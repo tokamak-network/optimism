@@ -3,7 +3,7 @@
 
 RAT은 챌리저들이 성실히 모니터링을 하고 있는지 챌린저 attention 테스트하기 위해 설계되었습니다.
 
-***FaultDisputeGame 관련사항은 game_spec.md를 참고한다.**
+**FaultDisputeGame 관련사항은 game_spec.md를 참고한다.**
 
 ## 구현 요소
 
@@ -156,7 +156,7 @@ RAT은 챌리저들이 성실히 모니터링을 하고 있는지 챌린저 atte
 2. **RAT.sol 컨트랙트의 주소 저장**: RAT.sol 컨트랙트의 주소는 owner만 변경 가능하다
 
 3. **create 함수 기능 추가하여 업그레이드**
-   - **3.1. FaultDisputeGame 만들 때, Factory 주소도 함께 전달**
+   - **3.1. FaultDisputeGame 만들 때, rat 주소도 함께 전달**
      ```solidity
      proxy_ = IDisputeGame(address(impl).clone(abi.encodePacked(
          msg.sender,      // gameCreator
@@ -227,3 +227,5 @@ RAT은 챌리저들이 성실히 모니터링을 하고 있는지 챌린저 atte
        ratAddress.resolve()  // -> 여기 추가
    }
    ```
+
+
