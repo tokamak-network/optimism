@@ -1,17 +1,17 @@
 # Randomized Attention Test (RAT) Contracts Implementation
 
-The RAT system is designed to test whether challengers are monitoring diligently. This document summarizes the specific details of the actually implemented contracts.
+RAT 시스템은 챌린저들이 성실히 모니터링을 하고 있는지 테스트하기 위해 설계된 시스템입니다. 이 문서는 실제 구현된 컨트랙트들의 구체적인 내용을 정리합니다.
 
-## Overview of Implemented Contracts
+## 구현된 컨트랙트 개요
 
-### 1. RAT Contract (`/packages/contracts-bedrock/src/L1/RAT.sol`)
+### 1. RAT 컨트랙트 (`/packages/contracts-bedrock/src/L1/RAT.sol`)
 
-#### Inheritance Structure
+#### 상속 구조
 ```solidity
 contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, ISemver
 ```
 
-#### Main Structs
+#### 주요 구조체
 ```solidity
 struct ChallengerInfo {
     uint256 id;
@@ -32,7 +32,7 @@ struct AttentionInfo {
 }
 ```
 
-#### State Variables
+#### 상태 변수
 ```solidity
 string public constant version = "1.0.0-beta.1";
 address public disputeGameFactory;
@@ -49,7 +49,7 @@ address[] public invalidChallengers;
 mapping(address => uint256) public invalidChallengerIndex;
 ```
 
-#### Events
+#### 이벤트
 ```solidity
 event ChallengerStaked(address indexed challenger, uint256 amount, uint256 challengerId);
 event AttentionTriggered(GameId indexed gameId, Claim stateRoot, uint256 l2BlockNumber, address indexed challengerAddress);
@@ -59,9 +59,9 @@ event ChallengerResolved(GameId indexed gameId, address indexed challengerAddres
 event MinimumStakeAmountUpdated(uint256 indexed newMinimumStakeAmount);
 ```
 
-#### Main Functions
+#### 주요 함수
 
-**Initialization Function**
+**초기화 함수**
 ```solidity
 function initialize(
     address _disputeGameFactory,
@@ -71,15 +71,15 @@ function initialize(
 ) external reinitializer(initVersion())
 ```
 
-**Staking Function (Supports Multiple Staking)**
+**스테이킹 함수 (다중 스테이킹 지원)**
 ```solidity
 function stake() external payable
 ```
-- Allows multiple staking
-- Validates minimum staking amount
-- Automatically manages valid/invalid challenger lists
+- 여러번 스테이킹 가능
+- 최소 스테이킹 금액 검증
+- 유효/무효 챌린저 리스트 자동 관리
 
-**Attention Trigger Function**
+**어텐션 트리거 함수**
 ```solidity
 function attentionTrigger(
     GameId _gameId,
@@ -88,11 +88,11 @@ function attentionTrigger(
     bytes32 _blockHash
 ) external
 ```
-- Only DisputeGameFactory can call
-- Random challenger selection using block hash
-- Automatic slashing and challenger state management
+- DisputeGameFactory만 호출 가능
+- 블록 해시를 이용한 랜덤 챌린저 선택
+- 자동 슬래싱 및 챌린저 상태 관리
 
-**Correct Evidence Submission Function**
+**올바른 증거 제출 함수**
 ```solidity
 function submitCorrectEvidence(
     address _gameAddress,
@@ -100,32 +100,32 @@ function submitCorrectEvidence(
     bytes32 _proofRV
 ) external
 ```
-- Validates evidence within submission period
-- Restores slashed bond
+- 제출 기간 내 증거 검증
+- 슬래시된 보증금 복구
 
-**Incorrect Evidence Submission Function**
+**틀린 증거 제출 함수**
 ```solidity
 function submitIncorrectEvidence(
     address _gameAddress,
     Claim _claim
 ) external payable
 ```
-- Starts FaultDisputeGame attack
-- Automatically calculates and validates required bond
+- FaultDisputeGame 공격 시작
+- 필요 보증금 자동 계산 및 검증
 
-**Resolve Function**
+**해결 함수**
 ```solidity
 function resolve() external
 ```
-- Restores bond when challenger wins
-- Restores valid challenger status
+- 챌린저 승리 시 보증금 복구
+- 유효 챌린저 상태 복원
 
-**Admin Function**
+**관리자 함수**
 ```solidity
 function setMinimumStakeAmount(uint256 _minimumStakeAmount) external
 ```
 
-**View Functions**
+**뷰 함수들**
 ```solidity
 function getChallengerInfo(address _challenger) external view returns (ChallengerInfo memory);
 function getTotalChallengers() external view returns (uint256);
@@ -134,14 +134,14 @@ function getInvalidChallengersCount() external view returns (uint256);
 function getAttentionInfo(GameId _gameId) external view returns (AttentionInfo memory);
 ```
 
-### 2. DisputeGameFactory Contract Upgrade (`/packages/contracts-bedrock/src/dispute/DisputeGameFactory.sol`)
+### 2. DisputeGameFactory 컨트랙트 업그레이드 (`/packages/contracts-bedrock/src/dispute/DisputeGameFactory.sol`)
 
-#### Added State Variables
+#### 추가된 상태 변수
 ```solidity
 address public rat;
 ```
 
-#### Modified create Function
+#### 수정된 create 함수
 ```solidity
 function create(
     GameType _gameType,
@@ -150,7 +150,7 @@ function create(
 ) external payable returns (IDisputeGame proxy_)
 ```
 
-**Conditional Initialization for CANNON Game Type**
+**CANNON 게임 타입 조건부 초기화**
 ```solidity
 // Only pass RAT address for CANNON game type, others use no parameter
 if (_gameType.raw() == GameTypes.CANNON.raw()) {
@@ -160,7 +160,7 @@ if (_gameType.raw() == GameTypes.CANNON.raw()) {
 }
 ```
 
-**RAT Attention Trigger Call**
+**RAT 어텐션 트리거 호출**
 ```solidity
 // Call RAT attention trigger if RAT address is set
 if (rat != address(0)) {
@@ -178,21 +178,21 @@ if (rat != address(0)) {
 }
 ```
 
-#### Added Admin Function
+#### 추가된 관리자 함수
 ```solidity
 function setRAT(address _rat) external onlyOwner {
     rat = _rat;
 }
 ```
 
-### 3. FaultDisputeGame Contract Upgrade (`/packages/contracts-bedrock/src/dispute/FaultDisputeGame.sol`)
+### 3. FaultDisputeGame 컨트랙트 업그레이드 (`/packages/contracts-bedrock/src/dispute/FaultDisputeGame.sol`)
 
-#### Added State Variables
+#### 추가된 상태 변수
 ```solidity
 address public rat;
 ```
 
-#### Overloaded Initialization Functions
+#### 오버로드된 초기화 함수
 ```solidity
 /// @notice Initializes the contract without RAT.
 function initialize() public payable virtual {
@@ -205,17 +205,17 @@ function initialize(address _rat) public payable virtual {
 }
 ```
 
-#### Internal Initialization Function
+#### 내부 초기화 함수
 ```solidity
 function _initialize(address _rat) internal {
-    // ... existing initialization logic ...
+    // ... 기존 초기화 로직 ...
 
-    // Set RAT address
+    // RAT 주소 설정
     if (_rat != address(0)) rat = _rat;
 }
 ```
 
-#### Game Data Query Function
+#### 게임 데이터 조회 함수
 ```solidity
 function gameDataWithRat() external view returns (GameType gameType_, Claim rootClaim_, bytes memory extraData_, address ratAddress_) {
     gameType_ = gameType();
@@ -225,93 +225,93 @@ function gameDataWithRat() external view returns (GameType gameType_, Claim root
 }
 ```
 
-#### Modified resolve Function
+#### 수정된 resolve 함수
 ```solidity
 function resolve() external returns (GameStatus status_) {
-    // ... existing resolve logic ...
+    // ... 기존 해결 로직 ...
 
     emit Resolved(status = status_);
 
-    // Call RAT resolve (when challenger wins)
+    // RAT resolve 호출 (챌린저 승리 시)
     if (rat != address(0) && status_ == GameStatus.CHALLENGER_WINS) {
         try IRAT(rat).resolve() {} catch {}
     }
 }
 ```
 
-### 4. Interface Updates
+### 4. 인터페이스 업데이트
 
-#### IDisputeGameFactory Interface (`/interfaces/dispute/IDisputeGameFactory.sol`)
+#### IDisputeGameFactory 인터페이스 (`/interfaces/dispute/IDisputeGameFactory.sol`)
 ```solidity
 function rat() external view returns (address);
 function setRAT(address _rat) external;
 ```
-- Added functions for RAT address query and setting
+- RAT 주소 조회 및 설정을 위한 함수들 추가
 
-#### IFaultDisputeGame Interface (`/interfaces/dispute/IFaultDisputeGame.sol`)
+#### IFaultDisputeGame 인터페이스 (`/interfaces/dispute/IFaultDisputeGame.sol`)
 ```solidity
 function gameDataWithRat() external view returns (GameType gameType_, Claim rootClaim_, bytes memory extraData_, address ratAddress_);
 function __constructor__(GameConstructorParams memory _params) external;
 ```
-- Added game data query function including RAT address
+- RAT 주소를 포함한 게임 데이터 조회 함수 추가
 
-#### IInitializable Interface (`/interfaces/dispute/IInitializable.sol`)
+#### IInitializable 인터페이스 (`/interfaces/dispute/IInitializable.sol`)
 ```solidity
 interface IInitializable {
     function initialize() external payable;
     function initialize(address _rat) external payable;
 }
 ```
-- Added basic initialize function and overloaded function that accepts RAT address
+- 기본 initialize 함수와 RAT 주소를 받는 오버로드 함수 추가
 
-#### IRAT Interface (`/interfaces/L1/IRAT.sol`)
+#### IRAT 인터페이스 (`/interfaces/L1/IRAT.sol`)
 ```solidity
 interface IRAT {
     function attentionTrigger(GameId _gameId, Claim _stateRoot, uint256 _l2BlockNumber, bytes32 _blockHash) external;
     function resolve() external;
 }
 ```
-- Interface defining core functions of RAT contract
+- RAT 컨트랙트의 핵심 함수들을 정의하는 인터페이스
 
-### 5. Test Implementation (`/test/L1/RAT.t.sol`)
+### 5. 테스트 구현 (`/test/L1/RAT.t.sol`)
 
-#### Test Contracts
-- `RAT_TestInit`: Basic test setup
-- `RAT_Version_Test`: Version test
-- `RAT_Initialize_Test`: Initialization test
-- `RAT_Stake_Test`: Staking test (includes multiple staking, minimum amount validation)
-- `RAT_AttentionTrigger_Test`: Attention trigger test
-- `RAT_SubmitCorrectEvidence_Test`: Correct evidence submission test
-- `RAT_GetChallengerInfo_Test`: Information query test
-- `RAT_SetMinimumStakeAmount_Test`: Minimum staking amount setting test
+#### 테스트 컨트랙트들
+- `RAT_TestInit`: 기본 테스트 설정
+- `RAT_Version_Test`: 버전 테스트
+- `RAT_Initialize_Test`: 초기화 테스트
+- `RAT_Stake_Test`: 스테이킹 테스트 (다중 스테이킹, 최소 금액 검증 포함)
+- `RAT_AttentionTrigger_Test`: 어텐션 트리거 테스트
+- `RAT_SubmitCorrectEvidence_Test`: 올바른 증거 제출 테스트
+- `RAT_GetChallengerInfo_Test`: 정보 조회 테스트
+- `RAT_SetMinimumStakeAmount_Test`: 최소 스테이킹 금액 설정 테스트
 
-#### Main Test Constants
+#### 주요 테스트 상수
 ```solidity
 uint256 public constant SLASH_BOND_AMOUNT = 1 ether;
 uint256 public constant EVIDENCE_SUBMISSION_PERIOD = 100;
 uint256 public constant MINIMUM_STAKE_AMOUNT = 0.1 ether;
 ```
 
-## Key Implementation Features
+## 주요 구현 특징
 
-### 1. Security Considerations
-- Uses `onlyProxyAdminOwner` modifier
-- Prevents reinitialization (`ReinitializableBase` version 2)
-- Index mapping for O(1) array element removal
-- Safe external calls through try-catch
+### 1. 보안 고려사항
+- `onlyProxyAdminOwner` modifier 사용
+- 재초기화 방지 (`ReinitializableBase` 버전 2)
+- O(1) 배열 요소 제거를 위한 인덱스 매핑
+- Try-catch를 통한 안전한 외부 호출
 
-### 2. Gas Optimization
-- Efficient challenger list management
-- Index-based array element removal
-- Conditional RAT address passing
+### 2. 가스 최적화
+- 효율적인 챌린저 리스트 관리
+- 인덱스 기반 배열 요소 제거
+- 조건부 RAT 주소 전달
 
-### 3. Scalability
-- Supports multiple staking
-- Admin-controllable minimum staking amount
-- Conditional RAT application by game type
+### 3. 확장성
+- 다중 스테이킹 지원
+- 관리자 제어 가능한 최소 스테이킹 금액
+- 게임 타입별 조건부 RAT 적용
 
-### 4. Event-Based Monitoring
-- Emits events for all important actions
-- Supports off-chain monitoring
+### 4. 이벤트 기반 모니터링
+- 모든 중요한 액션에 대한 이벤트 발생
+- 오프체인 모니터링 지원
 
-This implementation satisfies all requirements from the original draft document and additionally includes multiple staking and minimum staking amount management features.
+이 구현은 원본 draft 문서의 모든 요구사항을 충족하며, 추가적으로 다중 스테이킹과 최소 스테이킹 금액 관리 기능을 포함하고 있습니다.

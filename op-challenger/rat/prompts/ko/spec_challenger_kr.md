@@ -1,4 +1,101 @@
 
+
+### 게임 시작 흐름
+1. Monitor → 게임 감지
+   ↓
+2. Scheduler → 작업 큐에 등록
+   ↓
+3. Worker(챌린저) → 작업 할당받음 (j := <-in)
+   ↓
+4. GamePlayer.ProgressGame() → 게임 진행
+   ↓
+5. Agent.Act() → 액션 계산 및 실행
+   ↓
+6. performAction() → 실제 블록체인 트랜잭션 전송
+   ↓
+7. Responder.PerformAction() → 컨트랙트 호출
+
+
+### 챌린저가 루트 클래임의 참/거직을 확인하는 흐름
+1. Agent.Act() → 게임 액션 시작
+   ↓
+2. GameSolver.CalculateNextActions() → 다음 액션 계산
+   ↓
+3. GameSolver.AgreeWithRootClaim() → 루트 클레임 확인
+   ↓
+4. claimSolver.agreeWithClaim() → 클레임 값 비교
+   ↓
+5. TraceProvider.Get() → 실제 실행 트레이스로 값 계산
+   ↓
+6. bytes.Equal(ourValue, claim.Value) → 참/거짓 판단
+
+'''
+// op-challenger/game/fault/solver/game_solver.go
+func (s *GameSolver) CalculateNextActions(ctx context.Context, game types.Game) ([]types.Action, error) {
+    // 🔥 루트 클레임이 올바른지 확인
+	agreeWithRootClaim, err := s.AgreeWithRootClaim(ctx, game)
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine if root claim is correct: %w", err)
+	}
+
+	// Challenging the L2 block number will only work if we have the same output root as the claim
+	// Otherwise our output root preimage won't match. We can just proceed and invalidate the output root by disputing claims instead.
+	if agreeWithRootClaim {
+         // 루트가 올바르면 → L2 블록 번호 챌린지 시도
+		if challenge, err := s.claimSolver.trace.GetL2BlockNumberChallenge(ctx, game); errors.Is(err, types.ErrL2BlockNumberValid) {
+			// We agree with the L2 block number, proceed to processing claims
+		} else if err != nil {
+			// Failed to check L2 block validity
+			return nil, fmt.Errorf("failed to determine L2 block validity: %w", err)
+		} else {
+			return []types.Action{
+				{
+					Type:                          types.ActionTypeChallengeL2BlockNumber,
+					InvalidL2BlockNumberChallenge: challenge,
+				},
+			}, nil
+		}
+	}
+
+    // 루트가 틀렸으면 → 클레임들을 하나씩 공격/방어
+	var actions []types.Action
+	agreedClaims := newHonestClaimTracker()
+	if agreeWithRootClaim {
+		agreedClaims.AddHonestClaim(types.Claim{}, game.Claims()[0])
+	}
+	for _, claim := range game.Claims() {
+		var action *types.Action
+		if claim.Depth() == game.MaxDepth() {
+			action, err = s.calculateStep(ctx, game, claim, agreedClaims)
+		} else {
+			action, err = s.calculateMove(ctx, game, claim, agreedClaims)
+		}
+		if err != nil {
+			// Unable to continue iterating claims safely because we may not have tracked the required honest moves
+			// for this claim which affects the response to later claims.
+			// Any actions we've already identified are still safe to apply.
+			return actions, fmt.Errorf("failed to determine response to claim %v: %w", claim.ContractIndex, err)
+		}
+		if action == nil {
+			continue
+		}
+		actions = append(actions, *action)
+	}
+	return actions, nil
+}
+
+'''
+
+7. 핵심 포인트
+"챌린저가 실제로 작업을 시작하는 지점"
+j := <-in: 워커가 작업을 할당받는 순간
+j.player.ProgressGame(ctx): 실제 게임 진행 시작
+g.act(ctx): Agent가 게임을 분석하고 액션 결정
+a.solver.CalculateNextActions(): 다음 액션 계산 (공격/방어/스텝)
+a.performAction(): 실제 액션 실행 (트랜잭션 전송)
+이렇게 챌린저는 스케줄러로부터 작업을 할당받아 실제로 게임을 플레이하고 블록체인에 트랜잭션을 전송하게 됩니다!
+
+
 ## 모니터링 이벤트
 
 1. 이벤트 처리 흐름
