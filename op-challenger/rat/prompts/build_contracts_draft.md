@@ -1,5 +1,5 @@
 
-# Randomized Attention Test (RAT)
+# Randomized Attention Test (RAT) Contracts
 
 RAT은 챌리저들이 성실히 모니터링을 하고 있는지 챌린저 attention 테스트하기 위해 설계되었습니다.
 
