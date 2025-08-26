@@ -1,0 +1,31 @@
+forge test 결과를 파일로 저장하는 방법들:
+
+1. 기본 출력을 파일로 리다이렉트:
+   forge test > test-results.txt 2>&1
+
+2. JUnit XML 형식으로 출력:
+   forge test --junit > test-results.xml
+
+3. 상세한 요약과 함께:
+   forge test --detailed > test-results-detailed.txt 2>&1
+
+4. 가스 리포트 포함:
+   forge test --gas-report > test-results-with-gas.txt 2>&1
+
+5. 특정 테스트만 실행하고 결과 저장:
+   forge test --match-test "testName" > specific-test-results.txt 2>&1
+
+6. 실패한 테스트만 보기:
+   forge test --fail-fast > failed-tests.txt 2>&1
+
+7. JSON 형식으로 출력 (tee 사용):
+   forge test --junit | tee test-results.json
+
+8. 로그와 함께 저장:
+   forge test --verbosity 4 > test-results-verbose.txt 2>&1
+
+9. 특정 파일의 테스트만:
+   forge test --match-path "path/to/test.sol" > specific-file-tests.txt 2>&1
+
+10. 병렬 실행 결과 저장:
+    forge test --threads 4 > test-results-parallel.txt 2>&1
