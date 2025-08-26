@@ -137,6 +137,6 @@ interface IFaultDisputeGame is IDisputeGame {
     function vm() external view returns (IBigStepper vm_);
     function wasRespectedGameTypeWhenCreated() external view returns (bool);
     function weth() external view returns (IDelayedWETH weth_);
-
+    function gameDataWithRat() external view returns (GameType gameType_, Claim rootClaim_, bytes memory extraData_, address ratAddress_);
     function __constructor__(GameConstructorParams memory _params) external;
 }

@@ -21,6 +21,7 @@ import { IFaultDisputeGame } from "interfaces/dispute/IFaultDisputeGame.sol";
 import { ISuperFaultDisputeGame } from "interfaces/dispute/ISuperFaultDisputeGame.sol";
 import { IPermissionedDisputeGame } from "interfaces/dispute/IPermissionedDisputeGame.sol";
 import { ISuperPermissionedDisputeGame } from "interfaces/dispute/ISuperPermissionedDisputeGame.sol";
+import { IRAT } from "interfaces/L1/IRAT.sol";
 // Mocks
 import { AlphabetVM } from "test/mocks/AlphabetVM.sol";
 
@@ -622,5 +623,144 @@ contract DisputeGameFactory_Unclassified_Test is DisputeGameFactory_TestInit {
         vm.prank(address(0));
         vm.expectRevert("Ownable: caller is not the owner");
         disputeGameFactory.transferOwnership(address(1));
+    }
+}
+
+/// @notice A mock RAT contract for testing
+contract MockRAT {
+    event AttentionTriggered(GameId indexed gameId, Claim stateRoot, uint256 l2BlockNumber, bytes32 blockHash);
+
+    uint256 public attentionTriggerCount;
+    GameId public lastGameId;
+    Claim public lastStateRoot;
+    uint256 public lastL2BlockNumber;
+    bytes32 public lastBlockHash;
+
+    function attentionTrigger(
+        GameId _gameId,
+        Claim _stateRoot,
+        uint256 _l2BlockNumber,
+        bytes32 _blockHash
+    ) external {
+        attentionTriggerCount++;
+        lastGameId = _gameId;
+        lastStateRoot = _stateRoot;
+        lastL2BlockNumber = _l2BlockNumber;
+        lastBlockHash = _blockHash;
+
+        emit AttentionTriggered(_gameId, _stateRoot, _l2BlockNumber, _blockHash);
+    }
+
+    function resolve() external {
+        // Mock resolve function
+    }
+}
+
+/// @title DisputeGameFactory_RAT_Test
+/// @notice Tests for RAT integration with DisputeGameFactory
+contract DisputeGameFactory_RAT_Test is DisputeGameFactory_TestInit {
+    MockRAT mockRAT;
+    
+    event AttentionTriggered(GameId indexed gameId, Claim stateRoot, uint256 l2BlockNumber, bytes32 blockHash);
+
+    function setUp() public virtual override {
+        super.setUp();
+        mockRAT = new MockRAT();
+
+        // Set up the implementation and bond
+        disputeGameFactory.setImplementation(GameType.wrap(0), IDisputeGame(address(fakeClone)));
+        disputeGameFactory.setInitBond(GameType.wrap(0), 1 ether);
+    }
+
+    /// @notice Tests setting the RAT address
+    function test_setRAT_succeeds() public {
+        assertEq(disputeGameFactory.rat(), address(0));
+
+        disputeGameFactory.setRAT(address(mockRAT));
+        assertEq(disputeGameFactory.rat(), address(mockRAT));
+    }
+
+    /// @notice Tests that only owner can set RAT address
+    function test_setRAT_notOwner_reverts() public {
+        vm.prank(address(1));
+        vm.expectRevert("Ownable: caller is not the owner");
+        disputeGameFactory.setRAT(address(mockRAT));
+    }
+
+    /// @notice Tests that create calls RAT attention trigger when RAT is set
+    function test_create_callsRATAttentionTrigger_succeeds() public {
+        // Set RAT address
+        disputeGameFactory.setRAT(address(mockRAT));
+
+        GameType gameType = GameType.wrap(0);
+        Claim rootClaim = Claim.wrap(bytes32(uint256(1)));
+        bytes memory extraData = abi.encode(uint256(12345)); // L2 block number
+
+        vm.deal(address(this), 1 ether);
+
+        // Expect RAT attention trigger event
+        vm.expectEmit(true, true, true, true, address(mockRAT));
+        emit AttentionTriggered(GameId.wrap(bytes32(0)), rootClaim, 12345, bytes32(0));
+
+        // Create dispute game
+        disputeGameFactory.create{value: 1 ether}(gameType, rootClaim, extraData);
+
+        // Verify RAT was called
+        assertEq(mockRAT.attentionTriggerCount(), 1);
+        assertEq(Claim.unwrap(mockRAT.lastStateRoot()), Claim.unwrap(rootClaim));
+        assertEq(mockRAT.lastL2BlockNumber(), 12345);
+    }
+
+    /// @notice Tests that create works without RAT when RAT is not set
+    function test_create_withoutRAT_succeeds() public {
+        GameType gameType = GameType.wrap(0);
+        Claim rootClaim = Claim.wrap(bytes32(uint256(1)));
+        bytes memory extraData = abi.encode(uint256(12345));
+
+        vm.deal(address(this), 1 ether);
+
+        // Create dispute game without RAT
+        IDisputeGame proxy = disputeGameFactory.create{value: 1 ether}(gameType, rootClaim, extraData);
+
+        // Verify RAT was not called
+        assertEq(mockRAT.attentionTriggerCount(), 0);
+
+        // Verify game was created successfully
+        assertNotEq(address(proxy), address(0));
+    }
+
+    /// @notice Tests that create continues even if RAT attention trigger fails
+    function test_create_RATAttentionTriggerFails_continues() public {
+        // Create a RAT mock that will always revert
+        MockRATThatReverts revertingRAT = new MockRATThatReverts();
+        disputeGameFactory.setRAT(address(revertingRAT));
+
+        GameType gameType = GameType.wrap(0);
+        Claim rootClaim = Claim.wrap(bytes32(uint256(1)));
+        bytes memory extraData = abi.encode(uint256(12345));
+
+        vm.deal(address(this), 1 ether);
+
+        // Create should succeed even though RAT reverts
+        IDisputeGame proxy = disputeGameFactory.create{value: 1 ether}(gameType, rootClaim, extraData);
+
+        // Verify game was created successfully despite RAT failure
+        assertNotEq(address(proxy), address(0));
+
+        // Verify the game exists in the factory
+        (IDisputeGame game,) = disputeGameFactory.games(gameType, rootClaim, extraData);
+        assertEq(address(game), address(proxy));
+    }
+}
+
+/// @notice A mock RAT contract that always reverts for testing
+contract MockRATThatReverts {
+    function attentionTrigger(
+        GameId,
+        Claim,
+        uint256,
+        bytes32
+    ) external pure {
+        revert("MockRAT: Always reverts");
     }
 }

@@ -67,6 +67,7 @@ import { IDelayedWETH } from "interfaces/dispute/IDelayedWETH.sol";
 import { IBigStepper, IPreimageOracle } from "interfaces/dispute/IBigStepper.sol";
 import { IAnchorStateRegistry } from "interfaces/dispute/IAnchorStateRegistry.sol";
 import { IDisputeGame } from "interfaces/dispute/IDisputeGame.sol";
+import { IRAT } from "interfaces/L1/IRAT.sol";
 
 /// @title FaultDisputeGame
 /// @notice An implementation of the `IFaultDisputeGame` interface.
@@ -229,6 +230,9 @@ contract FaultDisputeGame is Clone, ISemver {
     /// @notice The bond distribution mode of the game.
     BondDistributionMode public bondDistributionMode;
 
+    /// @notice The address of the RAT contract.
+    address public rat;
+
     /// @param _params Parameters for creating a new FaultDisputeGame.
     constructor(GameConstructorParams memory _params) {
         // The max game depth may not be greater than `LibPosition.MAX_POSITION_BITLEN - 1`.
@@ -281,9 +285,21 @@ contract FaultDisputeGame is Clone, ISemver {
         L2_CHAIN_ID = _params.l2ChainId;
     }
 
-    /// @notice Initializes the contract.
+    /// @notice Initializes the contract without RAT.
     /// @dev This function may only be called once.
     function initialize() public payable virtual {
+        _initialize(address(0));
+    }
+
+    /// @notice Initializes the contract with RAT address.
+    /// @dev This function may only be called once.
+    function initialize(address _rat) public payable virtual {
+        _initialize(_rat);
+    }
+
+    /// @notice Internal initialization function.
+    /// @dev This function may only be called once.
+    function _initialize(address _rat) internal virtual {
         // SAFETY: Any revert in this function will bubble up to the DisputeGameFactory and
         // prevent the game from being created.
         //
@@ -352,6 +368,8 @@ contract FaultDisputeGame is Clone, ISemver {
         // Set whether the game type was respected when the game was created.
         wasRespectedGameTypeWhenCreated =
             GameType.unwrap(ANCHOR_STATE_REGISTRY.respectedGameType()) == GameType.unwrap(GAME_TYPE);
+
+        if(_rat != address(0)) rat = _rat;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -729,6 +747,13 @@ contract FaultDisputeGame is Clone, ISemver {
 
         // Update the status and emit the resolved event, note that we're performing an assignment here.
         emit Resolved(status = status_);
+
+        // Call RAT resolve if RAT address is set and challenger wins
+        if (rat != address(0) && status_ == GameStatus.CHALLENGER_WINS) {
+            try IRAT(rat).resolve() {} catch {
+                // RAT resolve failed, but don't revert the game resolution
+            }
+        }
     }
 
     /// @notice Resolves the subgame rooted at the given claim index. `_numToResolve` specifies how many children of
@@ -892,6 +917,21 @@ contract FaultDisputeGame is Clone, ISemver {
         gameType_ = gameType();
         rootClaim_ = rootClaim();
         extraData_ = extraData();
+    }
+
+    /// @notice A compliant implementation of this interface should return the components of the
+    ///         game UUID's preimage provided in the cwia payload. The preimage of the UUID is
+    ///         constructed as `keccak256(gameType . rootClaim . extraData)` where `.` denotes
+    ///         concatenation.
+    /// @return gameType_ The type of proof system being used.
+    /// @return rootClaim_ The root claim of the DisputeGame.
+    /// @return extraData_ Any extra data supplied to the dispute game contract by the creator.
+    /// @return ratAddress_ The address of the RAT contract.
+    function gameDataWithRat() external view returns (GameType gameType_, Claim rootClaim_, bytes memory extraData_, address ratAddress_) {
+        gameType_ = gameType();
+        rootClaim_ = rootClaim();
+        extraData_ = extraData();
+        ratAddress_ = rat;
     }
 
     ////////////////////////////////////////////////////////////////
