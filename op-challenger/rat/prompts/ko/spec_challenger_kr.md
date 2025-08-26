@@ -231,9 +231,57 @@ func (c *coordinator) scheduleGames(ctx context.Context, games []types.GameMetad
 클레임 분석, 응답 결정, 트랜잭션 전송
 
 
-핵심 특징
-폴링 기반: 이벤트 구독이 아닌 정기적 폴링으로 게임 발견
-배치 처리: 여러 게임을 한 번에 처리하여 효율성 증대
-필터링: 타임스탬프와 허용 목록으로 관련 게임만 처리
-비동기 처리: 스케줄러가 게임 플레이어를 비동기로 관리
-따라서 게임 시작은 폴링으로 수집한 게임 목록을 확인한 후, 각 게임에 대해 플레이어를 생성하여 시작하는 방식입니다!
+## 여러 컴퓨터에서 같은 게임에 동시 워커 진입
+
+시나리오: 동일 게임에 대한 경합
+
+게임 G 생성
+↓
+컴퓨터 A의 챌린저: 게임 G 감지 → 워커 1, 2, 3, 4 할당
+컴퓨터 B의 챌린저: 게임 G 감지 → 워커 1, 2, 3, 4 할당
+컴퓨터 C의 챌린저: 게임 G 감지 → 워커 1, 2, 3, 4 할당
+↓
+총 12개의 워커가 동시에 같은 게임 G를 처리 시도
+
+1. 블록체인 레벨에서의 경합
+'''
+// 각 워커가 동시에 같은 액션을 트랜잭션으로 전송
+func (a *Agent) performAction(ctx context.Context, wg *sync.WaitGroup, action types.Action) {
+    // 12개 워커가 동시에 같은 액션을 계산
+    tx, err := a.responder.PerformAction(ctx, action)
+    // 첫 번째로 블록에 포함된 트랜잭션만 성공
+    // 나머지 11개는 실패 (nonce 충돌, 상태 변경 등)
+}
+
+'''
+
+
+- 중복 실행이 되지 않게 하는 메커니즘
+'''
+// 1. step 함수에서의 보호
+if (parent.counteredBy != address(0)) revert DuplicateStep();
+parent.counteredBy = msg.sender;
+
+// 2. move 함수에서의 보호
+Hash claimHash = _claim.hashClaimPos(nextPosition, _challengeIndex);
+if (claims[claimHash]) revert ClaimAlreadyExists();
+claims[claimHash] = true;
+
+// 3. 게임 상태 보호
+if (status != GameStatus.IN_PROGRESS) revert GameNotInProgress();
+'''
+
+-
+게임 무결성: 하나의 claim에 대해 여러 번 step할 수 없음
+첫 번째 우선: 가장 먼저 성공한 챌린저가 해당 claim을 "소유"
+상태 일관성: 블록체인 상태의 일관성 보장
+
+
+## 개별참여자의 보상금 분배 시스템 구조
+
+- 크레딧 매핑
+// 일반 모드 크레딧 (정상적인 게임에서의 보상)
+mapping(address => uint256) public normalModeCredit;
+
+// 환불 모드 크레딧 (게임이 무효화된 경우 원금 환불)
+mapping(address => uint256) public refundModeCredit;
