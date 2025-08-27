@@ -8,12 +8,14 @@ import { ProxyAdminOwnedBase } from "src/L1/ProxyAdminOwnedBase.sol";
 
 // Libraries
 import { LibClone } from "@solady/utils/LibClone.sol";
-import { GameType, Claim, GameId, Timestamp, Hash, LibGameId } from "src/dispute/lib/Types.sol";
+import { GameType, Claim, GameId, Timestamp, Hash, LibGameId, GameTypes } from "src/dispute/lib/Types.sol";
 import { NoImplementation, IncorrectBondAmount, GameAlreadyExists } from "src/dispute/lib/Errors.sol";
 
 // Interfaces
 import { ISemver } from "interfaces/universal/ISemver.sol";
 import { IDisputeGame } from "interfaces/dispute/IDisputeGame.sol";
+import { IRAT } from "interfaces/L1/IRAT.sol";
+import { IInitializable } from "interfaces/dispute/IInitializable.sol";
 
 /// @custom:proxied true
 /// @title DisputeGameFactory
@@ -68,6 +70,9 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
     /// @notice An append-only array of disputeGames that have been created. Used by offchain game solvers to
     ///         efficiently track dispute games.
     GameId[] internal _disputeGameList;
+
+    /// @notice RAT contract address
+    address public rat;
 
     /// @notice Constructs a new DisputeGameFactory contract.
     constructor() OwnableUpgradeable() ReinitializableBase(1) {
@@ -168,7 +173,13 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         // │ [84, 84 + n) │ Extra data (opaque)                │
         // └──────────────┴────────────────────────────────────┘
         proxy_ = IDisputeGame(address(impl).clone(abi.encodePacked(msg.sender, _rootClaim, parentHash, _extraData)));
-        proxy_.initialize{ value: msg.value }();
+        
+        // Initialize with RAT address if CANNON game type
+        if (_gameType.raw() == GameTypes.CANNON.raw()) {
+            IInitializable(address(proxy_)).initialize{ value: msg.value }(rat);
+        } else {
+            proxy_.initialize{ value: msg.value }();
+        }
 
         // Compute the unique identifier for the dispute game.
         Hash uuid = getGameUUID(_gameType, _rootClaim, _extraData);
@@ -183,6 +194,17 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         _disputeGames[uuid] = id;
         _disputeGameList.push(id);
         emit DisputeGameCreated(address(proxy_), _gameType, _rootClaim);
+
+        // Trigger RAT attention test if RAT contract is set and game type is CANNON
+        if (rat != address(0) && _gameType.raw() == GameTypes.CANNON.raw()) {
+            // Extract L2 block number from extraData
+            // extraData format: [l2OutputIndex(32)] + [l2BlockNumber(32)] + [optional additional data]
+            uint256 l2BlockNumber = 0;
+            if (_extraData.length >= 64) {
+                l2BlockNumber = abi.decode(_extraData[32:64], (uint256));
+            }
+            try IRAT(rat).triggerAttentionTest(id, Claim.unwrap(_rootClaim), parentHash, l2BlockNumber) {} catch {}
+        }
     }
 
     /// @notice Returns a unique identifier for the given dispute game parameters.
@@ -275,5 +297,12 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
     function setInitBond(GameType _gameType, uint256 _initBond) external onlyOwner {
         initBonds[_gameType] = _initBond;
         emit InitBondUpdated(_gameType, _initBond);
+    }
+
+    /// @notice Sets the RAT contract address.
+    /// @dev May only be called by the `owner`.
+    /// @param _rat The RAT contract address.
+    function setRAT(address _rat) external onlyOwner {
+        rat = _rat;
     }
 }
