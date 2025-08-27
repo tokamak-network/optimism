@@ -13,7 +13,7 @@ RAT은 챌리저들이 성실히 모니터링을 하고 있는지 챌린저 atte
    - 올바른 증거 제출기간으로 설정한다.
 
 2. **거짓이라는 증거는 제출하지 않는다**
-   - 거짓일경우는 제출을 한다고 해도, 바로 보증금을 받을수 없는데, 바로 제출을 할 이유가 있을까? 게임에 참여하여 이겨야 환불을 받기 때문에
+   - 거짓일경우는 제출을 한다고 해도, 바로 보증금을 받을수 없고, 게임에 참여하여 이겨야 환불을 받을 수 있다.
 
 3. **올바른 증거 검증 방법**
    ```solidity
@@ -27,10 +27,10 @@ RAT은 챌리저들이 성실히 모니터링을 하고 있는지 챌린저 atte
    return compressed % validatorSetSize;
    ```
 
-5. **게임에 많은 Claim이 존재하고, 챌린저가 여러번 참여하였을수도 잇고, 참여하지 못했을수도 있다. 한번만이라도 참여하면 보증금을 환불받을수잇다**
-   - **챌린저들의 경쟁이 치열하여 Claim에 참여하지 못하면 보증금환불 못받음**
+5. **게임에 많은 Claim이 존재하고, 챌린저가 여러번 참여하였을수도 있고, 참여하지 못했을수도 있다. 한번만이라도 참여하면 보증금을 환불받을 수 있다**
+   - 게임에서 이긴후, resolveClaim 함수 호출시 보증금을 환불받는다.
 
-6. 올바른 증거를 제출할때, (어텐션정보.챌린저주소 == Transaction.sender) => 이 조건 필요한가?
+6. 올바른 증거를 제출할때, (어텐션정보.챌린저주소 == Transaction.sender) => 이 조건은 꼭 필요하다.
 
 ## 구현 요소
 
@@ -39,11 +39,11 @@ RAT은 챌리저들이 성실히 모니터링을 하고 있는지 챌린저 atte
 1. **파일 위치**: `packages/contracts-bedrock/src/L1/` 폴더에 `RAT.sol` 생성
 
 2. **스토리지 구조**
-   - **챌린저 정보 저장**: `{아이디 번호, 챌린저 Address, 스테이킹 양, 삭감된 양}`
+   - **챌린저 정보 저장**: `{아이디 번호, 챌린저 Address, 스테이킹 양, L1 blocknumber,삭감된 양}`
    - **DisputeGameFactory 컨트랙트 주소**
-   - **건당 삭감 보증금 양**: 어텐션 챌린지 시 삭감보증금 만큼 삭감
-   - **어텐션 매핑 정보**: `FaultDisputeGame`, 어텐션정보 관리
-     - 어텐션정보: `{GameId, 챌리저 address, stateRoot, L2 block number, block hash, 삭감된 보증금 양, L1 블록, 증거제출완료여부}` 저장
+   - **건당 삭감 보증금 양**: 어텐션 챌린지 시 삭감보증금 만큼 삭감, 스테이킹 금액이 부족하면 남은 금액 전체 삭감.
+   - **어텐션 매핑 정보**: `FaultDisputeGame`:어텐션정보 매핑
+     - 어텐션정보: `{GameId, 챌리저 address, stateRoot, 삭감된 보증금 양, 증거제출완료여부}` 저장
    - **어텐션 테스트 증거 제출 기간 (블록수)**: 증거제출기간 안에 증거를 제출해야 삭감된 보증금을 되살릴 수 있다
    - **유효한 챌린저 리스트**: 스테이킹할 때 확인해서 추가. 나중에 game에서 이기면 보증금을 되돌려줘야 한다
    - **유효하지 않은 챌린저 리스트**: 어텐션 트리거 시 보증금삭감하고, 조건이 되면 유효하지 않은 챌린저도 이동
@@ -97,7 +97,6 @@ RAT은 챌리저들이 성실히 모니터링을 하고 있는지 챌린저 atte
    - **3.9.2. 어텐션 트리거 함수에서 받는 파라미터**
      - `GameId`
      - `state root`
-     - `L2 block number`
      - `block hash`
    - **3.9.3. 동작**
      - `block hash` 정보로 유효한 validator 리스트에서 한명 선정
@@ -114,55 +113,59 @@ RAT은 챌리저들이 성실히 모니터링을 하고 있는지 챌린저 atte
      - 어텐션 매핑 정보 추가
         - GameId 에서 FaultDisputeGame 주소 추출
         - FaultDisputeGame: 어텐션 정보
-        - 어텐션 정보 = `{GameId, 선택된 챌린저 address, stateRoot, L2 block number, block hash, 삭감하는 양, L1 블록, false}`
+        - 어텐션 정보 = `{GameId, 선택된 챌린저 address, stateRoot,삭감하는 양,L1 blocknumber, false}`
      - 챌린저가 여전히 유효한 챌린저 인지 점검
         - 챌린저의 스테이킹 양이 '건당 삭감 보증금' 보다 작으면 유효하지 않은 챌린저이다.
         - 스테이킹 양을 조회하여 유효한 챌린저가 아니면, 유효한 챌린저 목록에서 삭제하고, 유효하지 않은 챌린저 목록에 등록한다.
    - **3.9.4. 이벤트 발생**
      - `(GameId, stateroot, L2 blocknumber, 챌린저 주소)` 파라미터를 포함한 이벤트를 발생시켜야 한다. 이벤트에 명시된 챌린저는 이 이벤트에 맞는 증거를 제출(트랜잭션)해야 한다
+     - L2 blocknumber 값은 스토리지에 저장은 안하고, 이벤트만 남긴다. 가스비를 절약하기 위해 스토리지 저장은 최소화 한다.
 
    #### 3.10. 참이라는 어텐션증거 제출 함수
    - **3.10.1. 파라미터**
-     - `FaultDisputeGame`
-     - `_proof{LV,RV}`를 제출
+     - `FaultDisputeGame`     // 게임 컨트랙 주소
+     - bytes32 _proofLV,      // 왼쪽 자식의 상태값
+     - bytes32 _proofRV       // 오른쪽 자식의 상태값
    - **3.10.2. 동작**
-     - 어텐션매핑정보에서 FaultDisputeGame 로 `GameId`, `sender`, `L2 blocknumber`로 어텐션정보를 찾는다
-     - **어텐션정보.sender == Transaction.sender** => 이 조건 필요한가?
+     - 어텐션매핑정보에서 FaultDisputeGame 로 어텐션정보{`GameId`, `챌린저address`,stateRoot,삭감하는 양,L1 blocknumber, false}를 찾는다
+     - **어텐션정보.챌린저address == Transaction.sender** : 반드시 챌린저가 직접 증거를 제출해야 한다.
      - 어텐션정보.증거제출완료여부 == false
      - `current L1 blocknumber < 어텐션정보.L1블록 + 어텐션 테스트 증거 제출 기간 (블록수)`
      - 어텐션정보.stateRoot == keccak256(abi.encodePacked(leftValue, rightValue))
      - 위 조건을 모두 만족하면
        - 어텐션정보.증거제출완료여부 = true
-       - 챌린저정보.스테이킹양 += 어텐션 매핑의 GameId어텐션정보의 삭감 보증금양
+       - 챌린저정보.스테이킹양 += 어텐션정보.삭감한양
    - **3.10.3. 이벤트 발생**
      - 이벤트 파라미터
        - `GameId`
-       - `sender`
-       - `proof{LV, RV}`
+       - `챌린저address`
+       - `_proofLV`
+       - `_proofRV`
        - 원복된 스테이킹 양
 
-   #### 3.11. resolveClaim(address claimant) 함수 추가 => **챌린저들의 경쟁이 치열하여 Claim에 참여하지 못하면 보증금환불 못받음**
+   #### 3.11. resolveClaim(address claimant) 함수 추가
    - FaultDisputeGame.resolveClaim(uint256 _claimIndex, uint256 _numToResolve) 함수 호출로 보상금을 받게 될때, 호출되는 함수
+   - **챌린저들의 경쟁이 치열하여 Claim에 참여하지 못하여, 이 함수를 호출할 수 없다면 보증금 환불 못받음**
    - **3.11.1. 파라미터**
      - claimant : 보증금을 받는 주소
    - **3.11.2. 동작**
      - 게임을 시작하여, 보상금을 받을때 호출되는 함수
      - `msg.sender`가 `FaultDisputeGame`이다
-     - `FaultDisputeGame`으로 어텐션정보 `{GameId, 챌리저 address, stateRoot, L2 block number, block hash, 삭감된 보증금 양, L1 블록, 증거제출완료여부}` 조회
-     - 어텐션정보.챌린저address != address(0)
-     - 어텐션정보.증거제출완료여부 == false (이미 환불받았으면 종료)
+     - `FaultDisputeGame`으로 어텐션정보 `{GameId, 챌리저 address, stateRoot, 삭감된 보증금 양, L1 블록, 증거제출완료여부}` 조회
+     - 어텐션정보.챌린저address != address(0) && 어텐션정보.챌린저address == claimant
+     - 어텐션정보.증거제출완료여부 == false
      - 위 조건을 만족하면
-       - 어텐션정보.증거제출완료여부 = true
-       - 챌린저정보.스테이킹양 += 어텐션 매핑의 GameId어텐션정보의 삭감된보증금양
-     - 챌린저가 유효한 챌린저 인지 점검
-        - 챌린저의 스테이킹 양이 '건당 삭감 보증금' 보다 작으면 유효하지 않은 챌린저이다.
-        - 스테이킹 양을 조회하여 유효한 챌린저인지 유효하지 않은 챌린저인지 확인하여, 올바른 곳에 존재하게 한다.
+        - 어텐션정보.증거제출완료여부 = true
+        - 챌린저정보.스테이킹양 += 어텐션정보.삭감된보증금양
+        - 챌린저가 유효한 챌린저 인지 점검
+            - 챌린저의 스테이킹 양이 '건당 삭감 보증금' 보다 작으면 유효하지 않은 챌린저이다.
+            - 스테이킹 양을 조회하여 유효한 챌린저인지 유효하지 않은 챌린저인지 확인하여, 올바른 곳에 존재하게 한다.
 
    - **3.11.3. 이벤트 발생**
      - 이벤트 파라미터
        - `GameId`
        - 챌린저 address
-       - 추가된 보증금 양
+       - 환불된 보증금 양
 
 4. **단위 테스트 코드 작성**
    - 경로: `/Users/zena/tokamak-projects/optimism/packages/contracts-bedrock/test/L1/RAT.t.sol`
@@ -189,7 +192,6 @@ RAT은 챌리저들이 성실히 모니터링을 하고 있는지 챌린저 atte
      - 어텐션 트리거 함수에 전달하는 파라미터
        - `GameId`
        - `state root`
-       - `L2 block number`
        - `block hash`
 
 4. **업그레이드 및 단위 테스트 코드 추가 작성**
