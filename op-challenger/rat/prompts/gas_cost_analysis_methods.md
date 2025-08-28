@@ -22,15 +22,33 @@ uint256 gasUsed = gasStart - gasleft();
 - **Test Environment Gas Cost**: Gas cost of function logic only
 - **Actual Network Gas Cost**: Test value + 21,000 gas (intrinsic gas)
 
+### ⚠️ Important: Function Call Context
+**Some functions are called within other functions, not as separate transactions:**
+
+1. **`triggerAttentionTest()`**: Called within `DisputeGameFactory.create()` and executed as one transaction
+   - No additional intrinsic gas cost
+   - Gas cost is included in the main transaction
+
+2. **`resolveClaim()`**: Called within `FaultDisputeGame.resolveClaim()` and executed as one transaction
+   - No additional intrinsic gas cost
+   - Gas cost is included in the main transaction
+
+3. **`submitCorrectEvidence()`**: Called as a separate transaction
+   - Requires additional intrinsic gas cost (21,000 gas)
+
 ### Total Gas Cost Calculation in Actual Network
 ```
+For standalone functions (separate transactions):
 Actual Total Gas Cost = Document Gas Cost + 21,000 gas
+
+For internal function calls (within other functions):
+Actual Total Gas Cost = Document Gas Cost (no additional intrinsic gas)
 ```
 
 Examples:
-- `resolveClaim()` (ignored): 1,565 + 21,000 = **22,565 gas**
-- `submitCorrectEvidence()`: 7,520 + 21,000 = **28,520 gas**
-- `DisputeGameFactory.create()`: 163,991 + 21,000 = **184,991 gas**
+- `resolveClaim()` (ignored): 1,565 gas (no additional intrinsic gas - internal call)
+- `submitCorrectEvidence()`: 7,520 + 21,000 = **28,520 gas** (standalone transaction)
+- `DisputeGameFactory.create()`: 163,991 + 21,000 = **184,991 gas** (standalone transaction)
 
 ## Analysis Target Scenarios
 
@@ -47,17 +65,17 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 | **3a** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | Valid challengers exist | **~296,369 gas** | **~317,369 gas** | Game creation + challenger selection, bond deduction | 🔄 Expected |
 | **3b** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | No valid challengers | **~178,668 gas** | **~199,668 gas** | Game creation + condition check only, silently ignored | 🔄 Expected |
 | **4** | Validator | `submitCorrectEvidence()` | Success | **7,520 gas** | **28,520 gas** | Evidence verification, bond refund | ✅ Success |
-| **5a** | Validator | `resolveClaim()` | AttentionTest participant | **4,857 gas** | **25,857 gas** | Bond refund, state update | ✅ Success |
-| **5b** | Validator | `resolveClaim()` | Not AttentionTest participant | **1,565 gas** | **22,565 gas** | Condition check only, silently ignored | ✅ Success |
+| **5a** | Validator | `resolveClaim()` | AttentionTest participant | **4,857 gas** | **4,857 gas** | Bond refund, state update (called within game's resolveClaim) | ✅ Success |
+| **5b** | Validator | `resolveClaim()` | Not AttentionTest participant | **1,565 gas** | **1,565 gas** | Condition check only, silently ignored (called within game's resolveClaim) | ✅ Success |
 
 ### 📈 Gas Cost Comparison Analysis
 
 | Comparison Item | Scenario | Test Gas Cost | Actual Network Gas Cost | Difference |
 |-----------------|----------|---------------|------------------------|------------|
 | **Game Creation** | No RAT vs RAT deployed | 163,991 vs ~163,991 | 184,991 vs ~184,991 | Same |
-| **RAT Trigger** | Execute (valid challengers exist) vs Skip (condition check only) | 132,378 vs 14,677 | 153,378 vs 35,677 | 4.3x difference |
+| **RAT Trigger** | Execute (valid challengers exist) vs Skip (condition check only) | 132,378 vs 14,677 | 132,378 vs 14,677 | 9x difference (no additional intrinsic gas) |
 | **Evidence Submission** | submitCorrectEvidence | 7,520 | 28,520 | Very efficient |
-| **Game Resolution** | (Attention test) participant vs (Attention test) non-participant | 4,857 vs 1,565 | 25,857 vs 22,565 | 1.15x difference |
+| **Game Resolution** | (Attention test) participant vs (Attention test) non-participant | 4,857 vs 1,565 | 4,857 vs 1,565 | 3.1x difference (no additional intrinsic gas) |
 
 ### 🎯 Key Conclusions
 
@@ -199,7 +217,11 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 
 ### 3. `triggerAttentionTest()` Function Analysis
 
+**Note: This function is called within `DisputeGameFactory.create()` as a contract call, so no additional intrinsic gas is required in actual network execution.**
+
 #### **Valid Challengers Exist (132,378 gas)**
+- **Test Environment Gas Cost**: 132,378 gas (intrinsic gas excluded)
+- **Actual Network Gas Cost**: 132,378 gas (no additional intrinsic gas - contract call)
 - **Challenger selection**: Hash-based random selection
 - **Bond calculation**: `stakingAmount` vs `perTestBondAmount` comparison
 - **Storage update**: Challenger information, AttentionInfo creation
@@ -207,6 +229,8 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 - **Event emission**: `AttentionTriggered` event
 
 #### **No Valid Challengers (14,677 gas)**
+- **Test Environment Gas Cost**: 14,677 gas (intrinsic gas excluded)
+- **Actual Network Gas Cost**: 14,677 gas (no additional intrinsic gas - contract call)
 - **Condition check only**: `validChallengersLength > 1` verification
 - **Silent ignore**: No work performed
 - **Gas savings**: Prevents unnecessary work
@@ -222,13 +246,19 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 
 ### 5. `resolveClaim()` Function Analysis
 
+**Note: This function is called within `FaultDisputeGame.resolveClaim()` as a contract call, so no additional intrinsic gas is required in actual network execution.**
+
 #### **Success (4,857 gas)**
+- **Test Environment Gas Cost**: 4,857 gas (intrinsic gas excluded)
+- **Actual Network Gas Cost**: 4,857 gas (no additional intrinsic gas - contract call)
 - **Bond refund**: Add bond to `stakingAmount`
 - **State update**: `evidenceSubmitted = true`
 - **Validity check**: Challenger state update
 - **Event emission**: `BondRefunded` event
 
 #### **Wrong Claimant (1,565 gas)**
+- **Test Environment Gas Cost**: 1,565 gas (intrinsic gas excluded)
+- **Actual Network Gas Cost**: 1,565 gas (no additional intrinsic gas - contract call)
 - **Condition check only**: `challengerAddress == _claimant` verification
 - **Silent ignore**: No work performed
 - **Gas savings**: Prevents unnecessary work
@@ -285,13 +315,13 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 
 | Function | Test Gas Usage | Actual Network Gas |
 |----------|----------------|-------------------|
-| **`resolveClaim()` (ignored)** | 1,565 gas | 22,565 gas |
-| **`resolveClaim()` (success)** | 4,857 gas | 25,857 gas |
+| **`resolveClaim()` (ignored)** | 1,565 gas | 1,565 gas (contract call) |
+| **`resolveClaim()` (success)** | 4,857 gas | 4,857 gas (contract call) |
 | **`submitCorrectEvidence()`** | 7,520 gas | 28,520 gas |
 | **`stake()` (general)** | 67,177 gas | 88,177 gas |
 | **`stake()` (valid challenger)** | 114,711 gas | 135,711 gas |
-| **`triggerAttentionTest()` (success)** | 132,378 gas | 153,378 gas |
-| **`triggerAttentionTest()` (ignored)** | 14,677 gas | 35,677 gas |
+| **`triggerAttentionTest()` (success)** | 132,378 gas | 132,378 gas (contract call) |
+| **`triggerAttentionTest()` (ignored)** | 14,677 gas | 14,677 gas (contract call) |
 | **`DisputeGameFactory.create()`** | 163,991 gas | 184,991 gas |
 
 
