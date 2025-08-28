@@ -98,7 +98,7 @@ cd optimism
 git branch
 git checkout feature/op-challenger-with-rat
 
-# Navigate to the contracts directory
+# Navigate to the contracts directory for building and testing
 cd packages/contracts-bedrock
 ```
 
@@ -128,6 +128,9 @@ cd ../packages/contracts-bedrock
 ### 3. Build Contracts
 
 ```bash
+# All contract building and testing should be done in optimism/packages/contracts-bedrock
+cd optimism/packages/contracts-bedrock
+
 # Compile all contracts
 forge build
 
@@ -141,13 +144,17 @@ cd scripts/go-ffi && go build
 ### 4. Run Tests
 
 ```bash
+# All testing should be done in optimism/packages/contracts-bedrock
+cd optimism/packages/contracts-bedrock
+
 # Run all tests
 forge test
 
 # Run specific RAT tests
 forge test --match-contract RAT
 
-forge test --match-path "packages/contracts-bedrock/test/L1/RAT.t.sol" -vv
+# Run RAT test file
+forge test --match-path "test/L1/RAT.t.sol" -vv
 
 # Detailed gas report
 forge test --match-path "test/L1/RAT.t.sol" -vv --gas-report
@@ -249,6 +256,9 @@ go build -o op-challenger ./cmd/op-challenger
 Manual testing procedures will be implemented in future updates:
 
 ```bash
+# All testing should be done in optimism/packages/contracts-bedrock
+cd optimism/packages/contracts-bedrock
+
 # Deploy contracts to local network
 anvil
 forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast
@@ -264,6 +274,9 @@ cast call $RAT_CONTRACT_ADDRESS "attentionTrigger(bytes32,bytes32,uint256,bytes3
 ### Automated Testing
 
 ```bash
+# All testing should be done in optimism/packages/contracts-bedrock
+cd optimism/packages/contracts-bedrock
+
 # Run all tests with coverage
 forge coverage
 
