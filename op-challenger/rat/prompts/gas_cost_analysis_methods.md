@@ -4,57 +4,10 @@
 
 This document is a comprehensive report analyzing gas usage for all functions and various scenarios of the RAT (Randomized Attention Test) contract in Optimism. RAT is a smart contract for challenger monitoring and testing, where gas efficiency is a critical factor.
 
-## 🔬 Gas Measurement Methodology
-
-### Measurement Environment
-- **Test Framework**: Foundry
-- **Measurement Method**: Internal function call simulation using `vm.prank()`
-- **Gas Measurement Code**:
-```solidity
-uint256 gasStart = gasleft();
-functionCall();
-uint256 gasUsed = gasStart - gasleft();
-```
-
-### ⚠️ Important: Gas Cost Interpretation
-**All gas costs reported in this document are measured in the Foundry test environment and do not include intrinsic gas (21,000 gas).**
-
-- **Test Environment Gas Cost**: Gas cost of function logic only
-- **Actual Network Gas Cost**: Test value + 21,000 gas (intrinsic gas)
-
-### ⚠️ Important: Function Call Context
-**Some functions are called within other functions, not as separate transactions:**
-
-1. **`triggerAttentionTest()`**: Called within `DisputeGameFactory.create()` and executed as one transaction
-   - No additional intrinsic gas cost
-   - Gas cost is included in the main transaction
-
-2. **`resolveClaim()`**: Called within `FaultDisputeGame.resolveClaim()` and executed as one transaction
-   - No additional intrinsic gas cost
-   - Gas cost is included in the main transaction
-
-3. **`submitCorrectEvidence()`**: Called as a separate transaction
-   - Requires additional intrinsic gas cost (21,000 gas)
-
-### Total Gas Cost Calculation in Actual Network
-```
-For standalone functions (separate transactions):
-Actual Total Gas Cost = Document Gas Cost + 21,000 gas
-
-For internal function calls (within other functions):
-Actual Total Gas Cost = Document Gas Cost (no additional intrinsic gas)
-```
-
-Examples:
-- `resolveClaim()` (ignored): 1,565 gas (no additional intrinsic gas - internal call)
-- `submitCorrectEvidence()`: 7,520 + 21,000 = **28,520 gas** (standalone transaction)
-- `DisputeGameFactory.create()`: 163,991 + 21,000 = **184,991 gas** (standalone transaction)
-
 ## Analysis Target Scenarios
 
 To analyze gas cost changes due to the introduction of RAT (Reactive Attention Test), we measure the following five scenarios:
 
-// Chart
 
 ## 📊 Complete Scenario Gas Cost Summary Table
 
