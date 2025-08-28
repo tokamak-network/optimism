@@ -173,7 +173,7 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         // │ [84, 84 + n) │ Extra data (opaque)                │
         // └──────────────┴────────────────────────────────────┘
         proxy_ = IDisputeGame(address(impl).clone(abi.encodePacked(msg.sender, _rootClaim, parentHash, _extraData)));
-        
+
         // Initialize with RAT address if CANNON game type
         if (_gameType.raw() == GameTypes.CANNON.raw()) {
             IInitializable(address(proxy_)).initialize{ value: msg.value }(rat);
@@ -197,13 +197,8 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
 
         // Trigger RAT attention test if RAT contract is set and game type is CANNON
         if (rat != address(0) && _gameType.raw() == GameTypes.CANNON.raw()) {
-            // Extract L2 block number from extraData
-            // extraData format: [l2OutputIndex(32)] + [l2BlockNumber(32)] + [optional additional data]
-            uint256 l2BlockNumber = 0;
-            if (_extraData.length >= 64) {
-                l2BlockNumber = abi.decode(_extraData[32:64], (uint256));
-            }
-            try IRAT(rat).triggerAttentionTest(id, Claim.unwrap(_rootClaim), parentHash, l2BlockNumber) {} catch {}
+            (, , address gameAddress) = id.unpack();
+            try IRAT(rat).triggerAttentionTest(gameAddress, Claim.unwrap(_rootClaim), parentHash) {} catch {}
         }
     }
 
