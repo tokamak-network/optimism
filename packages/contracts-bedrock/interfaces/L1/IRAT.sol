@@ -13,17 +13,14 @@ interface IRAT is IProxyAdminOwnedBase, IReinitializableBase {
     struct ChallengerInfo {
         uint256 stakingAmount;      // Slot 1: 32 bytes
         uint256 slashedAmount;      // Slot 2: 32 bytes
-        address challenger;         // Slot 3: 20 bytes
-        uint64 l1BlockNumber;       // Slot 3: 8 bytes (packed with address)
-        uint32 id;                  // Slot 3: 4 bytes (packed)
-        uint32 validatorIndex;      // Slot 4: 4 bytes 
-        bool isValid;               // Slot 4: 1 byte (packed)
+        uint32 validatorIndex;      // Slot 3: 4 bytes
+        bool isValid;               // Slot 3: 1 byte (packed)
     }
 
     /// @notice Attention test information structure
     /// @dev Packed to minimize storage slots
     struct AttentionInfo {
-        GameId gameId;              // Slot 1: 32 bytes
+        // GameId removed - using mapping key instead
         bytes32 stateRoot;          // Slot 2: 32 bytes
         uint256 slashedAmount;      // Slot 3: 32 bytes
         address challengerAddress;  // Slot 4: 20 bytes
@@ -32,22 +29,20 @@ interface IRAT is IProxyAdminOwnedBase, IReinitializableBase {
     }
 
     /// @notice Emitted when a challenger stakes ETH
-    event ChallengerStaked(address indexed challenger, uint256 amount, uint256 totalStaking);
+    event ChallengerStaked(address indexed challenger, uint256 amount);
 
     /// @notice Emitted when attention test is triggered
-    event AttentionTriggered(GameId indexed gameId, bytes32 stateRoot, uint256 l2BlockNumber, address indexed challenger);
+    event AttentionTriggered(address indexed gameAddress, address indexed challenger);
 
     /// @notice Emitted when correct evidence is submitted
     event CorrectEvidenceSubmitted(
-        GameId indexed gameId,
+        address indexed gameAddress,
         address indexed challenger,
-        bytes32 proofLV,
-        bytes32 proofRV,
         uint256 restoredAmount
     );
 
     /// @notice Emitted when bonded amount is refunded through claim resolution
-    event BondRefunded(GameId indexed gameId, address indexed challenger, uint256 refundedAmount);
+    event BondRefunded(address indexed gameAddress, address indexed challenger, uint256 refundedAmount);
 
     /// @notice Allows challengers to stake ETH
     function stake() external payable;
@@ -57,9 +52,7 @@ interface IRAT is IProxyAdminOwnedBase, IReinitializableBase {
     /// @return Challenger information
     function getChallengerInfo(address _challenger) external view returns (ChallengerInfo memory);
 
-    /// @notice Gets total number of challengers
-    /// @return Total number of challengers
-    function getTotalChallengers() external view returns (uint256);
+
 
     /// @notice Gets number of valid challengers
     /// @return Number of valid challengers
@@ -70,11 +63,10 @@ interface IRAT is IProxyAdminOwnedBase, IReinitializableBase {
     function getInvalidChallengerCount() external view returns (uint256);
 
     /// @notice Triggers attention test (called by DisputeGameFactory)
-    /// @param _gameId Game ID
+    /// @param _gameAddress Game contract address
     /// @param _stateRoot State root to be verified
     /// @param _blockHash Block hash for validator selection
-    /// @param _l2BlockNumber L2 block number
-    function triggerAttentionTest(GameId _gameId, bytes32 _stateRoot, bytes32 _blockHash, uint256 _l2BlockNumber) external;
+    function triggerAttentionTest(address _gameAddress, bytes32 _stateRoot, bytes32 _blockHash) external;
 
     /// @notice Submits correct evidence for attention test
     /// @param _gameAddress Game contract address

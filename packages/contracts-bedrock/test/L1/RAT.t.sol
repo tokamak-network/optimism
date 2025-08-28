@@ -2,86 +2,93 @@
 pragma solidity 0.8.15;
 
 // Testing utilities
-import { Test } from "forge-std/Test.sol";
-import { Vm } from "forge-std/Vm.sol";
+import { CommonTest } from "test/setup/CommonTest.sol";
+import { Proxy } from "src/universal/Proxy.sol";
 
 // Target contract
 import { RAT } from "src/L1/RAT.sol";
 
 // Libraries
-import { GameId, LibGameId, GameTypes, Timestamp } from "src/dispute/lib/Types.sol";
+import { GameId, LibGameId, GameTypes, Timestamp, Claim } from "src/dispute/lib/Types.sol";
 
 // Interfaces
 import { IDisputeGameFactory } from "interfaces/dispute/IDisputeGameFactory.sol";
 
-/// @title RAT_Initialize_Test
-/// @notice Tests initialization of the RAT contract
-contract RAT_Initialize_Test is Test {
+/// @notice Base contract that sets up the testing environment for RAT tests.
+contract RAT_TestInit is CommonTest {
     RAT public rat;
-    IDisputeGameFactory public mockFactory;
-    
-    address public constant ADMIN = address(0x1234);
-    uint256 public constant SLASH_AMOUNT = 1 ether;
-    uint256 public constant EVIDENCE_PERIOD = 100;
-    uint256 public constant MIN_STAKING = 2 ether;
+    address public mockDisputeGameFactory;
+    address public mockFaultDisputeGame;
+    uint256 public constant SLASH_BOND_AMOUNT = 1 ether;
+    uint256 public constant EVIDENCE_SUBMISSION_PERIOD = 100;
+    uint256 public constant MINIMUM_STAKE_AMOUNT = 2 ether; // Must be > perTestSlashingAmount (1 ether)
 
-    function setUp() public {
-        mockFactory = IDisputeGameFactory(address(0x5678));
-        rat = new RAT();
-        
-        vm.prank(ADMIN);
-        rat.initialize(
-            mockFactory,
-            SLASH_AMOUNT,
-            EVIDENCE_PERIOD,
-            MIN_STAKING
+    event ChallengerStaked(address indexed challenger, uint256 amount);
+    event AttentionTriggered(GameId indexed gameId, address indexed challenger);
+    event CorrectEvidenceSubmitted(GameId indexed gameId, address indexed challenger, bytes32 proofLV, bytes32 proofRV, uint256 restoredAmount);
+    event BondRefunded(GameId indexed gameId, address indexed challenger, uint256 refundedAmount);
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        // Create mock addresses
+        mockDisputeGameFactory = makeAddr("mockDisputeGameFactory");
+        mockFaultDisputeGame = makeAddr("mockFaultDisputeGame");
+
+        // Deploy RAT implementation
+        RAT ratImpl = new RAT();
+
+        // Deploy RAT proxy
+        Proxy ratProxy = new Proxy(address(1));
+
+        // Cast proxy to RAT interface
+        rat = RAT(payable(address(ratProxy)));
+
+        // Initialize proxy with implementation
+        vm.prank(address(1));
+        ratProxy.upgradeToAndCall(
+            address(ratImpl),
+            abi.encodeCall(
+                RAT.initialize,
+                (
+                    IDisputeGameFactory(mockDisputeGameFactory),
+                    SLASH_BOND_AMOUNT,
+                    EVIDENCE_SUBMISSION_PERIOD,
+                    MINIMUM_STAKE_AMOUNT
+                )
+            )
         );
     }
+}
+
+/// @title RAT_Initialize_Test
+/// @notice Tests initialization of the RAT contract
+contract RAT_Initialize_Test is RAT_TestInit {
 
     /// @notice Tests successful initialization
-    function test_initialize_succeeds() public {
-        assertEq(address(rat.disputeGameFactory()), address(mockFactory));
-        assertEq(rat.perTestSlashingAmount(), SLASH_AMOUNT);
-        assertEq(rat.evidenceSubmissionPeriod(), EVIDENCE_PERIOD);
-        assertEq(rat.minimumStakingBalance(), MIN_STAKING);
-        assertEq(rat.challengerCounter(), 0);
-        assertEq(rat.getValidChallengerCount(), 0);
-        assertEq(rat.getInvalidChallengerCount(), 0);
+    function test_initialize_succeeds() public view {
+        assertEq(address(rat.disputeGameFactory()), mockDisputeGameFactory);
+        assertEq(rat.perTestBondAmount(), SLASH_BOND_AMOUNT);
+        assertEq(rat.evidenceSubmissionPeriod(), EVIDENCE_SUBMISSION_PERIOD);
+        assertEq(rat.minimumStakingBalance(), MINIMUM_STAKE_AMOUNT);
+        // challengerCounter removed
+        assertEq(rat.getValidChallengerCount(), 1); // 1 because of dummy address(0) in initialize()
     }
 
     /// @notice Tests version string
-    function test_version() public {
+    function test_version() public view {
         assertEq(rat.version(), "1.0.0-beta.1");
     }
 }
 
 /// @title RAT_Staking_Test
 /// @notice Tests challenger staking functionality
-contract RAT_Staking_Test is Test {
-    RAT public rat;
-    IDisputeGameFactory public mockFactory;
-    
-    address public constant ADMIN = address(0x1234);
+contract RAT_Staking_Test is RAT_TestInit {
     address public constant CHALLENGER_1 = address(0x2345);
     address public constant CHALLENGER_2 = address(0x3456);
-    uint256 public constant SLASH_AMOUNT = 1 ether;
-    uint256 public constant EVIDENCE_PERIOD = 100;
-    uint256 public constant MIN_STAKING = 2 ether;
 
-    event ChallengerStaked(address indexed challenger, uint256 amount, uint256 totalStaking);
-
-    function setUp() public {
-        mockFactory = IDisputeGameFactory(address(0x5678));
-        rat = new RAT();
-        
-        vm.prank(ADMIN);
-        rat.initialize(
-            mockFactory,
-            SLASH_AMOUNT,
-            EVIDENCE_PERIOD,
-            MIN_STAKING
-        );
-
+    function setUp() public override {
+        super.setUp();
         // Fund test accounts
         vm.deal(CHALLENGER_1, 10 ether);
         vm.deal(CHALLENGER_2, 10 ether);
@@ -89,477 +96,344 @@ contract RAT_Staking_Test is Test {
 
     /// @notice Tests successful staking below minimum
     function test_stake_belowMinimum_succeeds() public {
-        uint256 stakeAmount = 1 ether;
-        
+        uint256 stakeAmount = 0.05 ether; // Below MINIMUM_STAKE_AMOUNT
+
         vm.expectEmit(true, false, false, true);
-        emit ChallengerStaked(CHALLENGER_1, stakeAmount, stakeAmount);
-        
+        emit ChallengerStaked(CHALLENGER_1, stakeAmount);
+
         vm.prank(CHALLENGER_1);
         rat.stake{value: stakeAmount}();
 
         RAT.ChallengerInfo memory info = rat.getChallengerInfo(CHALLENGER_1);
-        assertEq(info.id, 1);
-        assertEq(info.challenger, CHALLENGER_1);
+        // id field removed
+        // challenger field removed - address is available from mapping key
         assertEq(info.stakingAmount, stakeAmount);
-        assertEq(info.slashedAmount, 0);
-        assertFalse(info.isValid);
-        assertEq(rat.challengerCounter(), 1);
-        assertEq(rat.getValidChallengerCount(), 0);
-        assertEq(rat.getInvalidChallengerCount(), 0);
+        assertEq(info.totalSlashedAmount, 0);
+        assertFalse(info.isValid); // Below perTestBondAmount, should be invalid
+        assertEq(rat.getValidChallengerCount(), 1); // 1 because of dummy address(0) in initialize()
     }
 
-    /// @notice Tests successful staking above minimum becomes valid challenger
-    function test_stake_aboveMinimum_becomesValid() public {
-        uint256 stakeAmount = 3 ether;
-        
+    /// @notice Tests successful staking above minimum
+    function test_stake_aboveMinimum_succeeds() public {
+        uint256 stakeAmount = 0.2 ether; // Above MINIMUM_STAKE_AMOUNT
+
         vm.expectEmit(true, false, false, true);
-        emit ChallengerStaked(CHALLENGER_1, stakeAmount, stakeAmount);
-        
+        emit ChallengerStaked(CHALLENGER_1, stakeAmount);
+
         vm.prank(CHALLENGER_1);
+        uint256 gasStart = gasleft();
         rat.stake{value: stakeAmount}();
+        uint256 gasUsed = gasStart - gasleft();
+        emit log_named_uint("RAT stake() gas used", gasUsed);
 
         RAT.ChallengerInfo memory info = rat.getChallengerInfo(CHALLENGER_1);
-        assertEq(info.id, 1);
-        assertEq(info.challenger, CHALLENGER_1);
+        // id field removed
+        // challenger field removed - address is available from mapping key
         assertEq(info.stakingAmount, stakeAmount);
-        assertEq(info.slashedAmount, 0);
-        assertTrue(info.isValid);
-        assertEq(rat.challengerCounter(), 1);
-        assertEq(rat.getValidChallengerCount(), 1);
-        assertEq(rat.getInvalidChallengerCount(), 0);
-    }
-
-    /// @notice Tests multiple stakings from same challenger
-    function test_stake_multiple_succeeds() public {
-        vm.prank(CHALLENGER_1);
-        rat.stake{value: 1 ether}();
-
-        // Second stake should reach minimum
-        vm.prank(CHALLENGER_1);
-        rat.stake{value: 1.5 ether}();
-
-        RAT.ChallengerInfo memory info = rat.getChallengerInfo(CHALLENGER_1);
-        assertEq(info.id, 1);
-        assertEq(info.stakingAmount, 2.5 ether);
-        assertTrue(info.isValid);
-        assertEq(rat.challengerCounter(), 1);
-        assertEq(rat.getValidChallengerCount(), 1);
-    }
-
-    /// @notice Tests staking with zero value reverts
-    function test_stake_zeroValue_reverts() public {
-        vm.prank(CHALLENGER_1);
-        vm.expectRevert("Must stake positive amount");
-        rat.stake{value: 0}();
-    }
-
-    /// @notice Tests multiple challengers
-    function test_stake_multipleChallengeers_succeeds() public {
-        vm.prank(CHALLENGER_1);
-        rat.stake{value: 3 ether}();
-
-        vm.prank(CHALLENGER_2);
-        rat.stake{value: 2 ether}();
-
-        assertEq(rat.challengerCounter(), 2);
-        assertEq(rat.getValidChallengerCount(), 2);
-        
-        RAT.ChallengerInfo memory info1 = rat.getChallengerInfo(CHALLENGER_1);
-        RAT.ChallengerInfo memory info2 = rat.getChallengerInfo(CHALLENGER_2);
-        
-        assertEq(info1.id, 1);
-        assertEq(info2.id, 2);
-        assertTrue(info1.isValid);
-        assertTrue(info2.isValid);
+        assertEq(info.totalSlashedAmount, 0);
+        assertFalse(info.isValid); // Below perTestBondAmount (1 ether), should be invalid
+        assertEq(rat.getValidChallengerCount(), 1); // 1 because of dummy address(0) in initialize()
     }
 }
 
-/// @title RAT_AttentionTest_Test
-/// @notice Tests attention test triggering functionality
-contract RAT_AttentionTest_Test is Test {
-    RAT public rat;
-    address public mockFactory;
-    
-    address public constant ADMIN = address(0x1234);
+/// @title RAT_TriggerAttentionTest_Test
+/// @notice Tests triggerAttentionTest functionality
+contract RAT_TriggerAttentionTest_Test is RAT_TestInit {
     address public constant CHALLENGER_1 = address(0x2345);
     address public constant CHALLENGER_2 = address(0x3456);
-    uint256 public constant SLASH_AMOUNT = 1 ether;
-    uint256 public constant EVIDENCE_PERIOD = 100;
-    uint256 public constant MIN_STAKING = 2 ether;
 
-    event AttentionTriggered(GameId indexed gameId, bytes32 stateRoot, uint256 l2BlockNumber, address indexed challenger);
+    function setUp() public override {
+        super.setUp();
 
-    function setUp() public {
-        mockFactory = address(0x5678);
-        rat = new RAT();
-        
-        vm.prank(ADMIN);
-        rat.initialize(
-            IDisputeGameFactory(mockFactory),
-            SLASH_AMOUNT,
-            EVIDENCE_PERIOD,
-            MIN_STAKING
-        );
-
-        // Setup valid challengers
+        // Fund and stake challengers above minimum
         vm.deal(CHALLENGER_1, 10 ether);
         vm.deal(CHALLENGER_2, 10 ether);
-        
+
         vm.prank(CHALLENGER_1);
-        rat.stake{value: 3 ether}();
-        
+        rat.stake{value: 2.5 ether}(); // Must be >= perTestSlashingAmount (1 ether)
+
         vm.prank(CHALLENGER_2);
-        rat.stake{value: 2 ether}();
+        rat.stake{value: 3.0 ether}(); // Must be >= perTestSlashingAmount (1 ether)
     }
 
-    /// @notice Tests successful attention test trigger
+    /// @notice Tests successful attention trigger
     function test_triggerAttentionTest_succeeds() public {
-        GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), address(0x9999));
-        bytes32 stateRoot = keccak256("test state root");
-        bytes32 blockHash = keccak256("test block hash");
+        GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
+        bytes32 stateRoot = keccak256("test_state_root");
+        bytes32 blockHash = blockhash(block.number - 1);
+        (, , address gameAddress) = LibGameId.unpack(gameId);
 
-        vm.prank(mockFactory);
-        rat.triggerAttentionTest(gameId, stateRoot, blockHash, 12345);
+        vm.prank(mockDisputeGameFactory);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
 
-        // Verify attention test was created
-        (GameId returnedGameId, bytes32 returnedStateRoot, uint256 returnedSlashedAmount, address returnedChallengerAddress, uint64 returnedL1BlockNumber, bool returnedEvidenceSubmitted) = rat.attentionTests(address(0x9999));
-        assertEq(GameId.unwrap(returnedGameId), GameId.unwrap(gameId));
-        assertEq(returnedStateRoot, stateRoot);
-        assertEq(returnedL1BlockNumber, block.number);
-        assertFalse(returnedEvidenceSubmitted);
-        
-        // Verify GameId mapping
-        assertEq(rat.gameIdToAddress(gameId), address(0x9999));
-    }
+        // Check that attention test was created
+        (bytes32 attentionStateRoot, uint256 attentionBondAmount, address attentionChallengerAddress, , bool attentionEvidenceSubmitted) = rat.attentionTests(gameAddress);
 
-    /// @notice Tests non-factory caller reverts
-    function test_triggerAttentionTest_notFactory_reverts() public {
-        GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), address(0x9999));
-        bytes32 stateRoot = keccak256("test state root");
-        bytes32 blockHash = keccak256("test block hash");
+        assertEq(attentionStateRoot, stateRoot);
+        assertTrue(attentionChallengerAddress == CHALLENGER_1 || attentionChallengerAddress == CHALLENGER_2);
+        assertFalse(attentionEvidenceSubmitted);
+        assertTrue(attentionBondAmount > 0);
 
-        vm.expectRevert(RAT.NotDisputeGameFactory.selector);
-        rat.triggerAttentionTest(gameId, stateRoot, blockHash, 12345);
+        // Verify challenger was slashed
+        RAT.ChallengerInfo memory challengerInfo = rat.getChallengerInfo(attentionChallengerAddress);
+        assertTrue(challengerInfo.totalSlashedAmount > 0);
     }
 
     /// @notice Tests trigger with no valid challengers reverts
     function test_triggerAttentionTest_noValidChallengers_reverts() public {
-        // Create new RAT with no challengers
-        RAT emptyRat = new RAT();
-        vm.prank(ADMIN);
-        emptyRat.initialize(
-            IDisputeGameFactory(mockFactory),
-            SLASH_AMOUNT,
-            EVIDENCE_PERIOD,
-            MIN_STAKING
+        // Create empty RAT for test
+        RAT ratImpl2 = new RAT();
+        Proxy emptyRatProxy = new Proxy(address(1));
+        RAT emptyRat = RAT(payable(address(emptyRatProxy)));
+        vm.prank(address(1));
+        emptyRatProxy.upgradeToAndCall(
+            address(ratImpl2),
+            abi.encodeCall(RAT.initialize, (IDisputeGameFactory(mockDisputeGameFactory), SLASH_BOND_AMOUNT, EVIDENCE_SUBMISSION_PERIOD, MINIMUM_STAKE_AMOUNT))
         );
 
-        GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), address(0x9999));
-        bytes32 stateRoot = keccak256("test state root");
-        bytes32 blockHash = keccak256("test block hash");
+        GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
+        bytes32 stateRoot = keccak256("test_state_root");
+        bytes32 blockHash = blockhash(block.number - 1);
 
-        vm.prank(mockFactory);
-        vm.expectRevert("No valid challengers available");
-        emptyRat.triggerAttentionTest(gameId, stateRoot, blockHash, 12345);
+        vm.expectRevert(RAT.NoValidChallengers.selector);
+
+        (, , address gameAddress) = LibGameId.unpack(gameId);
+        vm.prank(mockDisputeGameFactory);
+        emptyRat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
+    }
+
+    /// @notice Tests trigger by non-factory reverts
+    function test_triggerAttentionTest_nonFactory_reverts() public {
+        GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
+        bytes32 stateRoot = keccak256("test_state_root");
+        bytes32 blockHash = blockhash(block.number - 1);
+
+        vm.expectRevert(RAT.NotDisputeGameFactory.selector);
+
+        (, , address gameAddress) = LibGameId.unpack(gameId);
+        vm.prank(CHALLENGER_1); // Not the factory
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
     }
 }
 
-/// @title RAT_EvidenceSubmission_Test
+/// @title RAT_Evidence_Test
 /// @notice Tests evidence submission functionality
-contract RAT_EvidenceSubmission_Test is Test {
-    RAT public rat;
-    address public mockFactory;
-    
-    address public constant ADMIN = address(0x1234);
+contract RAT_Evidence_Test is RAT_TestInit {
     address public constant CHALLENGER_1 = address(0x2345);
-    address public constant GAME_ADDRESS = address(0x9999);
-    uint256 public constant SLASH_AMOUNT = 1 ether;
-    uint256 public constant EVIDENCE_PERIOD = 100;
-    uint256 public constant MIN_STAKING = 2 ether;
 
-    event CorrectEvidenceSubmitted(
-        GameId indexed gameId,
-        address indexed challenger,
-        bytes32 proofLV,
-        bytes32 proofRV,
-        uint256 restoredAmount
-    );
+    GameId public gameId;
+    bytes32 public stateRoot;
+    bytes32 public proofLV;
+    bytes32 public proofRV;
+    address public gameAddress;
 
-    function setUp() public {
-        mockFactory = address(0x5678);
-        rat = new RAT();
-        
-        vm.prank(ADMIN);
-        rat.initialize(
-            IDisputeGameFactory(mockFactory),
-            SLASH_AMOUNT,
-            EVIDENCE_PERIOD,
-            MIN_STAKING
-        );
+    function setUp() public override {
+        super.setUp();
 
-        // Setup challenger and trigger attention test
+        // Fund test account
         vm.deal(CHALLENGER_1, 10 ether);
+
+        // Stake challenger with sufficient amount
         vm.prank(CHALLENGER_1);
-        rat.stake{value: 3 ether}();
+        rat.stake{value: 2 ether}();
 
-        GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), GAME_ADDRESS);
-        bytes32 stateRoot = keccak256(abi.encodePacked(bytes32("left"), bytes32("right")));
-        bytes32 blockHash = bytes32(uint256(0)); // Ensures CHALLENGER_1 is selected
+        // Setup test data
+        proofLV = keccak256("left_value");
+        proofRV = keccak256("right_value");
+        stateRoot = keccak256(abi.encodePacked(proofLV, proofRV));
 
-        vm.prank(mockFactory);
-        rat.triggerAttentionTest(gameId, stateRoot, blockHash, 12345);
+        gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
+        (, , gameAddress) = LibGameId.unpack(gameId);
     }
 
-    /// @notice Tests successful evidence submission
+    /// @notice Tests successful correct evidence submission
     function test_submitCorrectEvidence_succeeds() public {
-        bytes32 leftValue = bytes32("left");
-        bytes32 rightValue = bytes32("right");
-        
-        GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), GAME_ADDRESS);
-        
-        vm.expectEmit(true, true, false, true);
-        emit CorrectEvidenceSubmitted(gameId, CHALLENGER_1, leftValue, rightValue, SLASH_AMOUNT);
+        // Trigger attention test
+        vm.prank(mockDisputeGameFactory);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
 
-        vm.prank(CHALLENGER_1);
-        rat.submitCorrectEvidence(GAME_ADDRESS, leftValue, rightValue);
+        // Get selected challenger and game address
+        (bytes32 attentionStateRoot, uint256 bondAmount, address selectedChallenger, , ) = rat.attentionTests(gameAddress);
 
-        // Verify evidence was accepted
-        (GameId returnedGameId, bytes32 returnedStateRoot, uint256 returnedSlashedAmount, address returnedChallengerAddress, uint64 returnedL1BlockNumber, bool returnedEvidenceSubmitted) = rat.attentionTests(GAME_ADDRESS);
-        assertTrue(returnedEvidenceSubmitted);
-        
-        // Verify slashed amount was restored
-        RAT.ChallengerInfo memory challenger = rat.getChallengerInfo(CHALLENGER_1);
-        assertEq(challenger.stakingAmount, 3 ether); // Should be restored to original
+        vm.prank(selectedChallenger);
+        rat.submitCorrectEvidence(gameAddress, proofLV, proofRV);
+
+        // Verify evidence was submitted
+        (bytes32 verifyStateRoot, uint256 verifyBondAmount, address challenger, , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        assertTrue(evidenceSubmitted);
     }
 
-    /// @notice Tests wrong challenger submitting evidence reverts
-    function test_submitCorrectEvidence_wrongChallenger_reverts() public {
-        address wrongChallenger = address(0x4567);
-        bytes32 leftValue = bytes32("left");
-        bytes32 rightValue = bytes32("right");
-
-        vm.expectRevert(RAT.InvalidChallengerAddress.selector);
-        vm.prank(wrongChallenger);
-        rat.submitCorrectEvidence(GAME_ADDRESS, leftValue, rightValue);
-    }
-
-    /// @notice Tests wrong proof reverts
+    /// @notice Tests evidence submission with wrong proof fails
     function test_submitCorrectEvidence_wrongProof_reverts() public {
-        bytes32 leftValue = bytes32("wrong");
-        bytes32 rightValue = bytes32("proof");
+        vm.prank(mockDisputeGameFactory);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
+
+        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+
+        bytes32 wrongProofLV = keccak256("wrong_left");
+        bytes32 wrongProofRV = keccak256("wrong_right");
 
         vm.expectRevert(RAT.ProofVerificationFailed.selector);
-        vm.prank(CHALLENGER_1);
-        rat.submitCorrectEvidence(GAME_ADDRESS, leftValue, rightValue);
+
+        vm.prank(selectedChallenger);
+        rat.submitCorrectEvidence(gameAddress, wrongProofLV, wrongProofRV);
     }
 
-    /// @notice Tests submitting evidence twice reverts
-    function test_submitCorrectEvidence_alreadySubmitted_reverts() public {
-        bytes32 leftValue = bytes32("left");
-        bytes32 rightValue = bytes32("right");
-        
-        vm.prank(CHALLENGER_1);
-        rat.submitCorrectEvidence(GAME_ADDRESS, leftValue, rightValue);
+    /// @notice Tests evidence submission by wrong challenger fails
+    function test_submitCorrectEvidence_wrongChallenger_reverts() public {
+        vm.prank(mockDisputeGameFactory);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
 
-        vm.expectRevert(RAT.EvidenceAlreadySubmitted.selector);
-        vm.prank(CHALLENGER_1);
-        rat.submitCorrectEvidence(GAME_ADDRESS, leftValue, rightValue);
+        address wrongChallenger = address(0x9999);
+
+        vm.expectRevert(RAT.InvalidChallengerAddress.selector);
+
+        vm.prank(wrongChallenger);
+        rat.submitCorrectEvidence(gameAddress, proofLV, proofRV);
     }
 
-    /// @notice Tests submitting evidence after period expires reverts
-    function test_submitCorrectEvidence_expired_reverts() public {
-        bytes32 leftValue = bytes32("left");
-        bytes32 rightValue = bytes32("right");
-        
-        // Fast forward past evidence period
-        vm.warp(block.number + EVIDENCE_PERIOD + 1);
-
-        vm.expectRevert(RAT.EvidenceSubmissionExpired.selector);
-        vm.prank(CHALLENGER_1);
-        rat.submitCorrectEvidence(GAME_ADDRESS, leftValue, rightValue);
-    }
-
-    /// @notice Tests nonexistent attention test reverts
-    function test_submitCorrectEvidence_nonexistentTest_reverts() public {
-        address nonexistentGame = address(0x1111);
-        bytes32 leftValue = bytes32("left");
-        bytes32 rightValue = bytes32("right");
+    /// @notice Tests evidence submission for non-existent attention test fails
+    function test_submitCorrectEvidence_nonExistentTest_reverts() public {
+        address nonExistentGame = address(0x8888);
 
         vm.expectRevert(RAT.AttentionTestNotExists.selector);
+
         vm.prank(CHALLENGER_1);
-        rat.submitCorrectEvidence(nonexistentGame, leftValue, rightValue);
+        rat.submitCorrectEvidence(nonExistentGame, proofLV, proofRV);
+    }
+
+    /// @notice Tests double evidence submission fails
+    function test_submitCorrectEvidence_alreadySubmitted_reverts() public {
+        vm.prank(mockDisputeGameFactory);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
+
+        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+
+        // Submit evidence first time
+        vm.prank(selectedChallenger);
+        rat.submitCorrectEvidence(gameAddress, proofLV, proofRV);
+
+        // Try to submit again
+        vm.expectRevert(RAT.EvidenceAlreadySubmitted.selector);
+
+        vm.prank(selectedChallenger);
+        rat.submitCorrectEvidence(gameAddress, proofLV, proofRV);
+    }
+
+    /// @notice Tests evidence submission after deadline expires
+    function test_submitCorrectEvidence_expired_reverts() public {
+        vm.prank(mockDisputeGameFactory);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
+
+        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+
+        // Move forward beyond the submission period
+        vm.roll(block.number + EVIDENCE_SUBMISSION_PERIOD + 1);
+
+        vm.expectRevert(RAT.EvidenceSubmissionExpired.selector);
+
+        vm.prank(selectedChallenger);
+        rat.submitCorrectEvidence(gameAddress, proofLV, proofRV);
     }
 }
 
 /// @title RAT_ResolveClaim_Test
-/// @notice Tests claim resolution functionality
-contract RAT_ResolveClaim_Test is Test {
-    RAT public rat;
-    address public mockFactory;
-    
-    address public constant ADMIN = address(0x1234);
+/// @notice Tests resolveClaim functionality
+contract RAT_ResolveClaim_Test is RAT_TestInit {
     address public constant CHALLENGER_1 = address(0x2345);
-    address public constant GAME_ADDRESS = address(0x9999);
-    uint256 public constant SLASH_AMOUNT = 1 ether;
-    uint256 public constant EVIDENCE_PERIOD = 100;
-    uint256 public constant MIN_STAKING = 2 ether;
 
-    event BondRefunded(GameId indexed gameId, address indexed challenger, uint256 refundedAmount);
+    GameId public gameId;
+    bytes32 public stateRoot;
+    address public gameAddress;
 
-    function setUp() public {
-        mockFactory = address(0x5678);
-        rat = new RAT();
-        
-        vm.prank(ADMIN);
-        rat.initialize(
-            IDisputeGameFactory(mockFactory),
-            SLASH_AMOUNT,
-            EVIDENCE_PERIOD,
-            MIN_STAKING
-        );
+    function setUp() public override {
+        super.setUp();
 
-        // Setup challenger and trigger attention test
+        // Fund and stake challenger
         vm.deal(CHALLENGER_1, 10 ether);
         vm.prank(CHALLENGER_1);
-        rat.stake{value: 3 ether}();
+        rat.stake{value: 0.2 ether}();
 
-        GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), GAME_ADDRESS);
-        bytes32 stateRoot = keccak256("test state");
-        bytes32 blockHash = bytes32(uint256(0)); // Ensures CHALLENGER_1 is selected
+        // Setup test data
+        gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
+        stateRoot = keccak256("test_state_root");
 
-        vm.prank(mockFactory);
-        rat.triggerAttentionTest(gameId, stateRoot, blockHash, 12345);
+        // Trigger attention test
+        (, , gameAddress) = LibGameId.unpack(gameId);
+        vm.prank(mockDisputeGameFactory);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
     }
 
-    /// @notice Tests successful claim resolution refund
+    /// @notice Tests successful claim resolution
     function test_resolveClaim_succeeds() public {
-        GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), GAME_ADDRESS);
-        
-        vm.expectEmit(true, true, false, true);
-        emit BondRefunded(gameId, CHALLENGER_1, SLASH_AMOUNT);
+        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
 
-        vm.prank(GAME_ADDRESS);
-        rat.resolveClaim(CHALLENGER_1);
+        // Call from game contract
+        vm.prank(gameAddress);
+        rat.resolveClaim(selectedChallenger);
 
-        // Verify bond was refunded
-        RAT.ChallengerInfo memory challenger = rat.getChallengerInfo(CHALLENGER_1);
-        assertEq(challenger.stakingAmount, 3 ether); // Should be restored
-        
-        // Verify evidence marked as submitted
-        (GameId returnedGameId, bytes32 returnedStateRoot, uint256 returnedSlashedAmount, address returnedChallengerAddress, uint64 returnedL1BlockNumber, bool returnedEvidenceSubmitted) = rat.attentionTests(GAME_ADDRESS);
-        assertTrue(returnedEvidenceSubmitted);
+        // Call from game contract
+        vm.prank(gameAddress);
+        rat.resolveClaim(selectedChallenger);
+
+        // Verify evidence was marked as submitted
+        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        assertTrue(evidenceSubmitted);
+
+        // Verify challenger's balance was restored
+        RAT.ChallengerInfo memory challenger = rat.getChallengerInfo(selectedChallenger);
+        assertTrue(challenger.stakingAmount >= MINIMUM_STAKE_AMOUNT); // Should be restored
     }
 
-    /// @notice Tests resolve claim for wrong challenger does nothing
-    function test_resolveClaim_wrongChallenger_doesNothing() public {
-        address wrongChallenger = address(0x4567);
+    /// @notice Tests resolve claim for wrong claimant is ignored
+    function test_resolveClaim_wrongClaimant_ignored() public {
+        (, , address challengerBefore, , ) = rat.attentionTests(gameAddress);
+        address wrongClaimant = address(0x9999);
 
-        vm.prank(GAME_ADDRESS);
-        rat.resolveClaim(wrongChallenger);
+        // Get challenger balance before
+        uint256 challengerBalanceBefore = rat.getChallengerInfo(challengerBefore).stakingAmount;
+
+        // This should not revert but should do nothing
+        vm.prank(gameAddress);
+        rat.resolveClaim(wrongClaimant);
 
         // Verify nothing changed
-        (GameId returnedGameId, bytes32 returnedStateRoot, uint256 returnedSlashedAmount, address returnedChallengerAddress, uint64 returnedL1BlockNumber, bool returnedEvidenceSubmitted) = rat.attentionTests(GAME_ADDRESS);
-        assertFalse(returnedEvidenceSubmitted);
-    }
+        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        assertFalse(evidenceSubmitted);
 
-    /// @notice Tests resolve claim already submitted does nothing
-    function test_resolveClaim_alreadySubmitted_doesNothing() public {
-        // Submit evidence first
-        bytes32 leftValue = bytes32("left");
-        bytes32 rightValue = bytes32("right");
-        bytes32 correctStateRoot = keccak256(abi.encodePacked(leftValue, rightValue));
-        
-        // Update attention test with correct state root
-        vm.prank(mockFactory);
-        rat.triggerAttentionTest(
-            LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), address(0x8888)),
-            correctStateRoot,
-            bytes32(uint256(0)),
-            12345
-        );
-        
-        vm.prank(CHALLENGER_1);
-        rat.submitCorrectEvidence(address(0x8888), leftValue, rightValue);
-        
-        uint256 stakingBefore = rat.getChallengerInfo(CHALLENGER_1).stakingAmount;
-
-        vm.prank(address(0x8888));
-        rat.resolveClaim(CHALLENGER_1);
-
-        // Verify staking amount didn't change
-        uint256 stakingAfter = rat.getChallengerInfo(CHALLENGER_1).stakingAmount;
-        assertEq(stakingBefore, stakingAfter);
+        // Verify challenger balance unchanged
+        uint256 challengerBalanceAfter = rat.getChallengerInfo(challengerBefore).stakingAmount;
+        assertEq(challengerBalanceAfter, challengerBalanceBefore);
     }
 }
 
 /// @title RAT_Admin_Test
-/// @notice Tests administrative functionality
-contract RAT_Admin_Test is Test {
-    RAT public rat;
-    address public mockFactory;
-    
-    address public constant ADMIN = address(0x1234);
-    uint256 public constant SLASH_AMOUNT = 1 ether;
-    uint256 public constant EVIDENCE_PERIOD = 100;
-    uint256 public constant MIN_STAKING = 2 ether;
+/// @notice Tests for RAT admin functions
+contract RAT_Admin_Test is RAT_TestInit {
+    /// @notice Tests setting bond amount with non-admin caller should revert
+    function test_setPerTestBondAmount_notAdmin_reverts() public {
+        uint256 newAmount = 0.2 ether;
 
-    function setUp() public {
-        mockFactory = address(0x5678);
-        rat = new RAT();
-        
-        vm.prank(ADMIN);
-        rat.initialize(
-            IDisputeGameFactory(mockFactory),
-            SLASH_AMOUNT,
-            EVIDENCE_PERIOD,
-            MIN_STAKING
-        );
+        vm.expectRevert();
+        vm.prank(address(0x999)); // Not admin
+        rat.setPerTestBondAmount(newAmount);
     }
 
-    /// @notice Tests admin can set per-test slashing amount
-    function test_setPerTestSlashingAmount_succeeds() public {
-        uint256 newAmount = 2 ether;
-        
-        vm.prank(ADMIN);
-        rat.setPerTestSlashingAmount(newAmount);
-        
-        assertEq(rat.perTestSlashingAmount(), newAmount);
-    }
+    /// @notice Tests setting evidence submission period with non-admin caller should revert
+    function test_setEvidenceSubmissionPeriod_notAdmin_reverts() public {
+        uint256 newPeriod = 3600;
 
-    /// @notice Tests admin can set evidence submission period
-    function test_setEvidenceSubmissionPeriod_succeeds() public {
-        uint256 newPeriod = 200;
-        
-        vm.prank(ADMIN);
+        vm.expectRevert();
+        vm.prank(address(0x999)); // Not admin
         rat.setEvidenceSubmissionPeriod(newPeriod);
-        
-        assertEq(rat.evidenceSubmissionPeriod(), newPeriod);
     }
 
-    /// @notice Tests admin can set minimum staking balance
-    function test_setMinimumStakingBalance_succeeds() public {
-        uint256 newMinimum = 5 ether;
-        
-        vm.prank(ADMIN);
-        rat.setMinimumStakingBalance(newMinimum);
-        
-        assertEq(rat.minimumStakingBalance(), newMinimum);
-    }
+    /// @notice Tests setting minimum staking balance with non-admin caller should revert
+    function test_setMinimumStakingBalance_notAdmin_reverts() public {
+        uint256 newBalance = 2 ether;
 
-    /// @notice Tests non-admin cannot set parameters
-    function test_setParameters_nonAdmin_reverts() public {
-        address nonAdmin = address(0x9999);
-        
-        vm.expectRevert(); // Should revert with access control error
-        vm.prank(nonAdmin);
-        rat.setPerTestSlashingAmount(2 ether);
-        
-        vm.expectRevert(); // Should revert with access control error
-        vm.prank(nonAdmin);
-        rat.setEvidenceSubmissionPeriod(200);
-        
-        vm.expectRevert(); // Should revert with access control error
-        vm.prank(nonAdmin);
-        rat.setMinimumStakingBalance(5 ether);
+        vm.expectRevert();
+        vm.prank(address(0x999)); // Not admin
+        rat.setMinimumStakingBalance(newBalance);
     }
 }

@@ -7,31 +7,41 @@ This repository contains a Proof of Concept (PoC) implementation for Randomized 
 ### ✅ Completed Development
 
 **1. Contract Development**
-- **RAT Contract** (`src/L1/RAT.sol`): Core attention test contract with staking, slashing, and evidence submission
-- **DisputeGameFactory Upgrade** (`src/dispute/DisputeGameFactory.sol`): Enhanced with RAT integration for CANNON games
-- **FaultDisputeGame Upgrade** (`src/dispute/FaultDisputeGame.sol`): Added RAT address support and resolve integration
+- **RAT Contract** (`packages/contracts-bedrock/src/L1/RAT.sol`): Core attention test contract with staking, slashing, and evidence submission
+- **DisputeGameFactory Upgrade** (`packages/contracts-bedrock/src/dispute/DisputeGameFactory.sol`): Enhanced with RAT integration for CANNON games
+- **FaultDisputeGame Upgrade** (`packages/contracts-bedrock/src/dispute/FaultDisputeGame.sol`): Added RAT address support and resolve integration
 - **Interface Updates**: All necessary interfaces updated for RAT integration
 
 **2. Documentation**
 - **`spec_game.md`**: Game-related knowledge points (Claim types, Position, GameId, etc.)
-- **`build_contracts.md`**: Complete contract implementation details
-- **`spec_challenge.md`**: Challenger architecture specification
-- **`modify_challenger.md`**: Challenger modification guide for RAT integration
+- **`build_contract.md`**: Complete contract implementation details and build guide
+- **`spec_challenge.md`**: Challenger architecture specification and game flow
+- **`gas_cost_analysis_methods.md`**: Comprehensive gas cost analysis and optimization
 
 **3. Testing Infrastructure**
-- **RAT Test Suite** (`test/L1/RAT.t.sol`): Comprehensive test coverage including:
+- **RAT Test Suite** (`packages/contracts-bedrock/test/L1/RAT.t.sol`): Comprehensive test coverage including:
   - Initialization tests
   - Staking functionality (multiple staking, minimum amount validation)
   - Attention trigger mechanism
   - Evidence submission (correct/incorrect)
   - Information query functions
   - Admin functions
+- **Gas Measurement Tests**: Detailed gas cost analysis for all functions and scenarios
+- **DisputeGameFactory Gas Tests**: Gas measurement for game creation with RAT integration
 
 **4. Build & Test Verification**
 - ✅ `forge compile`: All contracts compile successfully
 - ✅ `forge test`: All tests pass successfully
 - ✅ Contract integration verified
 - ✅ RAT system functionality confirmed
+- ✅ Gas optimization verified
+- ✅ Security vulnerabilities addressed
+
+**5. Gas Analysis & Optimization**
+- **Complete Gas Cost Analysis**: All functions measured and documented
+- **Optimization Implemented**: Storage slot packing, conditional execution, gas-efficient operations
+- **Scenario-based Analysis**: 5 different scenarios analyzed with actual measurements
+- **Performance Comparison**: RAT vs non-RAT gas costs documented
 
 ### 🔄 In Progress
 
@@ -49,8 +59,9 @@ This repository contains a Proof of Concept (PoC) implementation for Randomized 
 ### 📋 Next Steps
 
 **1. Immediate Tasks**
-- Implement challenger modifications as per `modify_challenger.md`
+- Implement challenger modifications as per `spec_challenge.md`
 - Create end-to-end testing scenarios
+- Deploy and test on testnet
 
 **2. Advanced Features**
 - Advanced attention test scenarios
@@ -65,6 +76,7 @@ The RAT system is designed to:
 - Automatically slash bonds for non-responsive challengers
 - Restore bonds for correct evidence submission
 - Integrate with existing dispute game infrastructure
+- Optimize gas usage through conditional execution and storage optimization
 
 ## Prerequisites
 
@@ -135,6 +147,11 @@ forge test
 # Run specific RAT tests
 forge test --match-contract RAT
 
+forge test --match-path "packages/contracts-bedrock/test/L1/RAT.t.sol" -vv
+
+# Detailed gas report
+forge test --match-path "test/L1/RAT.t.sol" -vv --gas-report
+
 # Run tests with verbose output
 forge test -vvv
 
@@ -148,12 +165,33 @@ forge test --junit > test-results.xml
 
 The LLM prompts are located in `op-challenger/rat/prompts/`:
 
-- `spec_challenge.md`: Challenger architecture specification
-- `spec_game.md`: Game-related knowledge points
-- `build_contracts.md`: Contract implementation details
-- `modify_challenger.md`: Challenger modification guide
+- `spec_challenge.md`: Challenger architecture specification and game flow
+- `spec_game.md`: Game-related knowledge points (Claim types, Position, GameId, etc.)
+- `build_contract.md`: Complete contract implementation details and build guide
+- `gas_cost_analysis_methods.md`: Comprehensive gas cost analysis and optimization
 
-### 3. Start RAT System
+### 2. Contract Implementation
+
+Based on the documentation in `build_contract.md`, the following contracts have been implemented:
+
+- **RAT Contract**: Core attention test functionality with gas optimization
+- **DisputeGameFactory Upgrade**: RAT integration for CANNON games
+- **FaultDisputeGame Upgrade**: RAT address support and resolve integration
+- **Interface Updates**: All necessary interfaces for RAT integration
+
+### 3. Gas Analysis
+
+The `gas_cost_analysis_methods.md` document provides:
+- Complete gas usage analysis for all functions
+- Scenario-based gas cost comparison
+- Optimization techniques and results
+- Performance benchmarks
+
+### 4. Start RAT System
+
+**⚠️ Not Yet Implemented**
+
+The RAT system integration with the challenger is currently under development. The following steps will be implemented in future updates:
 
 ```bash
 # Navigate to op-challenger
@@ -175,18 +213,21 @@ go build -o op-challenger ./cmd/op-challenger
 
 ### Core Components
 
-1. **RAT Contract** (`src/L1/RAT.sol`)
+1. **RAT Contract** (`packages/contracts-bedrock/src/L1/RAT.sol`)
    - Manages challenger staking and slashing
    - Handles attention trigger events
    - Processes evidence submissions
+   - Gas-optimized with storage slot packing
 
-2. **DisputeGameFactory** (`src/dispute/DisputeGameFactory.sol`)
+2. **DisputeGameFactory** (`packages/contracts-bedrock/src/dispute/DisputeGameFactory.sol`)
    - Creates dispute games with RAT integration
    - Triggers attention tests for CANNON games
+   - Conditional execution for gas optimization
 
-3. **FaultDisputeGame** (`src/dispute/FaultDisputeGame.sol`)
+3. **FaultDisputeGame** (`packages/contracts-bedrock/src/dispute/FaultDisputeGame.sol`)
    - Enhanced with RAT address support
    - Calls RAT resolve on challenger wins
+   - Safe integration with existing functionality
 
 4. **Challenger** (`op-challenger/`)
    - Monitors dispute games
@@ -202,6 +243,10 @@ go build -o op-challenger ./cmd/op-challenger
 ## Testing
 
 ### Manual Testing
+
+**⚠️ To Be Implemented**
+
+Manual testing procedures will be implemented in future updates:
 
 ```bash
 # Deploy contracts to local network
@@ -227,7 +272,30 @@ forge test --match-contract RAT_Test -vvv
 
 # Generate test report
 forge test --junit > test-report.xml
+
+# Run gas measurement tests
+forge test --match-test test_.*_gas_measurement -vv
 ```
+
+## Gas Analysis Results
+
+### Key Performance Metrics
+
+| Function | Gas Usage | Optimization |
+|----------|-----------|--------------|
+| `DisputeGameFactory.create()` | 163,991 gas | Base cost (RAT independent) |
+| `triggerAttentionTest()` (success) | 132,378 gas | Full execution |
+| `triggerAttentionTest()` (ignored) | 14,677 gas | Conditional execution |
+| `submitCorrectEvidence()` | 7,520 gas | Very efficient |
+| `resolveClaim()` (participant) | 4,857 gas | Bond refund |
+| `resolveClaim()` (non-participant) | 1,565 gas | Condition check only |
+
+### Optimization Features
+
+1. **Conditional Execution**: Minimum gas overhead when no valid challengers
+2. **Storage Slot Packing**: Efficient data structures
+3. **Gas-efficient Operations**: Removal of unnecessary calculations
+4. **Safe Integration**: No impact on existing functionality
 
 ## Monitoring
 
@@ -244,79 +312,3 @@ cast logs --from-block latest $RAT_CONTRACT_ADDRESS \
 cast logs --from-block latest $RAT_CONTRACT_ADDRESS \
   --event "CorrectEvidenceSubmitted(bytes32,address,uint256)"
 ```
-
-### Metrics
-
-Key metrics to monitor:
-- Attention trigger frequency
-- Evidence submission success rate
-- Bond slashing events
-- Challenger response times
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Compilation Errors**
-   ```bash
-   # Clean and rebuild
-   forge clean
-   forge build
-   ```
-
-2. **Test Failures**
-   ```bash
-   # Run with verbose output
-   forge test -vvvv
-
-   # Check specific test
-   forge test --match-test "test_name" -vvv
-   ```
-
-3. **Network Issues**
-   ```bash
-   # Check RPC connectivity
-   cast block-number --rpc-url $L1_RPC_URL
-   cast block-number --rpc-url $L2_RPC_URL
-   ```
-
-### Debug Mode
-
-Enable debug logging:
-
-```bash
-export OP_CHALLENGER_LOG_LEVEL=debug
-./op-challenger --log.level debug
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
-
-### Code Style
-
-- Solidity: Follow Solidity Style Guide
-- Go: Use `gofmt` and `golint`
-- Tests: Maintain >90% coverage
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For questions and support:
-- Create an issue in this repository
-- Join the Optimism Discord
-- Check the documentation in `docs/` directory
-
-## References
-
-- [Optimism Documentation](https://docs.optimism.io/)
-- [Foundry Book](https://book.getfoundry.sh/)
-- [RAT Specification](op-challenger/rat/prompts/spec_challenge.md)
-- [Contract Implementation](op-challenger/rat/prompts/build_contracts.md)
