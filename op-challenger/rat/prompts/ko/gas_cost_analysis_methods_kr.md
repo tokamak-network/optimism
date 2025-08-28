@@ -4,52 +4,6 @@
 
 이 문서는 Optimism의 RAT (Randomized Attention Test) 컨트랙트의 모든 함수와 다양한 경우들에 대한 가스 사용량을 분석한 완전한 보고서입니다. RAT는 챌린저 모니터링 및 테스트를 위한 스마트 컨트랙트로, 가스 효율성이 중요한 요소입니다.
 
-## 🔬 가스 측정 방법론
-
-### 측정 환경
-- **테스트 프레임워크**: Foundry
-- **측정 방식**: `vm.prank()`를 사용한 내부 함수 호출 시뮬레이션
-- **가스 측정 코드**:
-```solidity
-uint256 gasStart = gasleft();
-functionCall();
-uint256 gasUsed = gasStart - gasleft();
-```
-
-### ⚠️ 중요: 가스 비용 해석
-**문서에 보고된 모든 가스 비용은 Foundry 테스트 환경에서 측정된 것으로, intrinsic gas (21,000 가스)를 포함하지 않습니다.**
-
-- **테스트 환경 가스 비용**: 함수 로직만의 가스 비용
-- **실제 네트워크 가스 비용**: 테스트 값 + 21,000 가스 (intrinsic gas)
-
-### ⚠️ 중요: 함수 호출 컨텍스트
-**일부 함수는 다른 함수 내부에서 호출되며, 별도의 트랜잭션이 아닙니다:**
-
-1. **`triggerAttentionTest()`**: `DisputeGameFactory.create()` 에서 호출되어 한 트랜잭션으로 실행됨
-   - 추가 intrinsic gas 비용 없음
-   - 가스 비용은 메인 트랜잭션에 포함됨
-
-2. **`resolveClaim()`**: `FaultDisputeGame.resolveClaim()` 에서 호출되어 한 트랜잭션으로 실행됨
-   - 추가 intrinsic gas 비용 없음
-   - 가스 비용은 메인 트랜잭션에 포함됨
-
-3. **`submitCorrectEvidence()`**: 별도의 트랜잭션으로 호출됨
-   - 추가 intrinsic gas 비용 필요 (21,000 가스)
-
-### 실제 네트워크에서의 총 가스 비용 계산
-```
-독립 실행 함수 (별도 트랜잭션)의 경우:
-실제 총 가스 비용 = 문서의 가스 비용 + 21,000 가스
-
-내부 함수 호출 (다른 함수 내부)의 경우:
-실제 총 가스 비용 = 문서의 가스 비용 (추가 intrinsic gas 없음)
-```
-
-예시:
-- `resolveClaim()` (무시): 1,565 가스 (추가 intrinsic gas 없음 - 내부 호출)
-- `submitCorrectEvidence()`: 7,520 + 21,000 = **28,520 가스** (독립 트랜잭션)
-- `DisputeGameFactory.create()`: 163,991 + 21,000 = **184,991 가스** (독립 트랜잭션)
-
 ## 분석 대상 시나리오
 
 RAT(Reactive Attention Test) 도입에 따른 가스 비용 변화를 분석하기 위해 다음 다섯 가지 시나리오를 측정합니다:
@@ -71,7 +25,7 @@ RAT(Reactive Attention Test) 도입에 따른 가스 비용 변화를 분석하�
 | 비교 항목 | 시나리오 | 테스트 가스 비용 | 실제 네트워크 가스 비용 | 차이 |
 |-----------|----------|------------------|------------------------|------|
 | **게임 생성** | RAT 없음 vs RAT 배포됨 | 163,991 vs ~163,991 | 184,991 vs ~184,991 | 동일 |
-| **RAT 트리거** |  실행함 (유효한 챌린저 있음) vs 실행안함 (조건검사만) | 132,378 vs 14,677 | 153,378 vs 35,677 | 4.3배 차이 |
+| **RAT 트리거** |  실행함 (유효한 챌린저 있음) vs 실행안함 (조건검사만) | 132,378 vs 14,677 | 132,378 vs 14,677 | 9배 차이 (추가 intrinsic gas 없음) |
 | **증거 제출** | submitCorrectEvidence | 7,520 | 28,520 | 매우 효율적 |
 | **게임 해결** | (어텐션테스트)참여자 vs (어텐션테스트)미참여자 | 4,857 vs 1,565 | 4,857 vs 1,565 | 3.1배 차이 (추가 intrinsic gas 없음) |
 
@@ -236,6 +190,8 @@ RAT(Reactive Attention Test) 도입에 따른 가스 비용 변화를 분석하�
 ### 4. `submitCorrectEvidence()` 함수 분석
 
 #### **성공 (7,520 가스)**
+- **테스트 환경 가스 비용**: 7,520 가스 (intrinsic gas 제외)
+- **실제 네트워크 가스 비용**: 28,520 가스 (intrinsic gas 포함)
 - **증거 검증**: `keccak256(proofLV, proofRV)` vs `stateRoot` 비교
 - **보증금 환불**: `stakingAmount`에 보증금 추가
 - **상태 업데이트**: `evidenceSubmitted = true`
