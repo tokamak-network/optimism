@@ -4,6 +4,34 @@
 
 This document is a comprehensive report analyzing gas usage for all functions and various scenarios of the RAT (Randomized Attention Test) contract in Optimism. RAT is a smart contract for challenger monitoring and testing, where gas efficiency is a critical factor.
 
+## 🔬 Gas Measurement Methodology
+
+### Measurement Environment
+- **Test Framework**: Foundry
+- **Measurement Method**: Internal function call simulation using `vm.prank()`
+- **Gas Measurement Code**:
+```solidity
+uint256 gasStart = gasleft();
+functionCall();
+uint256 gasUsed = gasStart - gasleft();
+```
+
+### ⚠️ Important: Gas Cost Interpretation
+**All gas costs reported in this document are measured in the Foundry test environment and do not include intrinsic gas (21,000 gas).**
+
+- **Test Environment Gas Cost**: Gas cost of function logic only
+- **Actual Network Gas Cost**: Test value + 21,000 gas (intrinsic gas)
+
+### Total Gas Cost Calculation in Actual Network
+```
+Actual Total Gas Cost = Document Gas Cost + 21,000 gas
+```
+
+Examples:
+- `resolveClaim()` (ignored): 1,565 + 21,000 = **22,565 gas**
+- `submitCorrectEvidence()`: 7,520 + 21,000 = **28,520 gas**
+- `DisputeGameFactory.create()`: 163,991 + 21,000 = **184,991 gas**
+
 ## Analysis Target Scenarios
 
 To analyze gas cost changes due to the introduction of RAT (Reactive Attention Test), we measure the following five scenarios:
@@ -12,24 +40,24 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 
 ## 📊 Complete Scenario Gas Cost Summary Table
 
-| Scenario | Role | Function | Case | Gas Usage | Description | Status |
-|----------|------|----------|------|-----------|-------------|--------|
-| **1** | Proposer | `DisputeGameFactory.create()` | No RAT | **163,991 gas** | Game creation with game type without RAT | ✅ Success |
-| **2** | Proposer | `DisputeGameFactory.create()` | RAT deployed, not triggered | **~163,991 gas** | RAT is deployed but not called | 🔄 Expected |
-| **3a** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | Valid challengers exist | **~296,369 gas** | Game creation + challenger selection, bond deduction | 🔄 Expected |
-| **3b** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | No valid challengers | **~178,668 gas** | Game creation + condition check only, silently ignored | 🔄 Expected |
-| **4** | Validator | `submitCorrectEvidence()` | Success | **7,520 gas** | Evidence verification, bond refund | ✅ Success |
-| **5a** | Validator | `resolveClaim()` | AttentionTest participant | **4,857 gas** | Bond refund, state update | ✅ Success |
-| **5b** | Validator | `resolveClaim()` | Not AttentionTest participant | **1,565 gas** | Condition check only, silently ignored | ✅ Success |
+| Scenario | Role | Function | Case | Test Gas Usage | Actual Network Gas | Description | Status |
+|----------|------|----------|------|----------------|-------------------|-------------|--------|
+| **1** | Proposer | `DisputeGameFactory.create()` | No RAT | **163,991 gas** | **184,991 gas** | Game creation with game type without RAT | ✅ Success |
+| **2** | Proposer | `DisputeGameFactory.create()` | RAT deployed, not triggered | **~163,991 gas** | **~184,991 gas** | RAT is deployed but not called | 🔄 Expected |
+| **3a** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | Valid challengers exist | **~296,369 gas** | **~317,369 gas** | Game creation + challenger selection, bond deduction | 🔄 Expected |
+| **3b** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | No valid challengers | **~178,668 gas** | **~199,668 gas** | Game creation + condition check only, silently ignored | 🔄 Expected |
+| **4** | Validator | `submitCorrectEvidence()` | Success | **7,520 gas** | **28,520 gas** | Evidence verification, bond refund | ✅ Success |
+| **5a** | Validator | `resolveClaim()` | AttentionTest participant | **4,857 gas** | **25,857 gas** | Bond refund, state update | ✅ Success |
+| **5b** | Validator | `resolveClaim()` | Not AttentionTest participant | **1,565 gas** | **22,565 gas** | Condition check only, silently ignored | ✅ Success |
 
 ### 📈 Gas Cost Comparison Analysis
 
-| Comparison Item | Scenario | Gas Cost | Difference |
-|-----------------|----------|----------|------------|
-| **Game Creation** | No RAT vs RAT deployed | 163,991 vs ~163,991 | Same |
-| **RAT Trigger** | Execute (valid challengers exist) vs Skip (condition check only) | 132,378 vs 14,677 | 9x difference |
-| **Evidence Submission** | submitCorrectEvidence | 7,520 | Very efficient |
-| **Game Resolution** | (Attention test) participant vs (Attention test) non-participant | 4,857 vs 1,565 | 3x difference |
+| Comparison Item | Scenario | Test Gas Cost | Actual Network Gas Cost | Difference |
+|-----------------|----------|---------------|------------------------|------------|
+| **Game Creation** | No RAT vs RAT deployed | 163,991 vs ~163,991 | 184,991 vs ~184,991 | Same |
+| **RAT Trigger** | Execute (valid challengers exist) vs Skip (condition check only) | 132,378 vs 14,677 | 153,378 vs 35,677 | 4.3x difference |
+| **Evidence Submission** | submitCorrectEvidence | 7,520 | 28,520 | Very efficient |
+| **Game Resolution** | (Attention test) participant vs (Attention test) non-participant | 4,857 vs 1,565 | 25,857 vs 22,565 | 1.15x difference |
 
 ### 🎯 Key Conclusions
 
@@ -37,6 +65,7 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 2. **Gas efficiency**: All functions optimized with conditional execution
 3. **Error handling**: Gas savings through silent ignore
 4. **Scalability**: Flexible design capable of handling various scenarios
+5. **Actual operational cost**: Still efficient even with intrinsic gas included
 
 ### 1. Proposer: Gas cost to post L2 state root in the original version (current OP mainnet)
 
@@ -145,7 +174,8 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 ### 1. `DisputeGameFactory.create()` Function Analysis
 
 #### **Game Creation (No RAT) (163,991 gas)**
-- **Basic transaction cost**: ~21,000 gas
+- **Test Environment Gas Cost**: 163,991 gas (intrinsic gas excluded)
+- **Actual Network Gas Cost**: 184,991 gas (intrinsic gas included)
 - **Game implementation clone creation**: Efficient clone creation using LibClone
 - **Game initialization**: `initialize()` function call
 - **Storage update**: Game information storage and mapping update
@@ -154,7 +184,8 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 ### 2. `stake()` Function Analysis
 
 #### **General Staking (67,177 gas)**
-- **Basic transaction cost**: ~21,000 gas
+- **Test Environment Gas Cost**: 67,177 gas (intrinsic gas excluded)
+- **Actual Network Gas Cost**: 88,177 gas (intrinsic gas included)
 - **Storage write**: `challengers[msg.sender].stakingAmount` update
 - **Event emission**: `ChallengerStaked` event
 - **Condition check**: `perTestBondAmount` comparison
@@ -242,22 +273,26 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 
 ### **RAT's gas usage is very efficient:**
 
-- **General ERC20 transfer**: ~65,000 gas
-- **ERC721 mint**: ~100,000+ gas
-- **Complex DeFi function**: 100,000-500,000 gas
+**Note: The following comparison values are total gas costs from actual network transactions (including intrinsic gas):**
+
+- **General ERC20 transfer**: ~65,000 gas (total network cost)
+- **ERC721 mint**: ~100,000+ gas (total network cost)
+- **Complex DeFi function**: 100,000-500,000 gas (total network cost)
+
+**When comparing with RAT functions, use the "Actual Network Gas" column values for fair comparison.**
 
 ### **Gas Usage Summary:**
 
-| Function | Gas Usage |
-|----------|-----------|
-| **`resolveClaim()` (ignored)** | 1,565 gas |
-| **`resolveClaim()` (success)** | 4,857 gas |
-| **`submitCorrectEvidence()`** | 7,520 gas |
-| **`stake()` (general)** | 67,177 gas |
-| **`stake()` (valid challenger)** | 114,711 gas |
-| **`triggerAttentionTest()` (success)** | 132,378 gas |
-| **`triggerAttentionTest()` (ignored)** | 14,677 gas |
-| **`DisputeGameFactory.create()`** | 163,991 gas |
+| Function | Test Gas Usage | Actual Network Gas |
+|----------|----------------|-------------------|
+| **`resolveClaim()` (ignored)** | 1,565 gas | 22,565 gas |
+| **`resolveClaim()` (success)** | 4,857 gas | 25,857 gas |
+| **`submitCorrectEvidence()`** | 7,520 gas | 28,520 gas |
+| **`stake()` (general)** | 67,177 gas | 88,177 gas |
+| **`stake()` (valid challenger)** | 114,711 gas | 135,711 gas |
+| **`triggerAttentionTest()` (success)** | 132,378 gas | 153,378 gas |
+| **`triggerAttentionTest()` (ignored)** | 14,677 gas | 35,677 gas |
+| **`DisputeGameFactory.create()`** | 163,991 gas | 184,991 gas |
 
 
 ## 📋 Test Commands
@@ -447,5 +482,11 @@ uint256 gasUsed = gasBefore - gasleft();
 - **Gas Optimization**: All functions implemented efficiently
 - **Safety**: All error cases properly handled
 - **Game Creation Overhead**: Game creation cost increase due to RAT introduction is minimized
+- **Actual Operational Efficiency**: Still efficient gas usage even with intrinsic gas included
+
+### 📊 Test vs Actual Network Gas Cost Comparison
+- **Test Environment**: Internal function call simulation using Foundry's `vm.prank()`
+- **Actual Network**: Real transaction execution with intrinsic gas (21,000) added
+- **Comparison Result**: Confirms that all functions operate efficiently even in actual network
 
 Through this, we can understand the efficiency and optimization points of the RAT system and predict gas costs in actual operational environments.
