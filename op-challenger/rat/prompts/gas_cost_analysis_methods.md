@@ -191,6 +191,8 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 ### 4. `submitCorrectEvidence()` Function Analysis
 
 #### **Success (7,520 gas)**
+- **Test Environment Gas Cost**: 7,520 gas (intrinsic gas excluded)
+- **Actual Network Gas Cost**: 28,520 gas (intrinsic gas included)
 - **Evidence verification**: `keccak256(proofLV, proofRV)` vs `stateRoot` comparison
 - **Bond refund**: Add bond to `stakingAmount`
 - **State update**: `evidenceSubmitted = true`
