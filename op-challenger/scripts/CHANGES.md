@@ -130,12 +130,22 @@ undefined: network.StreamErrorCode
 - ⚠️ madns.DefaultResolver issue has temporary workaround
 - 🔄 Ready for testing the complete build pipeline
 
+### Script Improvements - Idempotent Behavior
+**Enhancement**: Made `install-tools.sh` safe for multiple executions
+- **Problem**: Potential duplicate patching issues when re-running after first execution
+- **Solution**: 
+  - Accurately detects when correct patches are already applied
+  - Automatically removes and reapplies patches with incorrect types
+  - All fix functions work idempotently (safe to run multiple times)
+- **Verification**: Running `./install-tools.sh` multiple times shows "already applied" messages
+
 ## Next Steps
 1. ✅ **Completed**: Fixed install-tools.sh with correct go-libp2p types
-2. 🔄 **Next**: Test the automated fixes: `./install-tools.sh` 
-3. 🔄 **Then**: Verify op-node build: `./build-devnet.sh`
-4. Consider permanent solution for madns.DefaultResolver issue
-5. Continue with challenger network development
+2. ✅ **Completed**: Made script idempotent (safe for multiple runs)
+3. ✅ **Completed**: Verified op-node build success
+4. 🔄 **Ready**: Full devnet testing with `./build-devnet.sh`
+5. Consider permanent solution for madns.DefaultResolver issue
+6. Continue with challenger network development
 
 ## Notes
 - All fixes are automated in install-tools.sh where possible
