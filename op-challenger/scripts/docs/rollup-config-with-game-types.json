@@ -1,0 +1,60 @@
+{
+  "genesis": {
+    "l1": {
+      "hash": "0x259add95d3321b0af31b3e5439dd1e3122ca7f9a75edf963be8694665a8be021",
+      "number": 18
+    },
+    "l2": {
+      "hash": "0xe06ffca599521745c14cef0b271d0aaa836783972bbbf7cd6c6fe2b087e6e497",
+      "number": 0
+    },
+    "l2_time": 1756462059,
+    "system_config": {
+      "batcherAddr": "0xd3f2c5afb2d76f5579f326b0cd7da5f5a4126c35",
+      "overhead": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "scalar": "0x010000000000000000000000000000000000000000000000000c5fc500000558",
+      "gasLimit": 60000000,
+      "eip1559Params": "0x0000000000000000",
+      "operatorFeeParams": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "block_time": 2,
+  "max_sequencer_drift": 600,
+  "seq_window_size": 3600,
+  "channel_timeout": 300,
+  "l1_chain_id": 3151908,
+  "l2_chain_id": 2151908,
+  "regolith_time": 0,
+  "canyon_time": 0,
+  "delta_time": 0,
+  "ecotone_time": 0,
+  "fjord_time": 0,
+  "granite_time": 0,
+  "holocene_time": 0,
+  "isthmus_time": 0,
+  "batch_inbox_address": "0x00a4fe4c6aaa0729d7699c387e7f281dd64afa2a",
+  "deposit_contract_address": "0x8d606beb4b7e6d7b5a36a3966fbaea11e039df68",
+  "l1_system_config_address": "0x2cffd9bc41ad876490f1c850a64f3e89ed6f1567",
+  "protocol_versions_address": "0xb74bb6ae1a1804d283d17e95620da9b9b0e6e0da",
+  "chain_op_config": {
+    "eip1559Elasticity": 6,
+    "eip1559Denominator": 50,
+    "eip1559DenominatorCanyon": 250
+  },
+  
+  "_comment": "🎮 GAME TYPE CONFIGURATION SECTION - Added for unified game type management",
+  "dispute_game_config": {
+    "game_type": 1,
+    "_comment": "Game Type 1 = Permissioned Dispute Game with restricted participants",
+    "deployment_config": {
+      "fault_game_absolute_prestate": "0x038512e02c4c3f7bdaec27d00edf55b7155e0905301e1a88083e4e0a6764d54c",
+      "fault_game_max_depth": 73,
+      "fault_game_split_depth": 30,
+      "fault_game_clock_extension": 10800,
+      "fault_game_max_clock_duration": 302400,
+      "fault_game_withdrawal_delay": 302400,
+      "proof_maturity_delay_seconds": 604800,
+      "dispute_game_finality_delay_seconds": 302400
+    }
+  }
+}
