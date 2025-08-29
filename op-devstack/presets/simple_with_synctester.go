@@ -7,7 +7,8 @@ import (
 	"github.com/ethereum-optimism/optimism/op-devstack/stack"
 	"github.com/ethereum-optimism/optimism/op-devstack/stack/match"
 	"github.com/ethereum-optimism/optimism/op-devstack/sysgo"
-	sttypes "github.com/ethereum-optimism/optimism/op-sync-tester/synctester/backend/types"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 )
 
 type SimpleWithSyncTester struct {
@@ -17,7 +18,7 @@ type SimpleWithSyncTester struct {
 	L2CL2      *dsl.L2CLNode
 }
 
-func WithSimpleWithSyncTester(fcus sttypes.FCUState) stack.CommonOption {
+func WithSimpleWithSyncTester(fcus eth.FCUState) stack.CommonOption {
 	return stack.MakeCommon(sysgo.DefaultSimpleSystemWithSyncTester(&sysgo.DefaultSimpleSystemWithSyncTesterIDs{}, fcus))
 }
 
@@ -42,4 +43,8 @@ func NewSimpleWithSyncTester(t devtest.T) *SimpleWithSyncTester {
 		SyncTester: dsl.NewSyncTester(syncTester),
 		L2CL2:      dsl.NewL2CLNode(l2CL2, orch.ControlPlane()),
 	}
+}
+
+func WithHardforkSequentialActivation(startFork, endFork rollup.ForkName, delta uint64) stack.CommonOption {
+	return stack.MakeCommon(sysgo.WithDeployerOptions(sysgo.WithHardforkSequentialActivation(startFork, endFork, &delta)))
 }

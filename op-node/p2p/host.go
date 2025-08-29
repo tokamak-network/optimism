@@ -26,7 +26,6 @@ import (
 	tls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	ma "github.com/multiformats/go-multiaddr"
-	madns "github.com/multiformats/go-multiaddr-dns"
 
 	"github.com/ethereum/go-ethereum/log"
 
@@ -229,7 +228,9 @@ func (conf *Config) Host(log log.Logger, reporter metrics.Reporter, metrics Host
 		//libp2p.ResourceManager(nil), // TODO use resource manager interface to manage resources per peer better.
 		libp2p.Peerstore(ps),
 		libp2p.BandwidthReporter(reporter), // may be nil if disabled
-		libp2p.MultiaddrResolver(madns.DefaultResolver),
+		// libp2p v0.40.0+ has built-in DNS resolver by default
+		// No additional configuration needed for basic DNS resolution
+		// libp2p.MultiaddrResolver(madns.DefaultResolver),,
 		// Ping is a small built-in libp2p protocol that helps us check/debug latency between peers.
 		libp2p.Ping(true),
 	}
