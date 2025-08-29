@@ -89,13 +89,60 @@ Once the devnet is running, you can access:
 - **L2 RPC**: http://localhost:56781
 - **Rollup RPC**: http://localhost:57029
 
+## OP-Challenger 실행
+
+### 기본 사용법
+```bash
+# Step 3: Run Challenger (위의 Step 2 완료 후)
+./run-challenger-devnet.sh
+```
+
+### 관리 명령어
+```bash
+# 상태 확인
+docker ps | grep challenger
+
+# 로그 확인  
+docker logs op-challenger
+
+# 중지/제거
+docker stop op-challenger
+docker rm op-challenger
+
+# 헬스체크 실행
+./challenger-healthcheck.sh
+```
+
+### 📚 상세 문서
+
+- **[OP-Challenger 실행 가이드](./docs/challenger-guide.md)** - 스크립트 기능 및 사용법
+- **[Challenger Parameters](./docs/challenger-parameters.md)** - 모든 설정 옵션 설명
+- **[챌린저 기능 테스트 가이드](./docs/challenger-testing.md)** - 테스트 시나리오 및 방법
+- **[Game Types vs Trace Types](./docs/game-types-vs-trace-types.md)** - 개념 구분 및 상호관계
+- **[트러블슈팅 가이드](./docs/troubleshooting.md)** - 문제 해결 방법
+
 ## Troubleshooting
 
-If you encounter build errors, check:
+### 빠른 해결방법
+
+**일반적인 문제들은 [트러블슈팅 가이드](./docs/troubleshooting.md)를 참조하세요.**
+
+#### 빌드 오류 시 확인사항
 1. Docker service is running
 2. Go version is 1.23+
 3. All required tools are installed via `./install-tools.sh`
 4. Check build logs: `cat /tmp/devnet-build.log`
+
+#### 자주 발생하는 문제
+- **Devnet not running**: `./build-devnet.sh` 먼저 실행
+- **Docker image not found**: `./build-devnet.sh`로 이미지 재빌드
+- **Binary files missing**: cannon/op-program 빌드 필요
+
+### 주의사항
+
+⚠️ **개발 및 테스트 목적으로만 사용하세요**
+- 니모닉과 키는 테스트용이므로 프로덕션에서 사용하지 마세요
+- 네트워크 설정은 로컬 devnet에 맞춰져 있습니다
 
 
 
