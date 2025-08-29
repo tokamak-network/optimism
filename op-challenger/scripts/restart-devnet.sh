@@ -43,7 +43,22 @@ echo "Challenger Network - Devnet Restart"
 echo "=========================================="
 echo
 
-# 1. 기존 Devnet 정리
+# Safety confirmation
+log_warning "This script will:"
+echo "  • Remove Kurtosis enclave: $ENCLAVE_NAME"  
+echo "  • Stop and remove Devnet-related Docker containers"
+echo "  • Optionally clean up Docker volumes"
+echo "  • Rebuild and restart the entire devnet"
+echo
+read -p "Continue with devnet restart? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    log_info "Devnet restart cancelled"
+    exit 0
+fi
+echo
+
+# 1. Clean up existing devnet
 log_step "Cleaning up existing devnet..."
 
 # Kurtosis enclave 정리
@@ -56,26 +71,57 @@ else
     log_info "No existing enclave found"
 fi
 
-# Docker 컨테이너들 정리 (혹시 남아있는 경우)
-log_info "Cleaning up Docker containers..."
-docker stop $(docker ps -q) 2>/dev/null || true
-docker rm $(docker ps -aq) 2>/dev/null || true
-log_success "Docker containers cleaned"
+# Clean up Devnet-related Docker containers only
+log_info "Cleaning up Devnet-related Docker containers..."
 
-# Docker 볼륨 정리 (선택사항)
-read -p "Do you want to clean Docker volumes? (y/N): " -n 1 -r
+# Stop and remove only Devnet-related containers
+devnet_containers=$(docker ps -a --format "{{.Names}}" | grep -E "(op-|el-|cl-|geth|lighthouse|grafana|prometheus|proxyd|validator)" || true)
+
+if [ -n "$devnet_containers" ]; then
+    echo "$devnet_containers" | xargs docker stop 2>/dev/null || true
+    echo "$devnet_containers" | xargs docker rm 2>/dev/null || true
+    log_success "Devnet Docker containers cleaned"
+else
+    log_info "No Devnet Docker containers found"
+fi
+
+# Clean up Docker volumes (optional)
+read -p "Do you want to clean Devnet-related Docker volumes? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    log_info "Cleaning Docker volumes..."
-    docker volume prune -f
-    log_success "Docker volumes cleaned"
+    log_info "Cleaning Devnet-related Docker volumes..."
+    
+    # Clean only volumes that might be related to Devnet
+    devnet_volumes=$(docker volume ls --format "{{.Name}}" | grep -E "(devnet|kurtosis|optimism|op-)" || true)
+    
+    if [ -n "$devnet_volumes" ]; then
+        echo "$devnet_volumes" | xargs docker volume rm 2>/dev/null || true
+        log_success "Devnet Docker volumes cleaned"
+    else
+        log_info "No Devnet-related volumes found"
+    fi
+    
+    # Also run general prune with confirmation
+    log_warning "This will also remove ALL unused Docker volumes"
+    read -p "Proceed with full volume cleanup? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        docker volume prune -f
+        log_success "All unused Docker volumes cleaned"
+    fi
 fi
 
 echo
 
-# 2. Devnet 다시 시작
+# 2. Start new devnet
 log_step "Starting new devnet..."
-cd "$SCRIPT_DIR"
-./build-devnet.sh
+
+# Use absolute path to avoid path dependency issues
+if [ -f "$SCRIPT_DIR/build-devnet.sh" ]; then
+    "$SCRIPT_DIR/build-devnet.sh"
+else
+    log_error "build-devnet.sh not found in $SCRIPT_DIR"
+    exit 1
+fi
 
 log_success "🎉 Devnet restart completed!"

@@ -97,29 +97,53 @@ fix_dockerfile() {
     log_info "Checking Dockerfile for go-libp2p-mplex compatibility issues..."
 
     local dockerfile="$OPTIMISM_ROOT/ops/docker/op-stack-go/Dockerfile"
-    local backup_file="$dockerfile.backup.$(date +%Y%m%d_%H%M%S)"
-
+    
     if [ ! -f "$dockerfile" ]; then
         log_error "Dockerfile not found: $dockerfile"
         return 1
     fi
 
-    # Check if fix is already applied
-    if grep -q "Fix go-libp2p-mplex compatibility issues" "$dockerfile"; then
-        log_success "Dockerfile fix is already applied"
+    # Check if fix is already applied (more specific check)
+    if grep -q "Fix go-libp2p-mplex compatibility issues" "$dockerfile" && \
+       grep -q "CloseWithError(code int)" "$dockerfile"; then
+        log_success "Dockerfile fix is already applied with correct types"
         return 0
     fi
 
-    # Create backup
-    cp "$dockerfile" "$backup_file"
-    log_info "Created backup: $backup_file"
+    # Create or restore from original backup
+    local original_dockerfile="$dockerfile.original"
+    
+    if [ ! -f "$original_dockerfile" ]; then
+        # First time: create original backup from current file (or git)
+        log_info "Creating original Dockerfile backup..."
+        cd "$OPTIMISM_ROOT"
+        if git show HEAD:ops/docker/op-stack-go/Dockerfile > "$original_dockerfile" 2>/dev/null; then
+            log_success "Created original backup from git"
+        else
+            # Fallback: assume current file is original if no git
+            cp "$dockerfile" "$original_dockerfile"
+            log_warning "Created original backup from current file (git not available)"
+        fi
+    fi
+    
+    # Always restore from original backup before applying patch
+    log_info "Restoring from original backup..."
+    cp "$original_dockerfile" "$dockerfile"
+    log_success "Restored original Dockerfile"
 
     # Find the line after go mod download and before ARG GIT_COMMIT
     local insert_line=$(grep -n "ARG GIT_COMMIT" "$dockerfile" | head -1 | cut -d: -f1)
 
     if [ -z "$insert_line" ]; then
-        log_error "Could not find insertion point in Dockerfile"
-        return 1
+        # Fallback: try to find after COPY . /app
+        insert_line=$(grep -n "COPY . /app" "$dockerfile" | head -1 | cut -d: -f1)
+        if [ -n "$insert_line" ]; then
+            insert_line=$((insert_line + 4))  # Add some buffer lines
+            log_info "Using fallback insertion point after COPY . /app"
+        else
+            log_error "Could not find insertion point in Dockerfile"
+            return 1
+        fi
     fi
 
     # Create temporary file with the fix
@@ -150,7 +174,7 @@ EOF
     mv "$temp_file" "$dockerfile"
 
     log_success "Dockerfile fixed for go-libp2p-mplex compatibility"
-    log_info "Backup saved as: $backup_file"
+    log_info "Original is preserved in: $original_dockerfile"
 
     return 0
 }

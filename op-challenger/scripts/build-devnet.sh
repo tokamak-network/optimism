@@ -45,8 +45,15 @@ KURTOSIS_DEVNET_DIR="$OPTIMISM_ROOT/optimism/kurtosis-devnet"
 ENCLAVE_NAME="simple-devnet"
 BUILD_LOG="/tmp/devnet-build.log"
 
-# Service List
-SERVICES=(
+# Core Services (Persistent)
+CORE_SERVICES=(
+    "op-node"
+    "op-batcher"
+    "op-proposer"
+)
+
+# Build Services (for Docker image building)
+BUILD_SERVICES=(
     "op-node"
     "op-batcher"
     "op-proposer"
@@ -115,6 +122,8 @@ check_requirements() {
 # Build Docker Images
 build_docker_images() {
     log_step "Building Docker Images"
+    log_info "Expected build time: ~3-7 minutes (depending on cache)"
+    echo "   🔧 Building: op-node, op-batcher, op-proposer, op-faucet, op-challenger, op-deployer"
 
     cd "$KURTOSIS_DEVNET_DIR"
 
@@ -139,9 +148,9 @@ build_docker_images() {
     cd "$OPTIMISM_ROOT/optimism/kurtosis-devnet"
 
     local build_success_count=0
-    local total_services=${#SERVICES[@]}
+    local total_services=${#BUILD_SERVICES[@]}
 
-    for service in "${SERVICES[@]}"; do
+    for service in "${BUILD_SERVICES[@]}"; do
         log_info "Building: $service"
 
         # Set Git information
@@ -228,13 +237,21 @@ deploy_devnet() {
 
     cd "$KURTOSIS_DEVNET_DIR"
 
-    log_info "Deploying Devnet... (5-15 minutes required)"
+    log_info "Deploying Devnet... (Total: 5-15 minutes required)"
+    echo "   ⏱️  Expected timeline:"
+    echo "     • Configuration setup: ~30 seconds"
+    echo "     • Docker image preparation: ~2-3 minutes" 
+    echo "     • L1 chain startup: ~2-3 minutes"
+    echo "     • Contract deployments: ~3-5 minutes"
+    echo "     • L2 chain startup: ~2-4 minutes"
+    echo "     • Service verification: ~1-2 minutes"
 
     # Create our own Devnet configuration
+    log_info "Step 1/6: Creating Devnet configuration... (~30 seconds)"
     create_devnet_config
 
     # Run Kurtosis package (more stable way)
-    log_info "Running Kurtosis package..."
+    log_info "Step 2/6: Preparing Docker images and infrastructure... (~2-3 minutes)"
 
     # Clean up existing enclave
     if kurtosis enclave list | grep -q "$ENCLAVE_NAME"; then
@@ -244,7 +261,8 @@ deploy_devnet() {
     fi
 
     # Create and run new enclave
-    log_info "Creating new Devnet..."
+    log_info "Step 3/6: Starting L1 chain and deploying contracts... (~5-8 minutes)"
+    log_warning "⚠️  This is the longest step - L1 startup + contract deployments"
 
     # Run with timeout setting (increased to 10 minutes)
     timeout 600 kurtosis run ./optimism-package-trampoline/ --enclave "$ENCLAVE_NAME" >> "$BUILD_LOG" 2>&1
@@ -292,81 +310,54 @@ create_devnet_config() {
     log_success "Devnet configuration completed (using default simple.yaml)"
 }
 
-# Verify Services Status (Improved Version)
+# Verify Services Status (Clear and Accurate)
 verify_services() {
-    log_step "Verifying Services Status"
+    log_step "Verifying Core Services"
+    log_info "Step 4/6: Checking devnet core services... (~2-3 minutes)"
+    echo "   📊 Checking: L1/L2 chains and core L2 services"
 
-    # Longer wait time (60 seconds)
-    log_info "Waiting for services to start... (60 seconds)"
+    # Wait for services to stabilize
+    log_info "Waiting for services to stabilize... (60 seconds)"
     sleep 60
 
-    local running_services=0
-    local total_services=${#SERVICES[@]}
-    local challenger_running=false
+    local core_running=0
+    local total_core=${#CORE_SERVICES[@]}
 
-    # Check basic services first
-    for service in "${SERVICES[@]}"; do
-        if [ "$service" = "op-challenger" ]; then
-            continue  # op-challenger will be checked separately
+    # Check L1/L2 chain services
+    local chain_services=("el-1-geth-lighthouse" "cl-1-lighthouse-geth" "op-el-*-op-geth" "op-cl-*-op-node")
+    log_info "Checking L1/L2 chain services..."
+    for pattern in "${chain_services[@]}"; do
+        if docker ps --format "{{.Names}}" | grep -q "${pattern//\*/.*}"; then
+            log_success "✅ Chain service running: $pattern"
+        else
+            log_warning "⚠️  Chain service not found: $pattern"
         fi
+    done
 
+    # Check core L2 services
+    log_info "Checking core L2 services..."
+    for service in "${CORE_SERVICES[@]}"; do
         if docker ps --format "{{.Names}}" | grep -q "$service"; then
             log_success "✅ $service is running"
-            ((running_services++))
+            ((core_running++))
         else
             log_warning "❌ $service is not running"
         fi
     done
 
-    # op-challenger specific check (after dependency services are ready)
-    log_info "Checking op-challenger dependencies..."
+    # Status summary
+    log_info "=== Devnet Status Summary ==="
+    log_info "Core L2 services: $core_running/$total_core running"
 
-    # Check if dependency services are ready
-    local dependencies_ready=true
-    local dependency_services=("el-1-geth-lighthouse" "cl-1-lighthouse-geth" "op-el-2151908-node0-op-geth" "op-cl-2151908-node0-op-node")
-
-    for dep_service in "${dependency_services[@]}"; do
-        if docker ps --format "{{.Names}}" | grep -q "$dep_service"; then
-            log_info "✅ Dependency service $dep_service is ready"
-        else
-            log_warning "⚠️  Dependency service $dep_service is not ready"
-            dependencies_ready=false
-        fi
-    done
-
-    # Check op-challenger
-    if [ "$dependencies_ready" = true ]; then
-        log_info "Checking op-challenger status..."
-        if docker ps --format "{{.Names}}" | grep -q "op-challenger"; then
-            log_success "✅ op-challenger is running"
-            ((running_services++))
-            challenger_running=true
-                else
-            log_warning "❌ op-challenger is not running"
-            log_info "Please check simple.yaml configuration"
-        fi
-    else
-        log_warning "⚠️  Skipping op-challenger check due to unready dependencies"
-    fi
-
-    # Service status summary
-    log_info "=== Service Status Summary ==="
-    log_info "Running services: $running_services/$total_services"
-
-    if [ "$challenger_running" = true ]; then
-        log_success "🎉 op-challenger is running normally!"
-    else
-        log_warning "⚠️  op-challenger can be added manually later"
-    fi
-
-    if [ $running_services -eq $total_services ]; then
-        log_success "🎉 All services are running normally!"
+    if [ $core_running -eq $total_core ]; then
+        log_success "🎉 Core devnet services running successfully!"
+        log_info "✅ Ready for Step 3: ./run-challenger-devnet.sh"
         return 0
-    elif [ $running_services -gt 0 ]; then
-        log_warning "⚠️  Only some services are running ($running_services/$total_services)"
+    elif [ $core_running -gt 0 ]; then
+        log_warning "⚠️  Some core services are not running ($core_running/$total_core)"
         return 0
     else
-        log_error "❌ No services are running (0/$total_services)"
+        log_error "❌ No core services are running"
         return 1
     fi
 }
@@ -376,10 +367,16 @@ verify_services() {
 # Verify RPC Connections
 verify_rpc_connections() {
     log_step "Verifying RPC Connections"
+    log_info "Step 5/6: Testing L1/L2 RPC endpoints... (~1 minute)"
+    echo "   🌐 Testing connections to ensure network is accessible"
 
-    # Extract port information (use default values)
-    local l1_port="53620"
-    local l2_port="56781"
+    # Extract actual port information from Kurtosis enclave
+    local l1_port=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "el-1-geth-lighthouse" -A 5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
+    local l2_port=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "op-el.*op-geth" -A 5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
+    
+    # Fallback to default ports if extraction fails
+    [ -z "$l1_port" ] && l1_port="53620"
+    [ -z "$l2_port" ] && l2_port="56781"
 
     # Check L1 RPC
     log_info "Checking L1 RPC connection... (port: $l1_port)"
@@ -414,9 +411,24 @@ verify_rpc_connections() {
 
 # Completion Message
 show_completion_message() {
-    log_success "🎉 Devnet build and deployment completed!"
+    log_step "Step 6/6: Devnet Ready!"
+    log_success "🎉 Core devnet services running successfully!"
+    echo "   ⏱️  Total deployment time: Complete!"
 
     echo
+    echo "=== Connection Information ==="
+    
+    # Extract actual port information
+    local l1_port=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "el-1-geth-lighthouse" -A 5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
+    local l2_port=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "op-el.*op-geth" -A 5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
+    local l2_rollup_port=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "op-cl.*op-node" -A 5 | grep "rpc: 8547/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
+    
+    # Display actual connection information
+    echo "L1 RPC: http://localhost:${l1_port:-53620}"
+    echo "L2 RPC: http://localhost:${l2_port:-56781}"
+    echo "Rollup RPC: http://localhost:${l2_rollup_port:-57029}"
+    echo
+
     echo "=== Devnet Management Commands ==="
     echo "Check Devnet status: kurtosis enclave inspect $ENCLAVE_NAME"
     echo "Stop Devnet: kurtosis enclave rm --force $ENCLAVE_NAME"
@@ -424,16 +436,10 @@ show_completion_message() {
     echo "Check build logs: cat $BUILD_LOG"
     echo
 
-    echo "=== Connection Information ==="
-    echo "L1 RPC: http://localhost:53620"
-    echo "L2 RPC: http://localhost:56781"
-    echo "Rollup RPC: http://localhost:57029"
-    echo
-
     echo "=== Next Steps ==="
-    echo "To set up P2P challenger network, run the following command:"
+    log_success "✅ Ready for Step 3: Run challenger with ./run-challenger-devnet.sh"
     echo "cd $SCRIPT_DIR"
-    echo "./install-and-run.sh"
+    echo "./run-challenger-devnet.sh"
     echo
 }
 
