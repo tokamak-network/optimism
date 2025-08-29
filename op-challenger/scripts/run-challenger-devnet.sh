@@ -38,7 +38,7 @@ echo
 
 # 기본 설정
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OPTIMISM_ROOT="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
+OPTIMISM_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 # Check Devnet Status
 check_devnet_status() {
@@ -68,35 +68,53 @@ check_challenger_image() {
     log_success "op-challenger Docker image is ready"
 }
 
-# Check Required Binary Files
+# Check and Build Required Binary Files
 check_required_binaries() {
     log_info "Checking required binary files..."
 
+    local need_build=false
+
     # Check Cannon binary
     if [ ! -f "$OPTIMISM_ROOT/cannon/bin/cannon" ]; then
-        log_error "Cannon binary not found: $OPTIMISM_ROOT/cannon/bin/cannon"
-        log_info "Please build Cannon:"
-        log_info "  cd $OPTIMISM_ROOT/cannon && make cannon"
-        exit 1
+        log_warning "Cannon binary not found: $OPTIMISM_ROOT/cannon/bin/cannon"
+        need_build=true
     fi
 
     # Check op-program binary
     if [ ! -f "$OPTIMISM_ROOT/op-program/bin/op-program" ]; then
-        log_error "op-program binary not found: $OPTIMISM_ROOT/op-program/bin/op-program"
-        log_info "Please build op-program:"
-        log_info "  cd $OPTIMISM_ROOT/op-program && make op-program"
-        exit 1
+        log_warning "op-program binary not found: $OPTIMISM_ROOT/op-program/bin/op-program"
+        need_build=true
     fi
 
     # Check prestate file
     if [ ! -f "$OPTIMISM_ROOT/op-program/bin/prestate-mt64Next.bin.gz" ]; then
-        log_error "prestate file not found: $OPTIMISM_ROOT/op-program/bin/prestate-mt64Next.bin.gz"
-        log_info "Please build op-program (including prestate files):"
-        log_info "  cd $OPTIMISM_ROOT/op-program && make op-program"
-        exit 1
+        log_warning "prestate file not found: $OPTIMISM_ROOT/op-program/bin/prestate-mt64Next.bin.gz"
+        need_build=true
     fi
 
-    log_success "Required binary files are ready"
+    if [ "$need_build" = true ]; then
+        echo
+        log_error "❌ Required binaries are missing!"
+        echo
+        log_info "Please build the required binaries first:"
+        echo "  ./build-binaries-for-challenger.sh"
+        echo
+        log_info "Manual build commands (if needed):"
+        echo "  cd $OPTIMISM_ROOT/cannon && make cannon"
+        echo "  cd $OPTIMISM_ROOT/op-program && make op-program && make reproducible-prestate"
+        echo
+        log_info "Build process takes approximately 4-5 minutes"
+        echo
+        log_info "Check build status:"
+        echo "  ls -la $OPTIMISM_ROOT/cannon/bin/cannon"
+        echo "  ls -la $OPTIMISM_ROOT/op-program/bin/op-program"
+        echo "  ls -la $OPTIMISM_ROOT/op-program/bin/prestate-mt64Next.bin.gz"
+        echo
+        log_info "After build completes, re-run: ./run-challenger-devnet.sh"
+        exit 1
+    else
+        log_success "All required binary files are ready"
+    fi
 }
 
 # Get Devnet Port Information
@@ -204,11 +222,19 @@ run_challenger() {
         --cannon-prestate=/op-program-bin/prestate-mt64Next.bin.gz \
         --mnemonic="test test test test test test test test test test test junk" \
         --hd-path="m/44'/60'/0'/0/0" \
-        --p2p-enabled \
-        --p2p-listen-addr=/ip4/0.0.0.0/tcp/9876 \
-        --p2p-network-id=optimism-challenger-devnet \
-        --p2p-max-peers=20 \
-        --p2p-discovery-enabled \
+        --num-confirmations=3 \
+        --safe-abort-nonce-too-low-count=3 \
+        --fee-limit-multiplier=5 \
+        --txmgr.fee-limit-threshold=100 \
+        --txmgr.min-tip-cap=1 \
+        --txmgr.min-basefee=1 \
+        --resubmission-timeout=24s \
+        --network-timeout=10s \
+        --txmgr.retry-interval=1s \
+        --txmgr.max-retries=10 \
+        --txmgr.send-timeout=2m \
+        --txmgr.not-in-mempool-timeout=1m \
+        --txmgr.receipt-query-interval=12s \
         --log.level=INFO
 
     if [ $? -eq 0 ]; then
@@ -257,7 +283,7 @@ verify_services() {
 
 # Completion Message
 show_completion_message() {
-    log_success "🎉 Local Devnet P2P Challenger execution completed!"
+    log_success "🎉 Local Devnet Challenger execution completed!"
 
     echo
     echo "=== Connection Information ==="
@@ -265,7 +291,6 @@ show_completion_message() {
     echo "L1 Beacon: http://localhost:$L1_BEACON_PORT"
     echo "L2 RPC: http://localhost:$L2_RPC_PORT"
     echo "Rollup RPC: http://localhost:$ROLLUP_RPC_PORT"
-    echo "P2P Port: 9876"
     echo
 
     echo "=== Management Commands ==="
@@ -277,9 +302,8 @@ show_completion_message() {
     echo
 
     echo "=== Next Steps ==="
-    echo "Challenger network is ready!"
+    echo "Challenger is ready!"
     echo "You can now proceed with challenger development."
-    echo "Use P2P port 9876 to connect with other challenger nodes."
     echo
 }
 
