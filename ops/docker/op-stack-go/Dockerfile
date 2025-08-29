@@ -57,6 +57,17 @@ COPY . /app
 # Instead, specify:
 # --build-arg GIT_COMMIT=$(git rev-parse HEAD)
 # --build-arg GIT_DATE=$(git show -s --format='%ct')
+
+# Fix go-libp2p-mplex compatibility issues in Docker build
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go mod download && \
+    cd /go/pkg/mod/github.com/libp2p/go-libp2p-mplex@v0.9.0 && \
+    if ! grep -q "func (c \*conn) CloseWithError" conn.go; then \
+        sed -i '/var _ network.MuxedConn = &conn{}/a\\nfunc (c *conn) CloseWithError(code int) error {\n\treturn c.mplex().Close()\n}' conn.go; \
+    fi && \
+    if ! grep -q "func (s \*stream) ResetWithError" stream.go; then \
+        sed -i '/var _ network.MuxedStream = &stream{}/a\\nfunc (s *stream) ResetWithError(code int) error {\n\treturn s.mplex().Reset()\n}' stream.go; \
+    fi
+
 ARG GIT_COMMIT
 ARG GIT_DATE
 
