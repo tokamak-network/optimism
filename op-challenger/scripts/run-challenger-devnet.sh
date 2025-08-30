@@ -149,6 +149,70 @@ get_devnet_ports() {
     log_info "L1 Beacon: http://localhost:$L1_BEACON_PORT"
 }
 
+# Get Devnet Configuration
+get_devnet_configuration() {
+    log_info "Reading devnet configuration..."
+
+    # Read game type from simple.yaml
+    local config_file="$OPTIMISM_ROOT/kurtosis-devnet/simple.yaml"
+    if [ -f "$config_file" ]; then
+        GAME_TYPE=$(grep "game_type:" "$config_file" | sed 's/.*game_type: *\([0-9]*\).*/\1/')
+        if [ -n "$GAME_TYPE" ]; then
+            log_success "Game type from configuration: $GAME_TYPE"
+        else
+            log_warning "Game type not found in configuration. Using default: 0"
+            GAME_TYPE="0"
+        fi
+    else
+        log_warning "Configuration file not found. Using default game type: 0"
+        GAME_TYPE="0"
+    fi
+
+    # Set trace type based on game type
+    case $GAME_TYPE in
+        0)
+            TRACE_TYPE="cannon"
+            log_info "Game type 0 (CANNON) -> trace-type: $TRACE_TYPE"
+            ;;
+        1)
+            TRACE_TYPE="permissioned"
+            log_info "Game type 1 (PERMISSIONED) -> trace-type: $TRACE_TYPE"
+            ;;
+        2)
+            TRACE_TYPE="asterisc"
+            log_info "Game type 2 (ASTERISC) -> trace-type: $TRACE_TYPE"
+            ;;
+        3)
+            TRACE_TYPE="asterisc-kona"
+            log_info "Game type 3 (ASTERISC_KONA) -> trace-type: $TRACE_TYPE"
+            ;;
+        4)
+            TRACE_TYPE="super-cannon"
+            log_info "Game type 4 (SUPER_CANNON) -> trace-type: $TRACE_TYPE"
+            ;;
+        5)
+            TRACE_TYPE="super-permissioned"  
+            log_info "Game type 5 (SUPER_PERMISSIONED) -> trace-type: $TRACE_TYPE"
+            ;;
+        7)
+            TRACE_TYPE="super-asterisc-kona"
+            log_info "Game type 7 (SUPER_ASTERISC_KONA) -> trace-type: $TRACE_TYPE"
+            ;;
+        254)
+            TRACE_TYPE="fast"
+            log_info "Game type 254 (FAST) -> trace-type: $TRACE_TYPE"
+            ;;
+        255)
+            TRACE_TYPE="alphabet"
+            log_info "Game type 255 (ALPHABET) -> trace-type: $TRACE_TYPE"
+            ;;
+        *)
+            TRACE_TYPE="cannon"
+            log_warning "Unknown game type $GAME_TYPE -> using default trace-type: $TRACE_TYPE"
+            ;;
+    esac
+}
+
 # Get Game Factory Address
 get_game_factory_address() {
     log_info "Getting game factory address..."
@@ -216,7 +280,7 @@ run_challenger() {
         --l2-eth-rpc=http://localhost:$L2_RPC_PORT \
         --rollup-rpc=http://localhost:$ROLLUP_RPC_PORT \
         --game-factory-address=$GAME_FACTORY_ADDRESS \
-        --trace-type=cannon \
+        --trace-type=$TRACE_TYPE \
         --cannon-bin=/cannon-bin/cannon \
         --cannon-server=/op-program-bin/op-program \
         --cannon-prestate=/op-program-bin/prestate-mt64Next.bin.gz \
@@ -314,10 +378,46 @@ main() {
     check_challenger_image
     check_required_binaries
     get_devnet_ports
+    get_devnet_configuration
     get_game_factory_address
     run_challenger
     verify_services
     show_completion_message
+    validate_final_configuration
+}
+
+# Validate Final Configuration (after challenger is running)
+validate_final_configuration() {
+    log_info "Validating final configuration..."
+
+    # Wait for challenger to initialize
+    sleep 5
+
+    echo
+    echo "=== Configuration Summary ==="
+    echo "Game Type (from simple.yaml): $GAME_TYPE"
+    echo "Trace Type (challenger): $TRACE_TYPE"
+    
+    # Check challenger status
+    if docker ps --format "{{.Names}}" | grep -q "op-challenger"; then
+        echo "Challenger Status: ✅ Running"
+        
+        # Check for recent errors in logs
+        local recent_errors=$(docker logs op-challenger --since=30s 2>&1 | grep -i "error\|fail" | wc -l)
+        if [ "$recent_errors" -eq 0 ]; then
+            echo "Challenger Errors: ✅ No recent errors"
+            log_success "🎉 Configuration validated successfully!"
+        else
+            echo "Challenger Errors: ❌ $recent_errors recent errors found"
+            log_warning "⚠️  Check challenger logs for details"
+        fi
+    else
+        echo "Challenger Status: ❌ Not running"
+        log_warning "⚠️  Challenger failed to start"
+    fi
+    
+    echo "=== Validation Complete ==="
+    echo
 }
 
 # Execute Script
