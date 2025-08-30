@@ -6,57 +6,32 @@
 ### Local Devnet Development Environment
 
 ```bash
-# Step 0: Configure Game Type (선택사항)
-# simple.yaml에서 game_type 설정 확인/변경
-# 자세한 내용은 아래 "초기 설정" 섹션 참조
 
 # Step 1: Install system tools
 cd op-challenger/scripts
 ./install-tools.sh
 
 # Step 2: Build Devnet Environment
-# game-type = 0 : CANNON (⚠️ 테스트 필요)
-# game-type = 1 : PERMISSIONED (✅ 정상동작)
-./build-devnet.sh --game-type=1  # 현재 정상동작하는 게임타입
+./build-devnet.sh                      # Build with default game type (PERMISSIONED)
+./build-devnet.sh --game-type=0        # Build with CANNON game type
+./build-devnet.sh --game-type=1        # Build with PERMISSIONED game type
+
+
+### Supported Game Types
+| Type | Name | Purpose | Challenger Config | Status |
+|------|------|---------|-------------------|--------|
+| **0** | CANNON | Complete fault proof | Auto uses `cannon` | ⚠️ needs testing |
+| **1** | PERMISSIONED | Fast development/testing | Auto uses `permissioned` | ✅ **working** |
+| **2** | ASTERISC | Asterisc VM | Auto uses `asterisc` | ⚠️ needs testing |
+
+**📝 Current Status**: Only game type 1 (PERMISSIONED) is confirmed to be working.
+
 
 # Step 3: Run Challenger
 ./run-challenger-devnet.sh
 ```
 
-
-
-## ⚙️ 초기 설정 (중요)
-
-devnet을 처음 실행하기 전에 **게임 타입**을 확인하고 설정해야 합니다.
-
-### Game Type 설정 확인
-```bash
-# 현재 설정 확인
-grep "game_type:" /Users/zena/tokamak-projects/optimism/kurtosis-devnet/simple.yaml
-```
-
-### 지원되는 Game Types
-| 타입 | 이름 | 용도 | Challenger 설정 |
-|------|------|------|----------------|
-| **0** | CANNON | 완전한 fault proof | 자동으로 `cannon` 사용 |
-| **1** | PERMISSIONED | 빠른 개발/테스트 | 자동으로 `permissioned` 사용 |
-| **2** | ASTERISC | Asterisc VM | 자동으로 `asterisc` 사용 |
-
-### 설정 변경이 필요한 경우
-```bash
-# 1. simple.yaml 편집
-vim /Users/zena/tokamak-projects/optimism/kurtosis-devnet/simple.yaml
-
-# 2. proposer_params.game_type 값 변경
-proposer_params:
-  game_type: 1    # 원하는 타입으로 변경
-
-# 3. 기존 devnet 정리 후 재빌드
-kurtosis enclave rm --force simple-devnet
-./build-devnet.sh
-```
-
-**📖 자세한 설정 가이드**: [롤업 설정 가이드](./docs/rollup-configuration-guide.md)
+**📖 Detailed Configuration Guide**: [Rollup Configuration Guide](./docs/rollup-configuration-guide.md)
 
 
 ## ⏱️ Expected Build Times (Step 2)
@@ -132,68 +107,68 @@ Once the devnet is running, you can access:
 - **L2 RPC**: http://localhost:56781
 - **Rollup RPC**: http://localhost:57029
 
-## OP-Challenger 실행
+## OP-Challenger Execution
 
-### 기본 사용법
+### Basic Usage
 ```bash
-# Step 3: Run Challenger (위의 Step 2 완료 후)
+# Step 3: Run Challenger (after completing Step 2 above)
 ./run-challenger-devnet.sh
 ```
 
-### 관리 명령어
+### Management Commands
 ```bash
-# 상태 확인
+# Check status
 docker ps | grep challenger
 
-# 로그 확인
+# Check logs
 docker logs op-challenger
 
-# 중지/제거
+# Stop/Remove
 docker stop op-challenger
 docker rm op-challenger
 
-# 헬스체크 실행
+# Run health check
 ./challenger-healthcheck.sh
 ```
 
-### 📚 상세 문서
+### 📚 Detailed Documentation
 
-#### 🎯 설정 및 구성
-- **[Devnet 설정 가이드](./docs/devnet-configurations-guide.md)** - ⭐ Simple/Interop/Isthmus 설정 선택 가이드
-- **[롤업 설정 가이드](./docs/rollup-configuration-guide.md)** - Game Type, Proposal Interval 등 핵심 설정
-- **[Game Types vs Trace Types](./docs/game-types-vs-trace-types.md)** - 개념 구분 및 상호관계
-- **[Game Type Configuration](./docs/game-type-configuration.md)** - 설정 불일치 해결 방법
+#### 🎯 Configuration & Setup
+- **[Devnet Configuration Guide](./docs/devnet-configurations-guide.md)** - ⭐ Simple/Interop/Isthmus configuration selection guide
+- **[Rollup Configuration Guide](./docs/rollup-configuration-guide.md)** - Game Type, Proposal Interval and other core settings
+- **[Game Types vs Trace Types](./docs/game-types-vs-trace-types.md)** - Concept distinction and relationships
+- **[Game Type Configuration](./docs/game-type-configuration.md)** - Configuration mismatch resolution
 
-#### 🚀 실행 및 운영
-- **[OP-Challenger 실행 가이드](./docs/challenger-guide.md)** - 스크립트 기능 및 사용법
-- **[Challenger Parameters](./docs/challenger-parameters.md)** - 모든 설정 옵션 설명
-- **[챌린저 기능 테스트 가이드](./docs/challenger-testing.md)** - 테스트 시나리오 및 방법
+#### 🚀 Execution & Operations
+- **[OP-Challenger Execution Guide](./docs/challenger-guide.md)** - Script functionality and usage
+- **[Challenger Parameters](./docs/challenger-parameters.md)** - All configuration options explained
+- **[Challenger Feature Testing Guide](./docs/challenger-testing.md)** - Test scenarios and methods
 
-#### 🛟 문제 해결
-- **[트러블슈팅 가이드](./docs/troubleshooting.md)** - 일반적인 문제 해결 방법
+#### 🛟 Troubleshooting
+- **[Troubleshooting Guide](./docs/troubleshooting.md)** - Common problem resolution methods
 
 ## Troubleshooting
 
-### 빠른 해결방법
+### Quick Solutions
 
-**일반적인 문제들은 [트러블슈팅 가이드](./docs/troubleshooting.md)를 참조하세요.**
+**For common issues, refer to the [Troubleshooting Guide](./docs/troubleshooting.md).**
 
-#### 빌드 오류 시 확인사항
+#### Build Error Checklist
 1. Docker service is running
 2. Go version is 1.23+
 3. All required tools are installed via `./install-tools.sh`
 4. Check build logs: `cat /tmp/devnet-build.log`
 
-#### 자주 발생하는 문제
-- **Devnet not running**: `./build-devnet.sh` 먼저 실행
-- **Docker image not found**: `./build-devnet.sh`로 이미지 재빌드
-- **Binary files missing**: cannon/op-program 빌드 필요
+#### Frequently Occurring Issues
+- **Devnet not running**: Run `./build-devnet.sh` first
+- **Docker image not found**: Rebuild images with `./build-devnet.sh`
+- **Binary files missing**: Build cannon/op-program binaries
 
-### 주의사항
+### Important Notes
 
-⚠️ **개발 및 테스트 목적으로만 사용하세요**
-- 니모닉과 키는 테스트용이므로 프로덕션에서 사용하지 마세요
-- 네트워크 설정은 로컬 devnet에 맞춰져 있습니다
+⚠️ **For development and testing purposes only**
+- Mnemonics and keys are for testing, do not use in production
+- Network settings are configured for local devnet
 
 
 

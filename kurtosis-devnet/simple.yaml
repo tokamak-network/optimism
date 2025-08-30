@@ -50,7 +50,7 @@ optimism_package:
       proposer_params:
         image: {{ localDockerImage "op-proposer" }}
         extra_params: []
-        game_type: 0
+        game_type: 1
         proposal_interval: 10m
   challengers:
     challenger:
