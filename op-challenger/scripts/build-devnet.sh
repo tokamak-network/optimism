@@ -87,10 +87,17 @@ parse_arguments() {
     done
 }
 
-# 변수 정의
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OPTIMISM_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-KURTOSIS_DEVNET_DIR="$OPTIMISM_ROOT/optimism/kurtosis-devnet"
+# 변수 정의 (동적 경로 발견)
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+OPTIMISM_ROOT="$(realpath "$SCRIPT_DIR/../..")"
+KURTOSIS_DEVNET_DIR="$OPTIMISM_ROOT/kurtosis-devnet"
+
+# 경로 디버깅 (개발용)
+if [ "${DEBUG_PATHS:-}" = "1" ]; then
+    echo "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
+    echo "DEBUG: OPTIMISM_ROOT=$OPTIMISM_ROOT"  
+    echo "DEBUG: KURTOSIS_DEVNET_DIR=$KURTOSIS_DEVNET_DIR"
+fi
 
 ENCLAVE_NAME="simple-devnet"
 BUILD_LOG="/tmp/devnet-build.log"
@@ -173,6 +180,8 @@ check_requirements() {
     log_success "System requirements check completed"
 }
 
+
+
 # Build Docker Images
 build_docker_images() {
     log_step "Building Docker Images"
@@ -185,7 +194,7 @@ build_docker_images() {
     log_info "Checking Docker build modifications..."
 
     # Check if go-libp2p-mplex fix code is already added to Dockerfile
-    local dockerfile="$OPTIMISM_ROOT/optimism/ops/docker/op-stack-go/Dockerfile"
+    local dockerfile="$OPTIMISM_ROOT/ops/docker/op-stack-go/Dockerfile"
     if [ -f "$dockerfile" ]; then
         if grep -q "Fix go-libp2p-mplex compatibility issues" "$dockerfile"; then
             log_success "Docker build modifications are already applied"
@@ -196,10 +205,14 @@ build_docker_images() {
         log_warning "Dockerfile not found"
     fi
 
-    cd "$KURTOSIS_DEVNET_DIR"
-
     # Move to kurtosis-devnet directory (where just recipes are)
-    cd "$OPTIMISM_ROOT/optimism/kurtosis-devnet"
+    cd "$KURTOSIS_DEVNET_DIR"
+    
+    # Verify we're in the correct directory
+    if [ ! -f "justfile" ]; then
+        log_error "justfile not found in $KURTOSIS_DEVNET_DIR"
+        exit 1
+    fi
 
     local build_success_count=0
     local total_services=${#BUILD_SERVICES[@]}
@@ -347,7 +360,7 @@ deploy_devnet() {
             fi
         fi
 
-        timeout 600 kurtosis run "$KURTOSIS_DEVNET_DIR/optimism-package-trampoline/" --enclave "$ENCLAVE_NAME" >> "$BUILD_LOG" 2>&1
+        timeout 600 kurtosis run "$KURTOSIS_DEVNET_DIR/optimism-package-trampoline" --args-file "$KURTOSIS_DEVNET_DIR/simple.yaml" --enclave "$ENCLAVE_NAME" >> "$BUILD_LOG" 2>&1
         exit_code=$?
 
         # Check for specific GRPC/UTF-8 errors that indicate communication issues
