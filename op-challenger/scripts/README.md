@@ -5,17 +5,59 @@
 
 ### Local Devnet Development Environment
 
-```bash
-
 # Step 1: Install system tools
+```bash
 cd op-challenger/scripts
 ./install-tools.sh
+```
 
-# Step 2: Build Devnet Environment
-./build-devnet.sh                      # Build with default game type (PERMISSIONED)
-./build-devnet.sh --game-type=0        # Build with CANNON game type
-./build-devnet.sh --game-type=1        # Build with PERMISSIONED game type
+# Step 2: 컨트랙 컴파일 & 아티팩트 만들기
+```bash
+cd /optimism/packages/contracts-bedrock
+forge build
+cd /optimism/op-challenger/scripts
+./build-contract-artifacts.sh
+```
 
+# Step 3: Build Devnet Environment
+```bash
+cd /optimism/kurtosis-devnet
+
+' Edit game-type in 'simple.yaml'
+
+
+proposer_params:
+        image: {{ localDockerImage "op-proposer" }}
+        extra_params: []
+        game_type: 0            //--> here
+        proposal_interval: 10m
+```
+
+### Autofix mode
+
+Autofix mode helps recover from failed devnet deployments by automatically
+cleaning up the environment. It has two modes:
+
+1. **Normal Mode** (`AUTOFIX=true`)
+   - Sets up the correct shell and updates dependencies
+   - Cleans up dangling networks and stopped devnets
+   - Preserves other running enclaves
+   - Good for fixing minor deployment issues
+
+2. **Nuke Mode** (`AUTOFIX=nuke`)
+   - Sets up the correct shell and updates dependencies
+   - Completely resets the Kurtosis environment
+   - Removes all networks and containers
+   - Use when you need a fresh start
+
+Usage:
+```bash
+# For normal cleanup
+AUTOFIX=true just simle-devnet
+
+# For complete reset
+AUTOFIX=nuke just simle-devnet
+```
 
 ### Supported Game Types
 | Type | Name | Purpose | Challenger Config | Status |
@@ -26,15 +68,27 @@ cd op-challenger/scripts
 
 **📝 Current Status**: Only game type 1 (PERMISSIONED) is confirmed to be working.
 
-
-# Step 3: Run Challenger
+# Step 4: Run Challenger
+```bash
+cd /optimism/op-challenger/scripts
 ./run-challenger-devnet.sh
+
 ```
+
+
+
 
 **📖 Detailed Configuration Guide**: [Rollup Configuration Guide](./docs/rollup-configuration-guide.md)
 
+**🔍 Deployment Monitoring**: [로그 모니터링 가이드](./docs/monitoring-deployment-logs.md) - devnet 배포 중 실시간 로그 확인 방법
+
 
 ## ⏱️ Expected Build Times (Step 2)
+
+### Local Contracts Build (~1-3 minutes)
+- **First time**: 2-3 minutes (no cache)
+- **Subsequent builds**: 30 seconds - 1 minute (with cache)
+- **Components**: Optimism contracts built from local source using Foundry
 
 ### Docker Image Build (~3-7 minutes)
 - **First time**: 5-7 minutes (no cache)
@@ -46,16 +100,16 @@ The deployment process consists of 6 main steps:
 
 | Step | Component | Expected Time | Description |
 |------|-----------|---------------|-------------|
-| 1/6 | Configuration | ~30 seconds | Creating devnet configuration files |
+| 1/6 | Local Contracts | ~1-3 minutes | Building contracts from local source |
 | 2/6 | Docker Images | ~2-3 minutes | Preparing container infrastructure |
-| 3/6 | L1 + Contracts | ~5-8 minutes | **Longest step**: L1 chain startup + contract deployments |
+| 3/6 | L1 + Contracts | ~5-8 minutes | **Longest step**: L1 chain startup + local contract deployments |
 | 4/6 | Service Verification | ~2-3 minutes | Checking all services are running |
 | 5/6 | RPC Testing | ~1 minute | Testing L1/L2 RPC endpoints |
 | 6/6 | Final Setup | ~30 seconds | Completing devnet setup |
 
 **⚠️ Note**: Step 3/6 (L1 + Contracts) takes the longest time as it involves:
 - Starting the L1 Ethereum chain
-- Deploying all L2 smart contracts
+- Deploying all L2 smart contracts (using local artifacts)
 - Initializing cross-chain bridges
 - Setting up validator networks
 
