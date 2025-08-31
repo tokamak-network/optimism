@@ -157,7 +157,12 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 
 FROM --platform=$BUILDPLATFORM builder AS op-deployer-builder
 ARG OP_DEPLOYER_VERSION=v0.0.0
-RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build cd op-chain-ops && make op-deployer  \
+# Copy pre-built contract artifacts and build op-deployer
+COPY --from=builder /app/op-challenger/scripts/contract-artifacts /app/contract-artifacts
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+  cd op-deployer && mkdir -p pkg/deployer/artifacts/forge-artifacts && \
+  tar -czf pkg/deployer/artifacts/forge-artifacts/artifacts.tgz -C ../contract-artifacts/forge-artifacts --exclude="*.t.sol" . && \
+  cd ../op-chain-ops && make op-deployer \
   GOOS=$TARGETOS GOARCH=$TARGETARCH GITCOMMIT=$GIT_COMMIT GITDATE=$GIT_DATE VERSION="$OP_DEPLOYER_VERSION"
 
 FROM --platform=$BUILDPLATFORM builder AS op-dripper-builder
