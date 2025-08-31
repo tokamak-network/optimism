@@ -22,7 +22,7 @@ optimism_package:
       {{ include "l2.yaml" (dict "chain_id" $l2_id "overrides" $overrides "nodes" $l2.nodes) }}
   {{ end }}
   op_contract_deployer_params:
-    image: {{ dig "overrides" "images" "op_deployer" (localDockerImage "op-deployer") $context }}
+    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-deployer:v0.4.0-rc.2
     l1_artifacts_locator: {{ dig "overrides" "urls" "l1_artifacts" (localContractArtifacts "l1") $context }}
     l2_artifacts_locator: {{ dig "overrides" "urls" "l2_artifacts" (localContractArtifacts "l2") $context }}
 {{ if $interop }}
