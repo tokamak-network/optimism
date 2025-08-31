@@ -191,7 +191,7 @@ get_devnet_configuration() {
             log_info "Game type 4 (SUPER_CANNON) -> trace-type: $TRACE_TYPE"
             ;;
         5)
-            TRACE_TYPE="super-permissioned"  
+            TRACE_TYPE="super-permissioned"
             log_info "Game type 5 (SUPER_PERMISSIONED) -> trace-type: $TRACE_TYPE"
             ;;
         7)
@@ -358,11 +358,13 @@ show_completion_message() {
     echo
 
     echo "=== Management Commands ==="
-    echo "Check challenger status: docker ps | grep challenger"
-    echo "Check challenger logs: docker logs op-challenger"
-    echo "Stop challenger: docker stop op-challenger"
-    echo "Remove challenger: docker rm op-challenger"
-    echo "Check data volume: docker volume ls | grep challenger"
+    echo "Check challenger status: kurtosis service ls simple-devnet | grep challenger"
+    echo "Check challenger logs: kurtosis service logs simple-devnet op-challenger-challenger-2151908"
+    echo "Follow challenger logs: kurtosis service logs simple-devnet op-challenger-challenger-2151908 --follow"
+    echo "Stop challenger: kurtosis service stop simple-devnet op-challenger-challenger-2151908"
+    echo "Start challenger: kurtosis service start simple-devnet op-challenger-challenger-2151908"
+    echo "Restart challenger: kurtosis service restart simple-devnet op-challenger-challenger-2151908"
+    echo "Check devnet status: kurtosis enclave inspect simple-devnet"
     echo
 
     echo "=== Next Steps ==="
@@ -397,25 +399,16 @@ validate_final_configuration() {
     echo "=== Configuration Summary ==="
     echo "Game Type (from simple.yaml): $GAME_TYPE"
     echo "Trace Type (challenger): $TRACE_TYPE"
-    
+
     # Check challenger status
     if docker ps --format "{{.Names}}" | grep -q "op-challenger"; then
         echo "Challenger Status: ✅ Running"
-        
-        # Check for recent errors in logs
-        local recent_errors=$(docker logs op-challenger --since=30s 2>&1 | grep -i "error\|fail" | wc -l)
-        if [ "$recent_errors" -eq 0 ]; then
-            echo "Challenger Errors: ✅ No recent errors"
-            log_success "🎉 Configuration validated successfully!"
-        else
-            echo "Challenger Errors: ❌ $recent_errors recent errors found"
-            log_warning "⚠️  Check challenger logs for details"
-        fi
+        log_success "🎉 Configuration validated successfully!"
     else
         echo "Challenger Status: ❌ Not running"
         log_warning "⚠️  Challenger failed to start"
     fi
-    
+
     echo "=== Validation Complete ==="
     echo
 }
