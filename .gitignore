@@ -55,3 +55,12 @@ crytic-export
 # ignore local Claude settings
 **/.claude/
 **/.claude/settings.local.json
+
+# Local development artifacts
+kurtosis-devnet/contract-artifacts.tar.gz
+kurtosis-devnet/simple*.yaml
+kurtosis-devnet/simple-backup.yaml
+kurtosis-devnet/simple-input.json
+op-challenger/scripts/contract-artifacts/
+op-challenger/scripts/build-contract-artifacts.sh
+op-challenger/scripts/README-old.md
