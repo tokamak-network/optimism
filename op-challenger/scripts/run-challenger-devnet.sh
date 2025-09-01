@@ -87,8 +87,8 @@ check_required_binaries() {
     fi
 
     # Check prestate file
-    if [ ! -f "$OPTIMISM_ROOT/op-program/bin/prestate-mt64Next.bin.gz" ]; then
-        log_warning "prestate file not found: $OPTIMISM_ROOT/op-program/bin/prestate-mt64Next.bin.gz"
+    if [ ! -f "$OPTIMISM_ROOT/op-program/bin/prestate.bin.gz" ]; then
+        log_warning "prestate file not found: $OPTIMISM_ROOT/op-program/bin/prestate.bin.gz"
         need_build=true
     fi
 
@@ -108,7 +108,7 @@ check_required_binaries() {
         log_info "Check build status:"
         echo "  ls -la $OPTIMISM_ROOT/cannon/bin/cannon"
         echo "  ls -la $OPTIMISM_ROOT/op-program/bin/op-program"
-        echo "  ls -la $OPTIMISM_ROOT/op-program/bin/prestate-mt64Next.bin.gz"
+        echo "  ls -la $OPTIMISM_ROOT/op-program/bin/prestate.bin.gz"
         echo
         log_info "After build completes, re-run: ./run-challenger-devnet.sh"
         exit 1
@@ -121,26 +121,29 @@ check_required_binaries() {
 get_devnet_ports() {
     log_info "Getting Devnet port information..."
 
-    # Extract port information from kurtosis enclave inspect
-    local enclave_info=$(kurtosis enclave inspect simple-devnet 2>/dev/null)
+    # For Kurtosis devnet, use standard port mappings
+    # Based on README.md examples
+    L1_RPC_PORT="8545"
+    L2_RPC_PORT="9545" 
+    ROLLUP_RPC_PORT="9546"
+    L1_BEACON_PORT="4000"
 
-    # L1 RPC port (el-1-geth-lighthouse)
-    L1_RPC_PORT=$(echo "$enclave_info" | grep "rpc: 8545/tcp" | head -1 | sed 's/.*-> //' | sed 's/.*://' | tr -d ' ')
-
-    # L2 RPC port (op-el-2151908-node0-op-geth)
-    L2_RPC_PORT=$(echo "$enclave_info" | grep "rpc: 8545/tcp" | tail -1 | sed 's/.*-> //' | sed 's/.*://' | tr -d ' ')
-
-    # Rollup RPC port (op-cl-2151908-node0-op-node)
-    ROLLUP_RPC_PORT=$(echo "$enclave_info" | grep "rpc: 8547/tcp" | sed 's/.*-> //' | sed 's/.*://' | tr -d ' ')
-
-    # L1 Beacon port (cl-1-lighthouse-geth)
-    L1_BEACON_PORT=$(echo "$enclave_info" | grep "http: 4000/tcp" | sed 's/.*-> //' | sed 's/.*://' | tr -d ' ')
-
-    # Set default values
-    L1_RPC_PORT="${L1_RPC_PORT:-53620}"
-    L2_RPC_PORT="${L2_RPC_PORT:-56781}"
-    ROLLUP_RPC_PORT="${ROLLUP_RPC_PORT:-57029}"
-    L1_BEACON_PORT="${L1_BEACON_PORT:-54357}"
+    # Try to get actual ports from kurtosis if available
+    if kurtosis enclave inspect simple-devnet &>/dev/null; then
+        local enclave_info=$(kurtosis enclave inspect simple-devnet 2>/dev/null)
+        
+        # Extract actual mapped ports
+        local l1_port=$(echo "$enclave_info" | grep "el-1.*rpc.*8545" | sed 's/.*-> localhost:\([0-9]*\).*/\1/' | head -1)
+        local l2_port=$(echo "$enclave_info" | grep "op-el.*rpc.*8545" | sed 's/.*-> localhost:\([0-9]*\).*/\1/' | head -1)
+        local rollup_port=$(echo "$enclave_info" | grep "op-cl.*rpc.*8547" | sed 's/.*-> localhost:\([0-9]*\).*/\1/' | head -1)
+        local beacon_port=$(echo "$enclave_info" | grep "cl-1.*http.*4000" | sed 's/.*-> localhost:\([0-9]*\).*/\1/' | head -1)
+        
+        # Use extracted ports if found
+        [ -n "$l1_port" ] && L1_RPC_PORT="$l1_port"
+        [ -n "$l2_port" ] && L2_RPC_PORT="$l2_port" 
+        [ -n "$rollup_port" ] && ROLLUP_RPC_PORT="$rollup_port"
+        [ -n "$beacon_port" ] && L1_BEACON_PORT="$beacon_port"
+    fi
 
     log_success "Port information retrieved successfully"
     log_info "L1 RPC: http://localhost:$L1_RPC_PORT"
@@ -213,28 +216,34 @@ get_devnet_configuration() {
     esac
 }
 
-# Get Game Factory Address
+# Get Game Factory Address  
 get_game_factory_address() {
     log_info "Getting game factory address..."
 
-    # Create temporary directory
+    # Try to get from kurtosis devnet addresses
     local temp_dir=$(mktemp -d)
-
-    # Download Devnet deployment configuration files
+    
     if kurtosis files download simple-devnet op-deployer-configs "$temp_dir" > /dev/null 2>&1; then
-        # Find game factory address
-        local factory_address=$(grep -i "DisputeGameFactoryProxy" "$temp_dir/state.json" 2>/dev/null | sed 's/.*"DisputeGameFactoryProxy": *"\([^"]*\)".*/\1/')
-
-        if [ -n "$factory_address" ] && [ "$factory_address" != "null" ]; then
+        # Find game factory address from state.json
+        local factory_address=$(jq -r '.DisputeGameFactoryProxy // empty' "$temp_dir/state.json" 2>/dev/null)
+        
+        if [ -n "$factory_address" ] && [ "$factory_address" != "null" ] && [ "$factory_address" != "" ]; then
             GAME_FACTORY_ADDRESS="$factory_address"
             log_success "Game factory address retrieved: $GAME_FACTORY_ADDRESS"
         else
-            log_warning "Game factory address not found. Using default value."
-            GAME_FACTORY_ADDRESS="0x1aec0f0a8be00abf8abcf926a9a65caa7c7ee095"
+            # Try alternative locations
+            local alt_address=$(find "$temp_dir" -name "*.json" -exec jq -r '.DisputeGameFactoryProxy // .disputeGameFactoryProxy // empty' {} \; 2>/dev/null | head -1)
+            if [ -n "$alt_address" ] && [ "$alt_address" != "null" ]; then
+                GAME_FACTORY_ADDRESS="$alt_address"
+                log_success "Game factory address found: $GAME_FACTORY_ADDRESS"
+            else
+                log_warning "Game factory address not found in configs. Using environment variable or default."
+                GAME_FACTORY_ADDRESS="${DISPUTE_GAME_FACTORY:-0xd6E6dBf4F7EA0ac412fD8b65ED297e64BB7a06E1}"
+            fi
         fi
     else
-        log_warning "Failed to download Devnet configuration files. Using default value."
-        GAME_FACTORY_ADDRESS="0x1aec0f0a8be00abf8abcf926a9a65caa7c7ee095"
+        log_warning "Failed to download Devnet configuration files."
+        GAME_FACTORY_ADDRESS="${DISPUTE_GAME_FACTORY:-0xd6E6dBf4F7EA0ac412fD8b65ED297e64BB7a06E1}"
     fi
 
     # Clean up temporary directory
@@ -263,43 +272,45 @@ run_challenger() {
         fi
     fi
 
-    # 3. Run new container
+    # 3. Run new container - Based on README.md example
     log_info "Running new op-challenger container..."
+    
+    # Check if rollup.json and genesis-l2.json exist for cannon trace type
+    local rollup_config=""
+    local l2_genesis=""
+    
+    if [ "$TRACE_TYPE" = "cannon" ]; then
+        if [ -f "$OPTIMISM_ROOT/.devnet/rollup.json" ]; then
+            rollup_config="--cannon-rollup-config $OPTIMISM_ROOT/.devnet/rollup.json"
+        fi
+        if [ -f "$OPTIMISM_ROOT/.devnet/genesis-l2.json" ]; then
+            l2_genesis="--cannon-l2-genesis $OPTIMISM_ROOT/.devnet/genesis-l2.json"
+        fi
+    fi
+    
     docker run -d \
         --name op-challenger \
         --network host \
         -v challenger-data:/data \
-        -v "$OPTIMISM_ROOT/cannon/bin:/cannon-bin:ro" \
-        -v "$OPTIMISM_ROOT/op-program/bin:/op-program-bin:ro" \
+        -v "$OPTIMISM_ROOT:/workspace:ro" \
         op-challenger:devnet \
         op-challenger \
-        --network=op-sepolia \
+        --trace-type=$TRACE_TYPE \
         --datadir=/data \
         --l1-eth-rpc=http://localhost:$L1_RPC_PORT \
         --l1-beacon=http://localhost:$L1_BEACON_PORT \
         --l2-eth-rpc=http://localhost:$L2_RPC_PORT \
         --rollup-rpc=http://localhost:$ROLLUP_RPC_PORT \
         --game-factory-address=$GAME_FACTORY_ADDRESS \
-        --trace-type=$TRACE_TYPE \
-        --cannon-bin=/cannon-bin/cannon \
-        --cannon-server=/op-program-bin/op-program \
-        --cannon-prestate=/op-program-bin/prestate-mt64Next.bin.gz \
+        --cannon-bin=/workspace/cannon/bin/cannon \
+        --cannon-server=/workspace/op-program/bin/op-program \
+        --cannon-prestate=/workspace/op-program/bin/prestate.bin.gz \
+        $rollup_config \
+        $l2_genesis \
         --mnemonic="test test test test test test test test test test test junk" \
-        --hd-path="m/44'/60'/0'/0/0" \
-        --num-confirmations=3 \
-        --safe-abort-nonce-too-low-count=3 \
-        --fee-limit-multiplier=5 \
-        --txmgr.fee-limit-threshold=100 \
-        --txmgr.min-tip-cap=1 \
-        --txmgr.min-basefee=1 \
-        --resubmission-timeout=24s \
-        --network-timeout=10s \
-        --txmgr.retry-interval=1s \
-        --txmgr.max-retries=10 \
-        --txmgr.send-timeout=2m \
-        --txmgr.not-in-mempool-timeout=1m \
-        --txmgr.receipt-query-interval=12s \
-        --log.level=INFO
+        --hd-path="m/44'/60'/0'/0/8" \
+        --num-confirmations=1 \
+        --log.level=info
 
     if [ $? -eq 0 ]; then
         log_success "op-challenger started successfully"
