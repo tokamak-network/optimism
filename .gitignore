@@ -78,4 +78,9 @@ kurtosis-devnet/prestate-interop.bin.gz
 kurtosis-devnet/prestate-mt64.bin.gz
 kurtosis-devnet/prestate-proof-interop.json
 kurtosis-devnet/prestate-proof-mt64.json
+kurtosis-devnet/kurtosis-engine-logs--*/
+
+# Challenger scripts generated files
+op-challenger/scripts/docs/prestate-synchronization.md
+op-challenger/scripts/run-challenger-devnet-v1.sh
 
