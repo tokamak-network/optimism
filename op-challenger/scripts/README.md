@@ -56,7 +56,9 @@ AUTOFIX=nuke just simple-devnet
 cd /optimism/kurtosis-devnet && just fix-traefik
 ```
 
-**💡 Pro Tip**: Use `just devnet-with-fix simple.yaml` in kurtosis-devnet directory to automatically handle Traefik issues.
+**💡 Pro Tips**:
+- Use `just devnet-with-fix simple.yaml` in kurtosis-devnet directory to automatically handle **both Traefik and AnchorStateRegistry issues**
+- For AnchorStateRegistry cold start problems only: `just fix-anchor-state`
 
 ### Autofix mode
 
@@ -197,20 +199,46 @@ docker restart $(docker ps --filter "name=kurtosis-reverse-proxy" --format "{{.N
 
 **Root Cause**: Traefik tries to connect to hardcoded network IDs that change between deployments.
 
-#### 2. Challenger Prestate Validation Error
-**Problem**: Challenger logs show prestate validation failures:
+#### 2. AnchorStateRegistry Cold Start Problem
+**Problem**: Challenger logs show prestate validation failures with 0xdead:
 ```
 Failed to validate prestate: output root absolute prestate does not match
-Provider: 0x50c8... | Contract: 0xdead...
+Provider: 0x50c8... | Contract: 0xdead000000000000000000000000000000000000000000000000000000000000
 ```
 
-**Solution**: Use AUTOFIX to rebuild and sync prestates
+**This is the AnchorStateRegistry "cold start" problem** - intentional design requiring manual intervention.
+
+**Automated Solution**:
 ```bash
 cd /optimism/kurtosis-devnet
-AUTOFIX=true just simple-devnet
+
+# Option 1: Run fix script directly
+just fix-anchor-state
+
+# Option 2: Deploy with automatic fixes included
+just devnet-with-fix simple.yaml
 ```
 
-**Reference**: See [Prestate Synchronization Guide](./docs/prestate-synchronization.md) for detailed information.
+**Manual Solution** (if automated script fails):
+```bash
+# 1. Get L2 genesis root
+L2_GENESIS_ROOT=$(cast block 0 --rpc-url http://op-el-2151908-node0-op-geth:8545 -f stateRoot)
+
+# 2. Get contract addresses
+DISPUTE_GAME_FACTORY=$(grep -o '"DisputeGameFactoryProxy": *"[^"]*"' /tmp/devnet-desc/env.json | cut -d'"' -f4)
+
+# 3. Create first valid dispute game
+cast send $DISPUTE_GAME_FACTORY "create(uint32,bytes32,bytes)" \
+  0 $L2_GENESIS_ROOT 0x0000000000000000000000000000000000000000000000000000000000000000 \
+  --rpc-url http://127.0.0.1:58524 \
+  --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+
+# Game will resolve automatically as DEFENDER_WINS (correct root), updating AnchorStateRegistry
+```
+
+**References**:
+- [AnchorStateRegistry Fix Guide](./docs/anchor-state-fix.md) for detailed explanation
+- [Game Types Guide](./docs/game-types.md) for CANNON vs PERMISSIONED differences
 
 #### 3. Docker Resource Issues
 **Problem**: Deployment fails due to insufficient resources

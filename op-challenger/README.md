@@ -218,3 +218,17 @@ trace type name is used. If the prestateHash is omitted, the absolute prestate h
 
 For example to run both the production cannon prestate and a custom
 prestate, use `--run cannon,cannon/next-prestate/0x03c1f0d45248190f80430a4c31e24f8108f05f80ff8b16ecb82d20df6b1b43f3`.
+
+## Documentation
+
+The [docs](./scripts/docs/) folder contains detailed documentation:
+
+- **[Game Types Guide](./scripts/docs/game-types.md)** - CANNON vs PERMISSIONED_CANNON modes, challenger behavior, and deployment differences
+- **[AnchorStateRegistry Fix Guide](./scripts/docs/anchor-state-fix.md)** - Resolving the "0xdead cold start" problem and manual intervention steps  
+- **[Prestate Synchronization](./scripts/docs/prestate-synchronization.md)** - How AUTOFIX triggers prestate builds and sync process
+
+## Common Issues
+
+### AnchorStateRegistry Cold Start Problem
+
+If you encounter errors like `"Provider: 0x... | Contract: 0xdead..."`, this indicates the AnchorStateRegistry is using its default initialization value. This is expected behavior requiring manual resolution of the first dispute game. See the [AnchorStateRegistry Fix Guide](./scripts/docs/anchor-state-fix.md) for detailed solutions.
