@@ -24,6 +24,28 @@ just interop-devnet
 
 If all works as expected, you should see a collection of containers appear in Docker. Some of them are Kurtosis infrastructure, while others are the actual hosts for your network. You can observe that the network is running by searching for "supervisor" and watching its logs.
 
+## Post-Deployment Configuration
+
+### AnchorStateRegistry Cold Start Issue
+
+After devnet deployment, you may encounter challenger errors with `"Provider: 0x... | Contract: 0xdead..."`. This is the **AnchorStateRegistry cold start problem** - the system intentionally initializes with a placeholder value requiring manual intervention.
+
+**Quick Fix:**
+```bash
+# Navigate to op-challenger docs for detailed fix
+just fix-anchor-state  # If available in justfile
+
+# Or manually create and resolve first valid dispute game
+# See op-challenger/scripts/docs/anchor-state-fix.md for full instructions
+```
+
+**Why This Happens:**
+- CANNON mode (game_type: 0) doesn't use L2OutputOracle  
+- AnchorStateRegistry starts with `0xdead...` placeholder
+- First valid dispute game must be resolved to set proper anchor state
+
+See detailed guides in `op-challenger/scripts/docs/` for complete solutions.
+
 ## Resolving Issues
 
 Here is a list of potential pitfalls when running Kurtosis and known solutions.

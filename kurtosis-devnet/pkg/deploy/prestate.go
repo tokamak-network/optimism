@@ -109,12 +109,5 @@ func (h *localPrestateHolder) GetPrestateInfo(ctx context.Context) (*PrestateInf
 
 	h.info = info
 	
-	// Log synchronization completion with actual hash values
-	log.Printf("✅ Prestate synchronization completed:")
-	for key, hash := range info.Hashes {
-		log.Printf("  - %s: %s", key, hash)
-	}
-	log.Printf("  - URL: %s", info.URL)
-	
 	return info, nil
 }

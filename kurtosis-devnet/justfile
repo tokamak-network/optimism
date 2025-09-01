@@ -5,13 +5,18 @@ KURTOSIS_PACKAGE := "./optimism-package-trampoline/"
 test: _prerequisites
     go test --tags=testonly ./...
 
-# Traefik 네트워크 문제 자동 해결
+# AnchorStateRegistry 0xdead 초기화 문제 해결
+fix-anchor-state:
+    @echo "🔧 AnchorStateRegistry cold start 문제 해결 중..."
+    ./fix-anchor-state.sh
+
+# Traefik 네트워크 문제 자동 해결  
 fix-traefik:
     @echo "🔧 Traefik 네트워크 문제 해결 중..."
     ./fix-traefik.sh
 
-# 전체 devnet 배포 후 Traefik 자동 수정
-devnet-with-fix TEMPLATE_FILE: (devnet TEMPLATE_FILE) fix-traefik
+# 전체 devnet 배포 후 문제 자동 해결
+devnet-with-fix TEMPLATE_FILE: (devnet TEMPLATE_FILE) fix-traefik fix-anchor-state
 
 _kurtosis-run PACKAGE_NAME ARG_FILE ENCLAVE:
 	kurtosis run {{PACKAGE_NAME}} --args-file {{ARG_FILE}} --enclave {{ENCLAVE}} --show-enclave-inspect=false --image-download=missing
