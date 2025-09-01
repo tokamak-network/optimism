@@ -398,7 +398,9 @@ contract DeployOPChain is Script {
         vm.label(address(deployOutput.ethLockboxProxy), "ethLockboxProxy");
         vm.label(address(deployOutput.disputeGameFactoryProxy), "disputeGameFactoryProxy");
         vm.label(address(deployOutput.anchorStateRegistryProxy), "anchorStateRegistryProxy");
-        // vm.label(address(deployOutput.faultDisputeGame), "faultDisputeGame");
+        if (address(deployOutput.faultDisputeGame) != address(0)) {
+            vm.label(address(deployOutput.faultDisputeGame), "faultDisputeGame");
+        }
         vm.label(address(deployOutput.permissionedDisputeGame), "permissionedDisputeGame");
         vm.label(address(deployOutput.delayedWETHPermissionedGameProxy), "delayedWETHPermissionedGameProxy");
         // TODO: Eventually switch from Permissioned to Permissionless.
@@ -417,7 +419,9 @@ contract DeployOPChain is Script {
         _doo.set(_doo.ethLockboxProxy.selector, address(deployOutput.ethLockboxProxy));
         _doo.set(_doo.disputeGameFactoryProxy.selector, address(deployOutput.disputeGameFactoryProxy));
         _doo.set(_doo.anchorStateRegistryProxy.selector, address(deployOutput.anchorStateRegistryProxy));
-        // _doo.set(_doo.faultDisputeGame.selector, address(deployOutput.faultDisputeGame));
+        if (address(deployOutput.faultDisputeGame) != address(0)) {
+            _doo.set(_doo.faultDisputeGame.selector, address(deployOutput.faultDisputeGame));
+        }
         _doo.set(_doo.permissionedDisputeGame.selector, address(deployOutput.permissionedDisputeGame));
         _doo.set(_doo.delayedWETHPermissionedGameProxy.selector, address(deployOutput.delayedWETHPermissionedGameProxy));
         // TODO: Eventually switch from Permissioned to Permissionless.
@@ -441,15 +445,29 @@ contract DeployOPChain is Script {
             address(_doo.l1StandardBridgeProxy()),
             address(_doo.l1CrossDomainMessengerProxy())
         );
-        address[] memory addrs2 = Solarray.addresses(
-            address(_doo.optimismPortalProxy()),
-            address(_doo.disputeGameFactoryProxy()),
-            address(_doo.anchorStateRegistryProxy()),
-            address(_doo.permissionedDisputeGame()),
-            // address(_doo.faultDisputeGame()),
-            address(_doo.delayedWETHPermissionedGameProxy()),
-            address(_doo.ethLockboxProxy())
-        );
+        address[] memory addrs2;
+        if (address(_doo.faultDisputeGame()) != address(0)) {
+            // Include FaultDisputeGame in validation if deployed
+            addrs2 = Solarray.addresses(
+                address(_doo.optimismPortalProxy()),
+                address(_doo.disputeGameFactoryProxy()),
+                address(_doo.anchorStateRegistryProxy()),
+                address(_doo.permissionedDisputeGame()),
+                address(_doo.faultDisputeGame()),
+                address(_doo.delayedWETHPermissionedGameProxy()),
+                address(_doo.ethLockboxProxy())
+            );
+        } else {
+            // Standard validation without FaultDisputeGame
+            addrs2 = Solarray.addresses(
+                address(_doo.optimismPortalProxy()),
+                address(_doo.disputeGameFactoryProxy()),
+                address(_doo.anchorStateRegistryProxy()),
+                address(_doo.permissionedDisputeGame()),
+                address(_doo.delayedWETHPermissionedGameProxy()),
+                address(_doo.ethLockboxProxy())
+            );
+        }
         // TODO: Eventually switch from Permissioned to Permissionless. Add this address back in.
         // address(_delayedWETHPermissionlessGameProxy)
 

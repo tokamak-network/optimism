@@ -1044,30 +1044,60 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
             )
         );
 
-        // While not a proxy, we deploy the PermissionedDisputeGame here as well because it's bespoke per chain.
-        output.permissionedDisputeGame = IPermissionedDisputeGame(
-            Blueprint.deployFrom(
-                blueprint.permissionedDisputeGame1,
-                blueprint.permissionedDisputeGame2,
-                computeSalt(_input.l2ChainId, _input.saltMixer, "PermissionedDisputeGame"),
-                encodePermissionedFDGConstructor(
-                    IFaultDisputeGame.GameConstructorParams({
-                        gameType: GameTypes.PERMISSIONED_CANNON,
-                        absolutePrestate: _input.disputeAbsolutePrestate,
-                        maxGameDepth: _input.disputeMaxGameDepth,
-                        splitDepth: _input.disputeSplitDepth,
-                        clockExtension: _input.disputeClockExtension,
-                        maxClockDuration: _input.disputeMaxClockDuration,
-                        vm: IBigStepper(implementation.mipsImpl),
-                        weth: IDelayedWETH(payable(address(output.delayedWETHPermissionedGameProxy))),
-                        anchorStateRegistry: IAnchorStateRegistry(address(output.anchorStateRegistryProxy)),
-                        l2ChainId: _input.l2ChainId
-                    }),
-                    _input.roles.proposer,
-                    _input.roles.challenger
+        // Deploy dispute game based on the configured disputeGameType
+        if (_input.disputeGameType.raw() == GameTypes.CANNON.raw()) {
+            // Deploy FaultDisputeGame for CANNON (GameType 0)
+            output.faultDisputeGame = IFaultDisputeGame(
+                Blueprint.deployFrom(
+                    blueprint.permissionlessDisputeGame1,
+                    blueprint.permissionlessDisputeGame2,
+                    computeSalt(_input.l2ChainId, _input.saltMixer, "FaultDisputeGame"),
+                    encodePermissionlessFDGConstructor(
+                        IFaultDisputeGame.GameConstructorParams({
+                            gameType: _input.disputeGameType,
+                            absolutePrestate: _input.disputeAbsolutePrestate,
+                            maxGameDepth: _input.disputeMaxGameDepth,
+                            splitDepth: _input.disputeSplitDepth,
+                            clockExtension: _input.disputeClockExtension,
+                            maxClockDuration: _input.disputeMaxClockDuration,
+                            vm: IBigStepper(implementation.mipsImpl),
+                            weth: IDelayedWETH(payable(address(output.delayedWETHPermissionedGameProxy))),
+                            anchorStateRegistry: IAnchorStateRegistry(address(output.anchorStateRegistryProxy)),
+                            l2ChainId: _input.l2ChainId
+                        })
+                    )
                 )
-            )
-        );
+            );
+            // Set permissionedDisputeGame to zero for clarity
+            output.permissionedDisputeGame = IPermissionedDisputeGame(address(0));
+        } else {
+            // Deploy PermissionedDisputeGame for PERMISSIONED_CANNON (GameType 1) or others
+            output.permissionedDisputeGame = IPermissionedDisputeGame(
+                Blueprint.deployFrom(
+                    blueprint.permissionedDisputeGame1,
+                    blueprint.permissionedDisputeGame2,
+                    computeSalt(_input.l2ChainId, _input.saltMixer, "PermissionedDisputeGame"),
+                    encodePermissionedFDGConstructor(
+                        IFaultDisputeGame.GameConstructorParams({
+                            gameType: _input.disputeGameType,
+                            absolutePrestate: _input.disputeAbsolutePrestate,
+                            maxGameDepth: _input.disputeMaxGameDepth,
+                            splitDepth: _input.disputeSplitDepth,
+                            clockExtension: _input.disputeClockExtension,
+                            maxClockDuration: _input.disputeMaxClockDuration,
+                            vm: IBigStepper(implementation.mipsImpl),
+                            weth: IDelayedWETH(payable(address(output.delayedWETHPermissionedGameProxy))),
+                            anchorStateRegistry: IAnchorStateRegistry(address(output.anchorStateRegistryProxy)),
+                            l2ChainId: _input.l2ChainId
+                        }),
+                        _input.roles.proposer,
+                        _input.roles.challenger
+                    )
+                )
+            );
+            // Set faultDisputeGame to zero for clarity
+            output.faultDisputeGame = IFaultDisputeGame(address(0));
+        }
 
         // -------- Set and Initialize Proxy Implementations --------
         bytes memory data;
@@ -1133,11 +1163,22 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
             implementation.disputeGameFactoryImpl,
             data
         );
-        setDGFImplementation(
-            output.disputeGameFactoryProxy,
-            GameTypes.PERMISSIONED_CANNON,
-            IDisputeGame(address(output.permissionedDisputeGame))
-        );
+        // Register the deployed game implementation in the DisputeGameFactory
+        if (_input.disputeGameType.raw() == GameTypes.CANNON.raw()) {
+            // Register FaultDisputeGame for CANNON (GameType 0)
+            setDGFImplementation(
+                output.disputeGameFactoryProxy,
+                _input.disputeGameType,
+                IDisputeGame(address(output.faultDisputeGame))
+            );
+        } else {
+            // Register PermissionedDisputeGame for PERMISSIONED_CANNON (GameType 1) or others
+            setDGFImplementation(
+                output.disputeGameFactoryProxy,
+                _input.disputeGameType,
+                IDisputeGame(address(output.permissionedDisputeGame))
+            );
+        }
 
         transferOwnership(address(output.disputeGameFactoryProxy), address(_input.roles.opChainProxyAdminOwner));
 
