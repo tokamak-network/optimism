@@ -124,18 +124,36 @@ http://fileserver/
 └── ...
 ```
 
-## Cold Game vs Warm Game 검증
+## Cold Starting vs Warm Game 검증
 
-### Cold Game (새로 생성된 게임)
-- `claimCount == 1` (root claim만 존재)
-- `gameStatus == InProgress`
-- **startingRootHash가 초기화되지 않음** (`0xdead...`)
-- Prestate validation **실패 예상**
+### Cold Starting (AnchorStateRegistry 초기 상태)
 
-### Warm Game (진행 중인 게임)
-- 여러 claim들이 존재
-- startingRootHash가 올바른 값으로 설정됨
-- Prestate validation **성공**
+**Cold Starting이란?**
+- **Initial State**: AnchorStateRegistry가 처음 배포된 상태를 의미합니다
+- **Empty State**: 아직 유효한 anchor state가 설정되지 않은 상태
+- **0xdead Value**: `0xdeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddead` 같은 하드코딩된 임시값으로 초기화
+
+**문제가 발생하는 핵심 이유:**
+레지스트리가 초기에 유효하지 않거나 placeholder 값인 anchor state를 가지고 있기 때문입니다. challenger가 dispute game의 prestate를 검증하려고 할 때, 이 유효하지 않은 또는 0xdead 값을 마주치게 됩니다. challenger는 정당한 L2 state root를 예상하지만 대신 placeholder를 발견하여 prestate 검증 실패가 발생합니다.
+
+**Cold Starting이라고 불리는 이유:**
+- **Newly Deployed State**: 레지스트리가 새로 배포된 "cold" 상태로, 아직 실제 L2 상태에 연결되거나 반영하지 않음
+- **First Game Required**: 유효한 dispute game이 시작되고 성공적으로 완료되어야 anchor state가 초기 placeholder에서 실제 L2 상태로 업데이트됨  
+- **Manual Intervention Needed**: 이것은 자동으로 해결되지 않으며, 종종 첫 번째 유효한 anchor state를 설정하기 위해 특정한 액션("warm-up" 게임이나 수동 개입)이 필요함
+
+**결론적으로**, "Cold Starting"은 AnchorStateRegistry가 새로 배포되어 유효한 anchor state가 부족한 상태를 설명하며, 이것이 challenger의 prestate 검증 실패의 근본 원인입니다.
+
+### 게임별 검증 결과
+
+**Cold Starting 상태에서 생성된 모든 게임들:**
+- AnchorStateRegistry가 0xdead... 값을 가지고 있음
+- 새로 생성된 모든 dispute game들이 이 잘못된 값을 startingRootHash로 사용
+- **모든 게임에서 prestate validation 실패**
+
+**Warm 상태 (첫 번째 유효한 게임 완료 후):**
+- AnchorStateRegistry에 유효한 anchor game이 설정됨
+- 새로 생성되는 게임들이 올바른 L2 state root를 startingRootHash로 사용
+- **Prestate validation 성공**
 
 ## AnchorStateRegistry와의 관계
 
@@ -163,9 +181,9 @@ if (address(anchorGame) == address(0)) {
 - **Provider**: `0x03a1a13511403f206bb2414e3bf974f8b4608ad8f7b37ee6642f6598dbe06195` ✅  
 - **결과**: **성공**
 
-### 2. starting state root 검증 (Cold Game)
-- **Contract**: `0xdead0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000` ❌
-- **Provider**: `0x03a1a13511403f206bb2414e3bf974f8b4608ad8f7b37ee6642f6598dbe06195` ✅
+### 2. starting state root 검증 (Cold Starting 상태)
+- **Contract** (AnchorStateRegistry에서 가져온 값): `0xdead0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000` ❌
+- **Provider** (실제 L2 genesis root): `0x03a1a13511403f206bb2414e3bf974f8b4608ad8f7b37ee6642f6598dbe06195` ✅
 - **결과**: **실패** - "output root absolute prestate does not match"
 
 ## 해결 방안
@@ -203,13 +221,15 @@ if gameStatus == InProgress && claimCount == 1 {
 }
 ```
 
-### 2. AnchorStateRegistry 수정
+### 2. AnchorStateRegistry 수정 (Cold Starting 해결)
 - `startingAnchorRoot`를 올바른 L2 genesis root로 설정
-- 새로운 게임들이 올바른 starting root를 가지도록 함
+- Cold Starting 상태에서 벗어나 모든 새로운 게임들이 올바른 starting root를 가지도록 함
+- AnchorStateRegistry 재초기화 또는 새로운 배포 필요
 
 ### 3. --allow-invalid-prestate 플래그
-- Cold game 검증을 우회
+- Cold Starting 상태에서 prestate validation을 우회
 - 개발/테스트 환경에서만 사용 권장
+- 근본적인 해결책은 아니며 임시 회피책
 
 ## 결론
 
@@ -223,4 +243,4 @@ Challenger는 두 가지 핵심 값을 검증합니다:
    - L2 genesis output root와 게임의 starting root 비교  
    - 게임이 올바른 L2 상태에서 시작하는지 검증
 
-Cold game에서는 starting root가 초기화되지 않아 state root validation이 실패하는 것이 정상이며, 이를 해결하려면 AnchorStateRegistry의 startingAnchorRoot를 올바른 L2 genesis root 값으로 설정해야 합니다.
+**Cold Starting 상태**에서는 AnchorStateRegistry의 startingAnchorRoot가 0xdead... 같은 placeholder 값으로 설정되어 있어 모든 새로운 게임의 state root validation이 실패합니다. 이를 해결하려면 AnchorStateRegistry를 올바른 L2 genesis root 값으로 초기화하거나 재설정해야 합니다.
