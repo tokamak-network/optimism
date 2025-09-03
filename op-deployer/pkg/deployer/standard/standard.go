@@ -26,7 +26,7 @@ const (
 	ProofMaturityDelaySeconds       uint64 = 604800
 	DisputeGameFinalityDelaySeconds uint64 = 302400
 	MIPSVersion                     uint64 = 8
-	DisputeGameType                 uint32 = 1 // PERMISSIONED game type
+	DisputeGameType                 uint32 = 1 // PERMISSIONED game type (default, should be overridden by intent)
 	DisputeMaxGameDepth             uint64 = 73
 	DisputeSplitDepth               uint64 = 30
 	DisputeClockExtension           uint64 = 10800

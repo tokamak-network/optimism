@@ -50,7 +50,7 @@ optimism_package:
       proposer_params:
         image: {{ localDockerImage "op-proposer" }}
         extra_params: []
-        game_type: 1
+        game_type: 0
         proposal_interval: 10m
   challengers:
     challenger:
@@ -58,14 +58,15 @@ optimism_package:
       image: {{ localDockerImage "op-challenger" }}
       participants: "*"
       cannon_prestates_url: {{ localPrestate.URL }}
-      cannon_trace_types: ["cannon", "permissioned"]
+      cannon_trace_types: ["cannon"]
   op_contract_deployer_params:
     image: {{ localDockerImage "op-deployer" }}
     l1_artifacts_locator: {{ localContractArtifacts "l1" }}
     l2_artifacts_locator: {{ localContractArtifacts "l2" }}
     overrides:
       faultGameAbsolutePrestate: {{ localPrestate.Hashes.prestate_mt64 }}
-  global_log_level: "info"
+      vmType: "CANNON"
+  global_log_level: "debug"
   global_node_selectors: {}
   global_tolerations: []
   persistent: false
@@ -73,9 +74,10 @@ ethereum_package:
   participants:
     - el_type: geth
       cl_type: teku
+      cl_image: "consensys/teku:25.7.0"
   network_params:
     preset: minimal
-    genesis_delay: 5
+    genesis_delay: 10
     additional_preloaded_contracts: |
       {
         "0x4e59b44847b379578588920cA78FbF26c0B4956C": {

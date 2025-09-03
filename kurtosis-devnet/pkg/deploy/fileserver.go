@@ -105,6 +105,22 @@ func (f *FileServer) Deploy(ctx context.Context, sourceDir string, stateCh <-cha
 		return fmt.Errorf("error copying directory: %w", err)
 	}
 
+	// Log uploaded files for debugging prestate synchronization
+	log.Printf("📤 FileServer upload completed:")
+	log.Printf("  - Source: %s", sourceDir)  
+	log.Printf("  - Destination: %s", tempDir)
+	err = afero.Walk(f.fs, tempDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		relPath, _ := filepath.Rel(tempDir, path)
+		log.Printf("  - File uploaded: %s (size: %d bytes)", relPath, info.Size())
+		return nil
+	})
+	if err != nil {
+		log.Printf("  - Warning: failed to list uploaded files: %v", err)
+	}
+
 	buf := bytes.NewBuffer(nil)
 	buf.WriteString(fmt.Sprintf("source_path: %s\n", filepath.Base(tempDir)))
 

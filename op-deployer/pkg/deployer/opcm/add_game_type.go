@@ -2,6 +2,7 @@ package opcm
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/script"
@@ -57,6 +58,7 @@ func (a *AddGameTypeInput) UnmarshalJSON(b []byte) error {
 	a.OPChainProxyAdmin = alias.OPChainProxyAdmin
 	a.DelayedWETHProxy = alias.DelayedWETHProxy
 	a.DisputeGameType = alias.DisputeGameType
+	fmt.Printf("🔍 [DEBUG] AddGameTypeInput.UnmarshalJSON: DisputeGameType set to %d\n", a.DisputeGameType)
 	a.DisputeAbsolutePrestate = alias.DisputeAbsolutePrestate
 
 	if alias.DisputeMaxGameDepth != nil {

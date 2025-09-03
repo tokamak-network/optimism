@@ -37,13 +37,74 @@ log_step() {
     echo -e "${PURPLE}[STEP]${NC} $1"
 }
 
-# 변수 정의
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OPTIMISM_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-KURTOSIS_DEVNET_DIR="$OPTIMISM_ROOT/optimism/kurtosis-devnet"
+# Help Function
+show_help() {
+    echo "Usage: $0 [OPTIONS]"
+    echo
+    echo "Build Optimism devnet with configurable parameters"
+    echo
+    echo "OPTIONS:"
+    echo "  --game-type=TYPE    Set game type (0=CANNON, 1=PERMISSIONED, 2=ASTERISC)"
+    echo "                      Default: 1 (PERMISSIONED)"
+    echo "  -h, --help          Show this help message"
+    echo
+    echo "EXAMPLES:"
+    echo "  $0                      # Build with default game type (PERMISSIONED)"
+    echo "  $0 --game-type=0        # Build with CANNON game type"
+    echo "  $0 --game-type=1        # Build with PERMISSIONED game type"
+    echo
+    echo "GAME TYPES:"
+    echo "  0  CANNON        Complete fault proof (requires cannon binaries)"
+    echo "  1  PERMISSIONED  Fast development/testing (default)"
+    echo "  2  ASTERISC      Asterisc VM (requires asterisc binaries)"
+    echo
+}
+
+# Parse Command Line Arguments
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --game-type=*)
+                GAME_TYPE="${1#*=}"
+                if ! [[ "$GAME_TYPE" =~ ^[0-2]$ ]]; then
+                    log_error "Invalid game type: $GAME_TYPE"
+                    log_error "Valid game types: 0 (CANNON), 1 (PERMISSIONED), 2 (ASTERISC)"
+                    exit 1
+                fi
+                log_info "Game type set to: $GAME_TYPE"
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
+# 변수 정의 (동적 경로 발견)
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+OPTIMISM_ROOT="$(realpath "$SCRIPT_DIR/../..")"
+KURTOSIS_DEVNET_DIR="$OPTIMISM_ROOT/kurtosis-devnet"
+
+# 경로 디버깅 (개발용)
+if [ "${DEBUG_PATHS:-}" = "1" ]; then
+    echo "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
+    echo "DEBUG: OPTIMISM_ROOT=$OPTIMISM_ROOT"  
+    echo "DEBUG: KURTOSIS_DEVNET_DIR=$KURTOSIS_DEVNET_DIR"
+fi
 
 ENCLAVE_NAME="simple-devnet"
 BUILD_LOG="/tmp/devnet-build.log"
+
+# Default values - will be read from simple.yaml if not specified
+DEFAULT_GAME_TYPE=""  # Will be set later
+GAME_TYPE=""
 
 # Core Services (Persistent)
 CORE_SERVICES=(
@@ -119,6 +180,8 @@ check_requirements() {
     log_success "System requirements check completed"
 }
 
+
+
 # Build Docker Images
 build_docker_images() {
     log_step "Building Docker Images"
@@ -131,7 +194,7 @@ build_docker_images() {
     log_info "Checking Docker build modifications..."
 
     # Check if go-libp2p-mplex fix code is already added to Dockerfile
-    local dockerfile="$OPTIMISM_ROOT/optimism/ops/docker/op-stack-go/Dockerfile"
+    local dockerfile="$OPTIMISM_ROOT/ops/docker/op-stack-go/Dockerfile"
     if [ -f "$dockerfile" ]; then
         if grep -q "Fix go-libp2p-mplex compatibility issues" "$dockerfile"; then
             log_success "Docker build modifications are already applied"
@@ -142,10 +205,14 @@ build_docker_images() {
         log_warning "Dockerfile not found"
     fi
 
-    cd "$KURTOSIS_DEVNET_DIR"
-
     # Move to kurtosis-devnet directory (where just recipes are)
-    cd "$OPTIMISM_ROOT/optimism/kurtosis-devnet"
+    cd "$KURTOSIS_DEVNET_DIR"
+    
+    # Verify we're in the correct directory
+    if [ ! -f "justfile" ]; then
+        log_error "justfile not found in $KURTOSIS_DEVNET_DIR"
+        exit 1
+    fi
 
     local build_success_count=0
     local total_services=${#BUILD_SERVICES[@]}
@@ -240,7 +307,7 @@ deploy_devnet() {
     log_info "Deploying Devnet... (Total: 5-15 minutes required)"
     echo "   ⏱️  Expected timeline:"
     echo "     • Configuration setup: ~30 seconds"
-    echo "     • Docker image preparation: ~2-3 minutes" 
+    echo "     • Docker image preparation: ~2-3 minutes"
     echo "     • L1 chain startup: ~2-3 minutes"
     echo "     • Contract deployments: ~3-5 minutes"
     echo "     • L2 chain startup: ~2-4 minutes"
@@ -260,13 +327,66 @@ deploy_devnet() {
         sleep 10  # Longer wait time
     fi
 
-    # Create and run new enclave
+    # Pre-deployment check before the most critical step
     log_info "Step 3/6: Starting L1 chain and deploying contracts... (~5-8 minutes)"
     log_warning "⚠️  This is the longest step - L1 startup + contract deployments"
 
+    # Run quick pre-deployment check to catch issues early
+    log_info "Running pre-deployment safety check..."
+    if ! bash "$SCRIPT_DIR/scripts-build-devnet/ultra-simple-check.sh" >/dev/null 2>&1; then
+        log_error "Pre-deployment check failed - aborting to prevent timeout"
+        echo "       → Running detailed check for diagnosis:"
+        bash "$SCRIPT_DIR/scripts-build-devnet/ultra-simple-check.sh"
+        return 1
+    fi
+    log_success "Pre-deployment check passed ✓"
+
     # Run with timeout setting (increased to 10 minutes)
-    timeout 600 kurtosis run ./optimism-package-trampoline/ --enclave "$ENCLAVE_NAME" >> "$BUILD_LOG" 2>&1
-    local exit_code=$?
+    # Use absolute paths to avoid YAML parsing issues
+    # Add retry mechanism for GRPC communication issues
+    local max_retries=3
+    local attempt=1
+    local exit_code=1
+
+    while [ $attempt -le $max_retries ]; do
+        log_info "Deployment attempt $attempt/$max_retries..."
+
+        # Clean up previous failed attempt if not the first
+        if [ $attempt -gt 1 ]; then
+            log_info "Cleaning up previous attempt..."
+            if kurtosis enclave list | grep -q "$ENCLAVE_NAME"; then
+                kurtosis enclave rm --force "$ENCLAVE_NAME" > /dev/null 2>&1 || true
+                sleep 5
+            fi
+        fi
+
+        timeout 600 kurtosis run "$KURTOSIS_DEVNET_DIR/optimism-package-trampoline" --args-file "$KURTOSIS_DEVNET_DIR/simple.yaml" --enclave "$ENCLAVE_NAME" >> "$BUILD_LOG" 2>&1
+        exit_code=$?
+
+        # Check for specific GRPC/UTF-8 errors that indicate communication issues
+        if [ $exit_code -ne 0 ]; then
+            if grep -q "grpc: error while marshaling.*UTF-8\|Unexpected error happened reading the stream" "$BUILD_LOG"; then
+                log_warning "GRPC communication error detected on attempt $attempt"
+                if [ $attempt -lt $max_retries ]; then
+                    log_info "Retrying deployment due to communication issue..."
+                    echo "   🔄 Communication errors are usually temporary"
+                    sleep 10  # Wait before retry
+                    attempt=$((attempt + 1))
+                    continue
+                else
+                    log_error "All retry attempts failed due to communication issues"
+                fi
+            else
+                # Different error, don't retry
+                break
+            fi
+        else
+            # Success!
+            break
+        fi
+
+        attempt=$((attempt + 1))
+    done
 
     # Analyze result
     if [ $exit_code -eq 0 ]; then
@@ -373,7 +493,7 @@ verify_rpc_connections() {
     # Extract actual port information from Kurtosis enclave
     local l1_port=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "el-1-geth-lighthouse" -A 5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
     local l2_port=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "op-el.*op-geth" -A 5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
-    
+
     # Fallback to default ports if extraction fails
     [ -z "$l1_port" ] && l1_port="53620"
     [ -z "$l2_port" ] && l2_port="56781"
@@ -417,12 +537,12 @@ show_completion_message() {
 
     echo
     echo "=== Connection Information ==="
-    
+
     # Extract actual port information
     local l1_port=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "el-1-geth-lighthouse" -A 5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
     local l2_port=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "op-el.*op-geth" -A 5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
     local l2_rollup_port=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "op-cl.*op-node" -A 5 | grep "rpc: 8547/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
-    
+
     # Display actual connection information
     echo "L1 RPC: http://localhost:${l1_port:-53620}"
     echo "L2 RPC: http://localhost:${l2_port:-56781}"
@@ -445,10 +565,43 @@ show_completion_message() {
 
 # Main Function
 main() {
+    # Parse command line arguments first
+    parse_arguments "$@"
+
+    # If GAME_TYPE not set via command line, read from simple.yaml
+    if [ -z "$GAME_TYPE" ]; then
+        if [ -f "$KURTOSIS_DEVNET_DIR/simple.yaml" ]; then
+            GAME_TYPE=$(grep "game_type:" "$KURTOSIS_DEVNET_DIR/simple.yaml" | sed 's/.*game_type: *\([0-9]*\).*/\1/')
+            log_info "Reading game_type from simple.yaml: $GAME_TYPE"
+        else
+            GAME_TYPE=1  # Default fallback
+            log_warning "simple.yaml not found, using default game_type: $GAME_TYPE"
+        fi
+    fi
+
+    # Validate game type
+    case $GAME_TYPE in
+        0) log_info "Using CANNON game type (requires cannon binaries)" ;;
+        1) log_info "Using PERMISSIONED game type (development mode)" ;;
+        2) log_info "Using ASTERISC game type (requires asterisc binaries)" ;;
+        *)
+            log_error "Invalid game type: $GAME_TYPE"
+            exit 1
+            ;;
+    esac
+
     echo "=========================================="
     echo "Challenger Network - Devnet Builder"
     echo "Optimism Sequencer System Improvement Project"
     echo "=========================================="
+    echo
+    echo "Configuration:"
+    echo "  Game Type: $GAME_TYPE"
+    case $GAME_TYPE in
+        0) echo "  Mode: CANNON (Complete fault proof)" ;;
+        1) echo "  Mode: PERMISSIONED (Development)" ;;
+        2) echo "  Mode: ASTERISC (Asterisc VM)" ;;
+    esac
     echo
 
     # Execute each step
@@ -461,5 +614,43 @@ main() {
     show_completion_message
 }
 
+# Create temporary YAML with modified game_type
+create_temp_yaml() {
+    log_step "Creating temporary configuration with game_type=$GAME_TYPE" >&2
+
+    local source_yaml="$KURTOSIS_DEVNET_DIR/simple.yaml"
+    local temp_yaml="/tmp/simple-temp-$$.yaml"
+
+    if [ ! -f "$source_yaml" ]; then
+        log_error "Source YAML not found: $source_yaml" >&2
+        exit 1
+    fi
+
+    # Create temporary YAML with modified game_type
+    sed "s/game_type: [0-9]*/game_type: $GAME_TYPE/g" "$source_yaml" > "$temp_yaml"
+
+    # Verify the modification
+    local modified_game_type=$(grep "game_type:" "$temp_yaml" | sed 's/.*game_type: *\([0-9]*\).*/\1/')
+    if [ "$modified_game_type" != "$GAME_TYPE" ]; then
+        log_error "Failed to modify game_type in YAML" >&2
+        log_error "Expected: $GAME_TYPE, Got: $modified_game_type" >&2
+        rm -f "$temp_yaml"
+        exit 1
+    fi
+
+    log_success "Temporary YAML created: $temp_yaml" >&2
+    log_success "Game type set to: $GAME_TYPE" >&2
+
+    # Return only the file path (no other output)
+    printf "%s" "$temp_yaml"
+}
+
+# Cleanup function
+cleanup_temp_files() {
+    log_info "Cleaning up temporary files..."
+    rm -f /tmp/simple-temp-*.yaml
+}
+
 # Execute Script
+trap cleanup_temp_files EXIT
 main "$@"

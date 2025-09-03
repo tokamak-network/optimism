@@ -165,6 +165,7 @@ func (f *Templater) localPrestateOption(ctx context.Context, buildWg *sync.WaitG
 	})
 }
 
+
 func (f *Templater) Render(ctx context.Context) (*bytes.Buffer, error) {
 	// Initialize the build jobs map if it's nil
 	if f.buildJobs == nil {
