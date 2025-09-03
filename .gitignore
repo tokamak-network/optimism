@@ -60,20 +60,26 @@ crytic-export
 # Kurtosis devnet build artifacts and generated files
 kurtosis-devnet/--help/
 kurtosis-devnet/SESSION_NOTES.md
-kurtosis-devnet/fileserver/static_files/proofs/
+kurtosis-devnet/fileserver
 kurtosis-devnet/meta-interop.json
 kurtosis-devnet/meta-mt64.json
-kurtosis-devnet/op-program-client-interop.elf
-kurtosis-devnet/op-program-client64.elf
+
 kurtosis-devnet/prestate-build/
 kurtosis-devnet/prestate-interop.bin.gz
 kurtosis-devnet/prestate-mt64.bin.gz
 kurtosis-devnet/prestate-proof-interop.json
 kurtosis-devnet/prestate-proof-mt64.json
 kurtosis-devnet/kurtosis-engine-logs--*/
+kurtosis-devnet/contract-artifacts.tar.gz
+kurtosis-devnet/op-program-client-interop.elf
+kurtosis-devnet/op-program-client64.elf
+
 
 # New generated files from our deployment process
 kurtosis-devnet/contracts-ad9b7a6fca56bd578c4867de924331245fb920c6a58c34aa8492f6a23cdc351f/
 kurtosis-devnet/el_cl_genesis_data/
 kurtosis-devnet/genesis_validators_root/
 kurtosis-devnet/prestate.bin.gz
+
+op-challenger/scripts/contract-artifacts/
+
