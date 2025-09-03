@@ -116,15 +116,15 @@ docker exec op-challenger printenv | grep -E "TRACE_TYPE|GAME_TYPE"
 docker logs op-challenger | grep -E "(cannon|permissioned)" | tail -10
 
 # 3. 호환성 매트릭스 확인
-echo "Game Type 1 (Permissioned) + Trace Type permissioned = ✅"
-echo "Game Type 0 (Cannon) + Trace Type cannon = ✅"  
+echo "Game Type 1 (PERMISSIONED) + Trace Type cannon = ✅"
+echo "Game Type 0 (CANNON) + Trace Type cannon = ✅"  
 ```
 
 **호환성 매트릭스**:
 | Game Type | 지원 Trace Types | 설명 |
 |-----------|-----------------|------|
-| 0 (Cannon) | cannon | 표준 Fault Proof |
-| 1 (Permissioned) | permissioned | 제한된 참여자 |
+| 0 (CANNON) | cannon | 표준 Fault Proof |
+| 1 (PERMISSIONED) | cannon | 제한된 참여자, cannon trace 사용 |
 
 ## 자동화된 테스트 스크립트
 

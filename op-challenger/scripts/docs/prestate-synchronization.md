@@ -59,12 +59,8 @@ mkdir -p fileserver/static_files/proofs/op-program/cannon/
 # Copy prestate files
 cp ./prestate-build/*.json ./prestate-build/*.bin.gz fileserver/static_files/proofs/op-program/cannon/
 
-# Rename files to hash-based names (CRITICAL!)
-mv "fileserver/static_files/proofs/op-program/cannon/prestate-proof-mt64.json" \
-   "fileserver/static_files/proofs/op-program/cannon/0x03a1a13511403f206bb2414e3bf974f8b4608ad8f7b37ee6642f6598dbe06195.json"
-
-mv "fileserver/static_files/proofs/op-program/cannon/prestate-mt64.bin.gz" \
-   "fileserver/static_files/proofs/op-program/cannon/0x03a1a13511403f206bb2414e3bf974f8b4608ad8f7b37ee6642f6598dbe06195.bin.gz"
+# Hash-based files are automatically created during the build process
+# No manual renaming needed - files are already generated with correct hash names
 ```
 
 #### 3. Update Configuration
@@ -85,15 +81,16 @@ overrides:
 
 challengers:
   challenger:
-    cannon_prestates_url: "http://fileserver:8080/proofs/op-program/cannon/"
+    cannon_prestates_url: {{ localPrestate.URL }}
+    cannon_trace_types: ["cannon"]
 ```
 
 ## Key Points
 
 1. **Prestate Consistency**: Proposer and challenger must use exactly the same prestate
-2. **Hash-based Naming**: Prestate files must be renamed to their hash values
+2. **Hash-based Naming**: Prestate files are automatically generated with hash-based names
 3. **Build Process**: Use `just _prestate-build` for reproducible prestate generation
-4. **URL Synchronization**: Challenger's `cannon_prestates_url` must match actual file location
+4. **URL Synchronization**: Challenger automatically downloads correct prestate based on contract hash
 
 ## Verification
 

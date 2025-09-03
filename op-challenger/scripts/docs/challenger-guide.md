@@ -52,8 +52,8 @@ kurtosis files download simple-devnet op-deployer-configs /tmp/
 grep "respectedGameType" /tmp/state.json
 
 # 결과:
-# "respectedGameType": 0  → permissioned 자동 선택
-# "respectedGameType": 1  → cannon 자동 선택
+# "respectedGameType": 0  → cannon 자동 선택
+# "respectedGameType": 1  → permissioned 자동 선택
 ```
 
 ### Trace Type별 상세 비교

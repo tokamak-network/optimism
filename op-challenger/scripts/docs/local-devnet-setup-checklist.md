@@ -12,7 +12,7 @@ cat rollup-config.json | jq '.game_type'
 
 **필수 확인사항**:
 - [ ] `game_type` 필드가 존재하는가?
-- [ ] 값이 0 (Cannon) 또는 1 (Permissioned)인가?
+- [ ] 값이 0 (CANNON) 또는 1 (PERMISSIONED_CANNON)인가?
 - [ ] 네트워크 요구사항에 맞는 타입인가?
 
 ### 2. 주소 설정 확인
@@ -92,9 +92,9 @@ ls -la *.json | grep prestate
 ```
 
 **필수 Prestate들**:
-- [ ] **MT64 Prestate**: Game Type 1 (Permissioned)용
-- [ ] **Interop Prestate**: 인터오퍼러빌리티용 (필요시)
-- [ ] **Cannon Prestate**: Game Type 0 (Cannon)용 (필요시)
+- [ ] **MT64 Prestate**: 모든 게임 타입에 공통으로 사용
+- [ ] **Fileserver에서 hash 기반으로 자동 배포됨**
+- [ ] **수동 prestate 파일 지정은 불필요함**
 
 ### 7. 설정 일관성 체크
 
@@ -121,7 +121,7 @@ export CHALLENGER_ADDRESS="0x..."
 export BATCHER_ADDRESS="0x..."
 
 # 게임 타입 설정 (선택)
-export GAME_TYPE=1  # 1=Permissioned, 0=Cannon
+export GAME_TYPE=1  # 1=PERMISSIONED_CANNON, 0=CANNON
 ```
 
 ## 로컬 구축 시 추가 고려사항

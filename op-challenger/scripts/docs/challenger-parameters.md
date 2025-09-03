@@ -22,7 +22,7 @@
 |-----------|-------|-------------|
 | `--cannon-bin` | `/cannon-bin/cannon` | Cannon executable path |
 | `--cannon-server` | `/op-program-bin/op-program` | OP-Program server path |
-| `--cannon-prestate` | `/op-program-bin/prestate-mt64Next.bin.gz` | Prestate file path |
+| `--cannon-prestates-url` | Auto-configured | Base URL for prestate files (hash-based download) |
 
 ### Wallet Configuration
 | Parameter | Value | Description |

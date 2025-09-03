@@ -114,7 +114,7 @@ docker exec op-challenger op-challenger run-trace \
   --trace-type cannon \
   --cannon-bin /cannon-bin/cannon \
   --cannon-server /op-program-bin/op-program \
-  --cannon-prestate /op-program-bin/prestate-mt64Next.bin.gz \
+  --cannon-prestates-url http://fileserver:8080/prestates \
   --l1-eth-rpc http://localhost:65502 \
   --l2-eth-rpc http://localhost:49163 \
   --rollup-rpc http://localhost:49168
@@ -142,8 +142,8 @@ curl -X POST -H "Content-Type: application/json" \
 # 현재 설정된 trace-type 확인
 docker logs op-challenger 2>&1 | grep -i "trace-type\|starting"
 
-# 지원되는 trace-type으로 변경 테스트
-# run-challenger-devnet.sh에서 --trace-type=cannon 으로 변경
+# 모든 게임 타입에서 cannon trace-type 사용
+# run-challenger-devnet.sh는 자동으로 cannon 사용
 ```
 
 #### 연결 실패 테스트

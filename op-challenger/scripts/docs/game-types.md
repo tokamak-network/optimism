@@ -11,7 +11,7 @@ The Optimism fault proof system supports different game types that determine how
 | **Trust Model** | Fully permissionless | Role-based permissions |
 | **Participation** | Anyone can create games | Only authorized proposer/challenger |
 | **Game Creation** | Anyone can call `move()` | Only PROPOSER/CHALLENGER can call `move()` |
-| **L2OutputOracle** | May or may not be used | May or may not be used |
+| **L2OutputOracle** | Not used (0x0000...) | May be used |
 | **Economic Security** | Pure incentive-based | Role-based + incentive-based |
 | **Code Reference** | `FaultDisputeGame.sol:457` | `PermissionedDisputeGame.sol:73-85` |
 
@@ -52,8 +52,8 @@ function move(Claim _disputed, uint256 _challengeIndex, Claim _claim, bool _isAt
 # Devnet configuration shows L2OutputOracle as 0x0000...
 "L2OutputOracleProxy": "0x0000000000000000000000000000000000000000"
 
-# Challenger must compute output roots independently
-op-challenger --game-type=0 --cannon-bin=/path/to/cannon ...
+# Challenger works with MultiPrestateProvider (no --cannon-prestate parameter)
+op-challenger --game-type=0 ...
 ```
 
 ### Use Cases
@@ -100,11 +100,11 @@ function move(Claim _disputed, uint256 _challengeIndex, Claim _claim, bool _isAt
 
 ### Configuration Example
 ```bash
-# L2OutputOracle is deployed and active
+# L2OutputOracle is deployed and active (in some configurations)
 "L2OutputOracleProxy": "0x123abc..." # Real contract address
 
-# Challenger validates against oracle
-op-challenger --game-type=1 --l2-output-oracle=0x123abc... ...
+# Challenger works with MultiPrestateProvider (no --cannon-prestate parameter)
+op-challenger --game-type=1 ...
 ```
 
 ### Use Cases
@@ -136,14 +136,13 @@ func (f *DisputeGameFactoryContract) GetGamesAtOrAfter(ctx context.Context, bloc
 - ✅ **L2OutputOracle independent**: Works regardless of oracle deployment
 
 **CANNON Mode Requirements**:
-- Must run full L2 node or have access to L2 state
-- Must independently compute output roots
-- Higher computational requirements
+- Must have access to L2 state for output root computation
+- Uses MultiPrestateProvider for hash-based prestate file lookup
 - Polls DisputeGameFactory for new games
 
 **PERMISSIONED_CANNON Mode Requirements**:
 - Only authorized addresses can participate in games
-- Simpler validation (fewer participants)  
+- Uses MultiPrestateProvider for hash-based prestate file lookup  
 - Polls DisputeGameFactory for new games (same as CANNON)
 
 ### For Output Root Calculation
@@ -180,15 +179,16 @@ if c.DGFAddress != "" && c.L2OOAddress != "" {
 }
 ```
 
-**Current Devnet Configuration** (CANNON mode):
-- L2OutputOracle not deployed (`0x0000...`)
-- Proposer uses DisputeGameFactory mode → **Proposer creates dispute games** instead of submitting to oracle
-- Challenger polls DisputeGameFactory → **No dependency on L2OutputOracle events**
+**Current Devnet Configuration** (typically PERMISSIONED mode):
+- respectedGameType: 1 (PERMISSIONED_CANNON)
+- L2OutputOracle may or may not be deployed
+- Proposer creates dispute games through DisputeGameFactory
+- Challenger polls DisputeGameFactory for game discovery
 
-**Current Devnet Example** (CANNON mode with no L2OutputOracle):
+**Current Devnet Example**:
 ```json
 {
-  "L2OutputOracleProxy": "0x0000000000000000000000000000000000000000",
+  "L2OutputOracleProxy": "0x..." or "0x0000000000000000000000000000000000000000",
   "DisputeGameFactoryProxy": "0x...", // Supports both game types  
   "AnchorStateRegistryProxy": "0x...", // Works with both types
 }
