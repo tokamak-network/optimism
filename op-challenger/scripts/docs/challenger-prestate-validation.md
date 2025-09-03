@@ -12,7 +12,7 @@ op-challenger가 dispute game에 참여할 때 prestate와 state root를 어떻�
 
 ## Prestate 및 State Root Validation 과정
 
-### 1. Validator 생성 
+### 1. Validator 생성
 
 **파일**: `/Users/zena/tokamak-projects/optimism/op-challenger/game/fault/register_task.go:336-338`
 
@@ -33,7 +33,7 @@ if !e.skipPrestateValidation {
 - FaultDisputeGame 컨트랙트의 `absolutePrestate()` 함수 호출
 - 게임 생성 시 설정된 VM의 절대 prestate 해시 반환
 
-#### GetStartingRootHash()  
+#### GetStartingRootHash()
 - FaultDisputeGame 컨트랙트의 `startingRootHash()` 함수 호출
 - `startingOutputRoot.root` 값 반환
 - 이 값은 게임 초기화 시 `AnchorStateRegistry.getAnchorRoot()`에서 가져온 값
@@ -56,13 +56,13 @@ if !e.skipPrestateValidation {
 func (v *PrestateValidator) Validate(ctx context.Context) error {
     // Contract에서 값 가져오기
     contractHash, err := v.contractGetter(ctx)
-    
-    // Provider에서 값 계산하기  
+
+    // Provider에서 값 계산하기
     providerHash, err := v.prestateProvider.PrestatePath(ctx, contractHash)
-    
+
     // 두 값 비교
     if contractHash != calculatedProviderHash {
-        return fmt.Errorf("%s absolute prestate does not match: Provider: %s | Contract: %s", 
+        return fmt.Errorf("%s absolute prestate does not match: Provider: %s | Contract: %s",
             v.name, calculatedProviderHash, contractHash)
     }
 }
@@ -87,7 +87,7 @@ func (m *MultiPrestateProvider) PrestatePath(ctx context.Context, hash common.Ha
         }
         return path, nil // Found an existing file so use it
     }
-    
+
     // 2. 파일서버에서 다운로드 (라인 52-65)
     for _, fileType := range supportedFileTypes {
         path := filepath.Join(m.dataDir, hash.Hex()+fileType)
@@ -113,7 +113,7 @@ supportedFileTypes = []string{".bin.gz", ".json.gz", ".json"}
 ```
 
 - `.bin.gz` (바이너리 압축) - 우선순위 1
-- `.json.gz` (JSON 압축) - 우선순위 2  
+- `.json.gz` (JSON 압축) - 우선순위 2
 - `.json` (일반 JSON) - 우선순위 3
 
 ### 3. 파일서버 구조
@@ -138,7 +138,7 @@ http://fileserver/
 
 **Cold Starting이라고 불리는 이유:**
 - **Newly Deployed State**: 레지스트리가 새로 배포된 "cold" 상태로, 아직 실제 L2 상태에 연결되거나 반영하지 않음
-- **First Game Required**: 유효한 dispute game이 시작되고 성공적으로 완료되어야 anchor state가 초기 placeholder에서 실제 L2 상태로 업데이트됨  
+- **First Game Required**: 유효한 dispute game이 시작되고 성공적으로 완료되어야 anchor state가 초기 placeholder에서 실제 L2 상태로 업데이트됨
 - **Manual Intervention Needed**: 이것은 자동으로 해결되지 않으며, 종종 첫 번째 유효한 anchor state를 설정하기 위해 특정한 액션("warm-up" 게임이나 수동 개입)이 필요함
 
 **결론적으로**, "Cold Starting"은 AnchorStateRegistry가 새로 배포되어 유효한 anchor state가 부족한 상태를 설명하며, 이것이 challenger의 prestate 검증 실패의 근본 원인입니다.
@@ -147,13 +147,16 @@ http://fileserver/
 
 **Cold Starting 상태에서 생성된 모든 게임들:**
 - AnchorStateRegistry가 0xdead... 값을 가지고 있음
-- 새로 생성된 모든 dispute game들이 이 잘못된 값을 startingRootHash로 사용
+- **동시에 여러 개의 게임이 생성될 수 있음** (실제로 2개 게임이 동시 생성된 경우 확인됨)
+- 생성된 모든 dispute game들이 동일한 잘못된 값(0xdead...)을 startingRootHash로 사용
 - **모든 게임에서 prestate validation 실패**
+- 게임 1개든 2개든 n개든 상관없이 모든 게임이 같은 문제를 겪음
+- 각 게임은 독립적이지만 모두 동일한 AnchorStateRegistry를 참조하므로 같은 결과
 
 **Warm 상태 (첫 번째 유효한 게임 완료 후):**
 - AnchorStateRegistry에 유효한 anchor game이 설정됨
-- 새로 생성되는 게임들이 올바른 L2 state root를 startingRootHash로 사용
-- **Prestate validation 성공**
+- 그 이후 새로 생성되는 모든 게임들이 올바른 L2 state root를 startingRootHash로 사용
+- **이후 생성되는 모든 게임에서 prestate validation 성공**
 
 ## AnchorStateRegistry와의 관계
 
@@ -178,7 +181,7 @@ if (address(anchorGame) == address(0)) {
 
 ### 1. absolutePrestate 검증
 - **Contract**: `0x03a1a13511403f206bb2414e3bf974f8b4608ad8f7b37ee6642f6598dbe06195` ✅
-- **Provider**: `0x03a1a13511403f206bb2414e3bf974f8b4608ad8f7b37ee6642f6598dbe06195` ✅  
+- **Provider**: `0x03a1a13511403f206bb2414e3bf974f8b4608ad8f7b37ee6642f6598dbe06195` ✅
 - **결과**: **성공**
 
 ### 2. starting state root 검증 (Cold Starting 상태)
@@ -196,7 +199,7 @@ if (address(anchorGame) == address(0)) {
 // NewCannonRegisterTask 함수 (라인 97)
 skipPrestateValidation: gameType == faultTypes.PermissionedGameType,
 
-// NewSuperCannonRegisterTask 함수 (라인 58)  
+// NewSuperCannonRegisterTask 함수 (라인 58)
 skipPrestateValidation: gameType == faultTypes.SuperPermissionedGameType,
 
 // NewSuperAsteriscKonaRegisterTask 함수 (라인 200)
@@ -209,17 +212,24 @@ if !e.skipPrestateValidation {
 }
 ```
 
-**현재 동작**: 
+**현재 동작**:
 - **PermissionedGameType**, **SuperPermissionedGameType**: prestate validation 건너뜀
 - **기타 게임 타입**: prestate validation 수행
 
-### 1-1. Cold Game 예외 처리 (제안된 개선 방안)
+### 1-1. Cold Starting 기반 예외 처리 (제안된 개선 방안)
 ```go
-// 게임 상태 기반 예외 처리 (아직 구현되지 않음)
-if gameStatus == InProgress && claimCount == 1 {
+// AnchorStateRegistry 상태 기반 예외 처리 (아직 구현되지 않음)
+if anchorStateRegistry.isColdStarting() {
+    skipPrestateValidation = true
+}
+
+// 또는 게임 생성 시점 기반
+if gameStatus == InProgress && isNewlyCreatedGame {
     skipPrestateValidation = true
 }
 ```
+
+**참고**: `claimCount == 1` 조건은 개별 게임의 상태를 확인하는 것이지만, 실제로는 Cold Starting 상태에서 생성된 모든 게임(1개든 2개든)이 같은 문제를 겪습니다.
 
 ### 2. AnchorStateRegistry 수정 (Cold Starting 해결)
 - `startingAnchorRoot`를 올바른 L2 genesis root로 설정
@@ -235,12 +245,12 @@ if gameStatus == InProgress && claimCount == 1 {
 
 Challenger는 두 가지 핵심 값을 검증합니다:
 
-1. **VM absolutePrestate 검증**: 
+1. **VM absolutePrestate 검증**:
    - 파일서버에서 다운로드한 prestate 해시와 컨트랙트 값 비교
    - VM 실행의 초기 상태 검증
 
-2. **Starting state root 검증**: 
-   - L2 genesis output root와 게임의 starting root 비교  
+2. **Starting state root 검증**:
+   - L2 genesis output root와 게임의 starting root 비교
    - 게임이 올바른 L2 상태에서 시작하는지 검증
 
 **Cold Starting 상태**에서는 AnchorStateRegistry의 startingAnchorRoot가 0xdead... 같은 placeholder 값으로 설정되어 있어 모든 새로운 게임의 state root validation이 실패합니다. 이를 해결하려면 AnchorStateRegistry를 올바른 L2 genesis root 값으로 초기화하거나 재설정해야 합니다.
