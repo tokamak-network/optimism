@@ -29,10 +29,53 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Help Function
+show_help() {
+    echo "Usage: $0 [OPTIONS]"
+    echo
+    echo "Build required binaries for op-challenger"
+    echo
+    echo "OPTIONS:"
+    echo "  --force         Force rebuild even if binaries exist"
+    echo "  -h, --help      Show this help message"
+    echo
+    echo "EXAMPLES:"
+    echo "  $0              # Build only if binaries don't exist"
+    echo "  $0 --force      # Force rebuild all binaries"
+    echo
+}
+
+# Parse Command Line Arguments
+FORCE_BUILD=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --force)
+            FORCE_BUILD=true
+            log_info "Force rebuild enabled"
+            shift
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
 # Script Information
 echo "=========================================="
 echo "OP-Challenger Binary Builder"
 echo "Builds required binaries for challenger"
+if [ "$FORCE_BUILD" = true ]; then
+    echo "Mode: Force Rebuild"
+else
+    echo "Mode: Build if Missing"
+fi
 echo "=========================================="
 echo
 
@@ -82,6 +125,21 @@ build_op_program() {
         log_info "Running: make reproducible-prestate"
         if make reproducible-prestate; then
             log_success "✅ prestate files generated successfully"
+            
+            # Rename prestate file for challenger compatibility
+            log_info "Renaming prestate file for challenger compatibility..."
+            cd "$OPTIMISM_ROOT/op-program/bin"
+            
+            # Rename MT64 prestate file to standard name
+            if [ -f "prestate-mt64.bin.gz" ]; then
+                mv prestate-mt64.bin.gz prestate.bin.gz
+                log_success "✅ Renamed prestate-mt64.bin.gz -> prestate.bin.gz"
+            elif [ -f "prestate-mt64Next.bin.gz" ]; then
+                mv prestate-mt64Next.bin.gz prestate.bin.gz
+                log_success "✅ Renamed prestate-mt64Next.bin.gz -> prestate.bin.gz"
+            else
+                log_warning "⚠️  No MT64 prestate file found for renaming"
+            fi
         else
             log_warning "⚠️  Failed to generate prestate files, but continuing"
         fi
@@ -100,25 +158,32 @@ main() {
 
     log_info "Checking required binary files..."
 
-    # Check binaries
-    if [ ! -f "$OPTIMISM_ROOT/cannon/bin/cannon" ]; then
-        log_warning "❌ cannon binary not found"
+    # Check binaries (or force rebuild)
+    if [ "$FORCE_BUILD" = true ] || [ ! -f "$OPTIMISM_ROOT/cannon/bin/cannon" ]; then
+        if [ "$FORCE_BUILD" = true ] && [ -f "$OPTIMISM_ROOT/cannon/bin/cannon" ]; then
+            log_info "🔄 cannon binary exists but forcing rebuild"
+        else
+            log_warning "❌ cannon binary not found"
+        fi
         need_cannon=true
     else
         log_success "✅ cannon binary found"
     fi
 
-    if [ ! -f "$OPTIMISM_ROOT/op-program/bin/op-program" ]; then
-        log_warning "❌ op-program binary not found"
+    if [ "$FORCE_BUILD" = true ] || [ ! -f "$OPTIMISM_ROOT/op-program/bin/op-program" ] || [ ! -f "$OPTIMISM_ROOT/op-program/bin/prestate.bin.gz" ]; then
+        if [ "$FORCE_BUILD" = true ]; then
+            log_info "🔄 op-program/prestate exists but forcing rebuild"
+        else
+            if [ ! -f "$OPTIMISM_ROOT/op-program/bin/op-program" ]; then
+                log_warning "❌ op-program binary not found"
+            fi
+            if [ ! -f "$OPTIMISM_ROOT/op-program/bin/prestate.bin.gz" ]; then
+                log_warning "❌ prestate.bin.gz file not found"
+            fi
+        fi
         need_op_program=true
     else
         log_success "✅ op-program binary found"
-    fi
-
-    if [ ! -f "$OPTIMISM_ROOT/op-program/bin/prestate-mt64Next.bin.gz" ]; then
-        log_warning "❌ prestate file not found"
-        need_op_program=true
-    else
         log_success "✅ prestate file found"
     fi
 
