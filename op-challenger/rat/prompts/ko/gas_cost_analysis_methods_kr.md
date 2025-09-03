@@ -13,9 +13,10 @@ RAT(Reactive Attention Test) 도입에 따른 가스 비용 변화를 분석하�
 | 시나리오 | 역할 | 함수 | 경우 | 테스트 가스 사용량 | 실제 네트워크 가스 | 설명 | 상태 |
 |----------|------|------|------|-------------------|-------------------|------|------|
 | **1** | Proposer | `DisputeGameFactory.create()` | RAT 없음 | **163,991 가스** | **184,991 가스** | RAT가 없는 게임 타입으로 게임 생성 | ✅ 성공 |
-| **2** | Proposer | `DisputeGameFactory.create()` | RAT 배포됨, 트리거 안됨 | **~163,991 가스** | **~184,991 가스** | RAT가 배포되어 있지만 호출되지 않음 | 🔄 예상 |
-| **3a** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | 유효한 챌린저 있음 | **~296,369 가스** | **~317,369 가스** | 게임 생성 + 챌린저 선택, 보증금 차감 | 🔄 예상 |
-| **3b** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | 유효한 챌린저 없음 | **~178,668 가스** | **~199,668 가스** | 게임 생성 + 조건 검사만, 조용히 무시 | 🔄 예상 |
+| **2a** | Proposer | `DisputeGameFactory.create()` | RAT 배포됨, 확률 체크 실패 | **~164,000 가스** | **~185,000 가스** | RAT 확률 체크에서 early return | 🔄 예상 |
+| **2b** | Proposer | `DisputeGameFactory.create()` | RAT 배포됨, 트리거 안됨 | **~163,991 가스** | **~184,991 가스** | RAT가 배포되어 있지만 호출되지 않음 | 🔄 예상 |
+| **3a** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | 확률 통과 + 유효한 챌린저 있음 | **~296,400 가스** | **~317,400 가스** | 게임 생성 + 확률 체크 + 챌린저 선택, 보증금 차감 | 🔄 예상 |
+| **3b** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | 확률 통과 + 유효한 챌린저 없음 | **~178,700 가스** | **~199,700 가스** | 게임 생성 + 확률 체크 + 조건 검사만, 조용히 무시 | 🔄 예상 |
 | **4** | Validator | `submitCorrectEvidence()` | 성공 | **7,520 가스** | **28,520 가스** | 증거 검증, 보증금 환불 | ✅ 성공 |
 | **5a** | Validator | `resolveClaim()` | 해당 AttentionTest 참여자 | **4,857 가스** | **4,857 가스** | 보증금 환불, 상태 업데이트 (게임의 resolveClaim 내부에서 호출) | ✅ 성공 |
 | **5b** | Validator | `resolveClaim()` | 해당 AttentionTest 참여자 아님 | **1,565 가스** | **1,565 가스** | 조건 검사만, 조용히 무시 (게임의 resolveClaim 내부에서 호출) | ✅ 성공 |
@@ -53,16 +54,17 @@ RAT(Reactive Attention Test) 도입에 따른 가스 비용 변화를 분석하�
 ### 2. Proposer: Gas cost to post L2 state root in RAT when RAT is not triggered
 
 **분석 방법:**
-- RAT가 배포되어 있지만 `triggerAttentionTest`가 호출되지 않는 경우
-- `DisputeGameFactory.create()` 함수에서 RAT 호출이 없는 경우
+- **2a. 확률 기반 트리거 실패**: RAT의 `shouldTriggerRAT()` 확률 체크에서 early return
+- **2b. RAT 호출 없음**: `DisputeGameFactory.create()` 함수에서 RAT 호출이 없는 경우
 
 **측정 포인트:**
-- `DisputeGameFactory.create()` 함수 실행 가스 비용 (RAT 호출 없음)
-- 게임 생성 비용
+- `DisputeGameFactory.create()` 함수 실행 가스 비용
+- 확률 체크 함수 `shouldTriggerRAT()` 가스 비용
 
 **예상 결과:**
-- **가스 사용량**: ~163,991 가스 (RAT 호출 없음)
-- **설명**: RAT가 배포되어 있지만 실제로 호출되지 않는 경우
+- **2a. 확률 체크 실패**: ~164,000 가스 (확률 체크 + early return)
+- **2b. RAT 호출 없음**: ~163,991 가스 (RAT 호출 없음)
+- **설명**: 확률 기반 시스템으로 대부분의 경우 minimal overhead
 
 ### 3. Proposer: Gas cost to post L2 state root in RAT when RAT is triggered
 
@@ -133,6 +135,10 @@ RAT(Reactive Attention Test) 도입에 따른 가스 비용 변화를 분석하�
 | **`DisputeGameFactory.create()`** | RAT 없음 | **163,991 가스** | RAT가 없는 게임 타입으로 게임 생성 | ✅ 성공 |
 | **`stake()`** | 일반 스테이킹 | **67,177 가스** | 기본 스테이킹 (0.2 ETH) | ✅ 성공 |
 | **`stake()`** | 유효한 챌린저 등록 있음 | **114,711 가스** | 유효한 챌린저로 등록되는 스테이킹 (2 ETH) | ✅ 성공 |
+| **`setRatTriggerProbability()`** | 확률 설정 | **~22,000 가스** | 관리자 확률 설정 함수 | 🔄 예상 |
+| **`shouldTriggerRAT()`** | 확률 체크 (0%) | **~500 가스** | 확률 0%에서 즉시 false 반환 | 🔄 예상 |
+| **`shouldTriggerRAT()`** | 확률 체크 (100%) | **~500 가스** | 확률 100%에서 즉시 true 반환 | 🔄 예상 |
+| **`shouldTriggerRAT()`** | 확률 체크 (중간값) | **~800 가스** | 블록 해시 기반 랜덤 계산 | 🔄 예상 |
 | **`triggerAttentionTest()`** | 유효한 챌린저 있음 | **132,378 가스** | 챌린저 선택, 보증금 차감, AttentionInfo 생성 | ✅ 성공 |
 | **`triggerAttentionTest()`** | 유효한 챌린저 없음 | **14,677 가스** | 조용히 무시됨 (가스 절약) | ✅ 성공 |
 | **`submitCorrectEvidence()`** | 성공 | **7,520 가스** | 증거 검증, 보증금 환불 | ✅ 성공 |
@@ -167,7 +173,33 @@ RAT(Reactive Attention Test) 도입에 따른 가스 비용 변화를 분석하�
   - `challengers[msg.sender].validatorIndex` 설정
   - `validChallengers.push(msg.sender)` 배열에 추가
 
-### 3. `triggerAttentionTest()` 함수 분석
+### 3. 확률 기반 시스템 분석
+
+#### **`shouldTriggerRAT()` 함수 분석**
+
+**가스 효율성:**
+- **확률 0% (never trigger)**: ~500 가스 (즉시 false 반환)
+- **확률 100% (always trigger)**: ~500 가스 (즉시 true 반환)
+- **중간 확률값**: ~800 가스 (블록 해시 기반 랜덤 계산)
+
+**구현 최적화:**
+```solidity
+function shouldTriggerRAT() internal view returns (bool) {
+    uint256 prob = ratTriggerProbability;
+    if (prob == 0) return false;
+    if (prob >= MAX_PROBABILITY) return true;
+    return uint256(blockhash(block.number - 1)) % MAX_PROBABILITY < prob;
+}
+```
+
+#### **`setRatTriggerProbability()` 함수 분석**
+
+**가스 사용량**: ~22,000 가스
+- 관리자 권한 검증
+- 확률값 유효성 검사 (0-50,400 범위)
+- 스토리지 업데이트
+
+### 4. `triggerAttentionTest()` 함수 분석
 
 **참고: 이 함수는 `DisputeGameFactory.create()` 내부에서 컨트랙트 호출로 실행되므로, 실제 네트워크 실행 시 추가 intrinsic gas가 필요하지 않습니다.**
 

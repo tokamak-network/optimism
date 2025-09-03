@@ -14,9 +14,10 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 | Scenario | Role | Function | Case | Test Gas Usage | Actual Network Gas | Description | Status |
 |----------|------|----------|------|----------------|-------------------|-------------|--------|
 | **1** | Proposer | `DisputeGameFactory.create()` | No RAT | **163,991 gas** | **184,991 gas** | Game creation with game type without RAT | ✅ Success |
-| **2** | Proposer | `DisputeGameFactory.create()` | RAT deployed, not triggered | **~163,991 gas** | **~184,991 gas** | RAT is deployed but not called | 🔄 Expected |
-| **3a** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | Valid challengers exist | **~296,369 gas** | **~317,369 gas** | Game creation + challenger selection, bond deduction | 🔄 Expected |
-| **3b** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | No valid challengers | **~178,668 gas** | **~199,668 gas** | Game creation + condition check only, silently ignored | 🔄 Expected |
+| **2a** | Proposer | `DisputeGameFactory.create()` | RAT deployed, probability check fails | **~164,000 gas** | **~185,000 gas** | RAT probability check early return | 🔄 Expected |
+| **2b** | Proposer | `DisputeGameFactory.create()` | RAT deployed, not triggered | **~163,991 gas** | **~184,991 gas** | RAT is deployed but not called | 🔄 Expected |
+| **3a** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | Probability passes + Valid challengers exist | **~296,400 gas** | **~317,400 gas** | Game creation + probability check + challenger selection, bond deduction | 🔄 Expected |
+| **3b** | Proposer | `DisputeGameFactory.create()` + `triggerAttentionTest()` | Probability passes + No valid challengers | **~178,700 gas** | **~199,700 gas** | Game creation + probability check + condition check only, silently ignored | 🔄 Expected |
 | **4** | Validator | `submitCorrectEvidence()` | Success | **7,520 gas** | **28,520 gas** | Evidence verification, bond refund | ✅ Success |
 | **5a** | Validator | `resolveClaim()` | AttentionTest participant | **4,857 gas** | **4,857 gas** | Bond refund, state update (called within game's resolveClaim) | ✅ Success |
 | **5b** | Validator | `resolveClaim()` | Not AttentionTest participant | **1,565 gas** | **1,565 gas** | Condition check only, silently ignored (called within game's resolveClaim) | ✅ Success |
@@ -54,16 +55,17 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 ### 2. Proposer: Gas cost to post L2 state root in RAT when RAT is not triggered
 
 **Analysis Method:**
-- Case where RAT is deployed but `triggerAttentionTest` is not called
-- Case where RAT call is not made in `DisputeGameFactory.create()` function
+- **2a. Probability-based trigger failure**: RAT's `shouldTriggerRAT()` probability check with early return
+- **2b. No RAT call**: Case where RAT call is not made in `DisputeGameFactory.create()` function
 
 **Measurement Points:**
-- Gas cost for `DisputeGameFactory.create()` function execution (no RAT call)
-- Game creation cost
+- Gas cost for `DisputeGameFactory.create()` function execution
+- Gas cost for probability check function `shouldTriggerRAT()`
 
 **Expected Results:**
-- **Gas Usage**: ~163,991 gas (no RAT call)
-- **Description**: Case where RAT is deployed but not actually called
+- **2a. Probability check failure**: ~164,000 gas (probability check + early return)
+- **2b. No RAT call**: ~163,991 gas (no RAT call)
+- **Description**: Probability-based system with minimal overhead for most cases
 
 ### 3. Proposer: Gas cost to post L2 state root in RAT when RAT is triggered
 
@@ -134,6 +136,10 @@ To analyze gas cost changes due to the introduction of RAT (Reactive Attention T
 | **`DisputeGameFactory.create()`** | No RAT | **163,991 gas** | Game creation with game type without RAT | ✅ Success |
 | **`stake()`** | General staking | **67,177 gas** | Basic staking (0.2 ETH) | ✅ Success |
 | **`stake()`** | Valid challenger registration | **114,711 gas** | Staking that registers as valid challenger (2 ETH) | ✅ Success |
+| **`setRatTriggerProbability()`** | Probability setting | **~22,000 gas** | Admin probability setting function | 🔄 Expected |
+| **`shouldTriggerRAT()`** | Probability check (0%) | **~500 gas** | Probability 0% immediate false return | 🔄 Expected |
+| **`shouldTriggerRAT()`** | Probability check (100%) | **~500 gas** | Probability 100% immediate true return | 🔄 Expected |
+| **`shouldTriggerRAT()`** | Probability check (middle value) | **~800 gas** | Block hash based random calculation | 🔄 Expected |
 | **`triggerAttentionTest()`** | Valid challengers exist | **132,378 gas** | Challenger selection, bond deduction, AttentionInfo creation | ✅ Success |
 | **`triggerAttentionTest()`** | No valid challengers | **14,677 gas** | Silently ignored (gas savings) | ✅ Success |
 | **`submitCorrectEvidence()`** | Success | **7,520 gas** | Evidence verification, bond refund | ✅ Success |
