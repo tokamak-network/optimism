@@ -1,0 +1,23 @@
+{
+  "l1ChainID": 31337,
+  "l2ChainID": 2151908,
+  "l1GenesisBlockNumber": 0,
+  "l1GenesisBlockNonce": 0,
+  "l1GenesisBlockGasLimit": 30000000,
+  "l1GenesisBlockGasUsed": 0,
+  "l1GenesisBlockBaseFeePerGas": "1000000000",
+  "l1GenesisBlockDifficulty": "0",
+  "l1GenesisBlockParentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "l1GenesisBlockMixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "l1GenesisBlockCoinbase": "0x0000000000000000000000000000000000000000",
+  "l1GenesisBlockExcessBlobGas": null,
+  "l1GenesisBlockBlobGasUsed": null,
+  "l2GenesisBlockNumber": 0,
+  "l2GenesisBlockGasLimit": 30000000,
+  "l2GenesisBlockBaseFeePerGas": "1000000000",
+  "l2GenesisBlockDifficulty": "0",
+  "l2GenesisBlockNonce": "0",
+  "l2GenesisBlockGasUsed": "0",
+  "l2GenesisBlockParentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "l2GenesisBlockMixHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}
