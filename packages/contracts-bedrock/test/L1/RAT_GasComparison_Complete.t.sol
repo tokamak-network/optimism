@@ -69,7 +69,8 @@ contract RAT_GasComparison_Complete_Test is CommonTest {
                     SLASH_BOND_AMOUNT,
                     EVIDENCE_SUBMISSION_PERIOD,
                     MINIMUM_STAKE_AMOUNT,
-                    100000 // 100% default probability (MAX_PROBABILITY)
+                    100000, // 100% default probability (MAX_PROBABILITY)
+                    address(1) // manager address
                 )
             )
         );

@@ -13,6 +13,7 @@ import { GameTypes } from "src/dispute/lib/Types.sol";
 contract RAT_Simple_Test is CommonTest {
     RAT public rat;
     address public mockFaultDisputeGame;
+    address public ratProxyAdmin;
 
     uint256 public constant SLASH_BOND_AMOUNT = 1 ether;
     uint256 public constant EVIDENCE_SUBMISSION_PERIOD = 100;
@@ -33,6 +34,7 @@ contract RAT_Simple_Test is CommonTest {
 
         // Deploy RAT proxy
         Proxy ratProxy = new Proxy(address(1));
+        ratProxyAdmin = address(1);
 
         // Cast proxy to RAT interface
         rat = RAT(payable(address(ratProxy)));
@@ -48,7 +50,8 @@ contract RAT_Simple_Test is CommonTest {
                     SLASH_BOND_AMOUNT,
                     EVIDENCE_SUBMISSION_PERIOD,
                     MINIMUM_STAKE_AMOUNT,
-                    100000 // 100% default probability (MAX_PROBABILITY)
+                    100000, // 100% default probability (MAX_PROBABILITY)
+                    ratProxyAdmin // manager address
                 )
             )
         );
@@ -124,7 +127,7 @@ contract RAT_Simple_Test is CommonTest {
     /// @notice Test triggerAttentionTest() with low probability (1%) - should not trigger
     function test_triggerAttentionTest_low_probability_gas_measurement() public {
         // Set probability to 1% (1000/100000)
-        vm.prank(address(1)); // proxy admin owner
+        vm.prank(rat.ratManager()); // Use RAT contract's manager
         rat.setRatTriggerProbability(1000); // 1% probability
 
         // Setup challenger first
@@ -155,7 +158,7 @@ contract RAT_Simple_Test is CommonTest {
     /// @notice Test triggerAttentionTest() with 0% probability - should not trigger
     function test_triggerAttentionTest_zero_probability_gas_measurement() public {
         // Set probability to 0%
-        vm.prank(address(1)); // proxy admin owner
+        vm.prank(rat.ratManager()); // Use RAT contract's manager
         rat.setRatTriggerProbability(0); // 0% probability
 
         // Setup challenger first

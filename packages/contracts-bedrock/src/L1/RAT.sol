@@ -75,7 +75,8 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     /// @notice Probability for triggering RAT (0-50400, where 50400 = weekly)
     uint256 public ratTriggerProbability;
 
-
+    /// @notice Manager address that can modify RAT parameters
+    address public ratManager;
 
     /// @notice Mapping from challenger address to challenger info
     mapping(address => ChallengerInfo) public challengers;
@@ -95,6 +96,9 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
     /// @notice Error thrown when evidence submission period has expired
     error EvidenceSubmissionExpired();
+
+    /// @notice Error thrown when caller is not the ratManager
+    error NotRatManager();
 
     /// @notice Error thrown when evidence has already been submitted
     error EvidenceAlreadySubmitted();
@@ -122,6 +126,18 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         _;
     }
 
+    /// @notice Modifier to restrict access to manager only
+    modifier onlyManager() {
+        if (msg.sender != ratManager) revert NotRatManager();
+        _;
+    }
+
+    /// @notice Modifier to restrict access to RAT manager only
+    modifier onlyRatManager() {
+        if (msg.sender != ratManager) revert NotRatManager();
+        _;
+    }
+
     /// @notice Constructs the RAT contract
     constructor() ReinitializableBase(2) {
         _disableInitializers();
@@ -133,12 +149,14 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     /// @param _evidenceSubmissionPeriod Evidence submission period in blocks
     /// @param _minimumStakingBalance Minimum staking balance required
     /// @param _ratTriggerProbability Initial RAT trigger probability (0-50400)
+    /// @param _manager Address of the manager who can modify RAT parameters
     function initialize(
         IDisputeGameFactory _disputeGameFactory,
         uint256 _perTestBondAmount,
         uint256 _evidenceSubmissionPeriod,
         uint256 _minimumStakingBalance,
-        uint256 _ratTriggerProbability
+        uint256 _ratTriggerProbability,
+        address _manager
     )
         public
         payable
@@ -152,6 +170,7 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         evidenceSubmissionPeriod = _evidenceSubmissionPeriod;
         minimumStakingBalance = _minimumStakingBalance;
         ratTriggerProbability = _ratTriggerProbability;
+        ratManager = _manager;
 
         // Initialize validChallengers with a dummy element at index 0
         validChallengers.push(address(0));
@@ -378,10 +397,9 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         minimumStakingBalance = _balance;
     }
 
-    /// @notice Sets the RAT trigger probability (only proxy admin owner)
+    /// @notice Sets the RAT trigger probability (only manager)
     /// @param _probability New trigger probability (0-50400)
-    function setRatTriggerProbability(uint256 _probability) external {
-        _assertOnlyProxyAdminOwner();
+    function setRatTriggerProbability(uint256 _probability) external onlyRatManager {
         require(_probability <= MAX_PROBABILITY, "Invalid probability");
         ratTriggerProbability = _probability;
     }
