@@ -80,7 +80,9 @@ kurtosis-devnet/prestate-proof-interop.json
 kurtosis-devnet/prestate-proof-mt64.json
 kurtosis-devnet/kurtosis-engine-logs--*/
 
-# Challenger scripts generated files
-op-challenger/scripts/docs/prestate-synchronization.md
-op-challenger/scripts/run-challenger-devnet-v1.sh
+# New generated files from our deployment process
+kurtosis-devnet/contracts-ad9b7a6fca56bd578c4867de924331245fb920c6a58c34aa8492f6a23cdc351f/
+kurtosis-devnet/el_cl_genesis_data/
+kurtosis-devnet/genesis_validators_root/
+kurtosis-devnet/prestate.bin.gz
 
