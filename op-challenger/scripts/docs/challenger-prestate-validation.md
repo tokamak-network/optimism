@@ -160,6 +160,46 @@ http://fileserver/
 
 ## AnchorStateRegistry와의 관계
 
+### startingAnchorRoot 체크 로직 위치
+
+**1. AnchorStateRegistry Contract 정의**
+- **파일**: `/Users/zena/tokamak-projects/optimism/packages/contracts-bedrock/src/dispute/AnchorStateRegistry.sol:44`
+- **정의**: `Proposal internal startingAnchorRoot;`
+- **초기화**: `initialize()` 함수에서 설정 (라인 104)
+
+**2. Challenger Validation 설정**
+- **파일**: `/Users/zena/tokamak-projects/optimism/op-challenger/game/fault/register_task.go:336-338`
+- **로직**: `skipPrestateValidation` 플래그에 따라 validator 생성
+```go
+if !e.skipPrestateValidation {
+    validators = append(validators, NewPrestateValidator(e.gameType.String(), contract.GetAbsolutePrestateHash, vmPrestateProvider))
+    validators = append(validators, NewPrestateValidator("output root", contract.GetStartingRootHash, prestateProvider))
+}
+```
+
+**3. Contract 값 조회 구현**
+- **파일**: `/Users/zena/tokamak-projects/optimism/op-challenger/game/fault/contracts/faultdisputegame.go:259-265`
+- **함수**: `GetStartingRootHash()`
+```go
+func (f *FaultDisputeGameContract) GetStartingRootHash(ctx context.Context) (common.Hash, error) {
+    defer f.metrics.StartContractRequest("GetStartingRootHash")()
+    return f.multiCaller.SingleCall(ctx, rpcblock.Latest, f.contract.Call(methodStartingRootHash))
+}
+```
+
+**4. AnchorStateRegistry getAnchorRoot() 동작**
+- **파일**: `/Users/zena/tokamak-projects/optimism/packages/contracts-bedrock/src/dispute/AnchorStateRegistry.sol:168-176`
+```solidity
+function getAnchorRoot() public view returns (Hash, uint256) {
+    // Return the starting anchor root if there is no anchor game.
+    if (address(anchorGame) == address(0)) {
+        return (startingAnchorRoot.root, startingAnchorRoot.l2SequenceNumber);
+    }
+    // Otherwise, return the anchor root.
+    return (Hash.wrap(anchorGame.rootClaim().raw()), anchorGame.l2SequenceNumber());
+}
+```
+
 ### startingAnchorRoot 설정 과정
 
 1. **게임 생성 시**: `FaultDisputeGame.initialize()`
