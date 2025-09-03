@@ -68,10 +68,15 @@ contract RAT_GasComparison_Complete_Test is CommonTest {
                     IDisputeGameFactory(mockDisputeGameFactory),
                     SLASH_BOND_AMOUNT,
                     EVIDENCE_SUBMISSION_PERIOD,
-                    MINIMUM_STAKE_AMOUNT
+                    MINIMUM_STAKE_AMOUNT,
+                    100000 // 100% default probability (MAX_PROBABILITY)
                 )
             )
         );
+
+        // Set probability to 100% to ensure RAT always triggers
+        vm.prank(address(1)); // proxy admin owner
+        rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
 
         // Fund test accounts
         vm.deal(CHALLENGER_1, 10 ether);

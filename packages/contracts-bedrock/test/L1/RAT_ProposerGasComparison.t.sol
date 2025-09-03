@@ -48,10 +48,15 @@ contract RAT_ProposerGasComparison_Test is CommonTest {
                     disputeGameFactory,
                     SLASH_BOND_AMOUNT,
                     EVIDENCE_SUBMISSION_PERIOD,
-                    MINIMUM_STAKE_AMOUNT
+                    MINIMUM_STAKE_AMOUNT,
+                    100000 // 100% default probability (MAX_PROBABILITY)
                 )
             )
         );
+
+        // Set probability to 100% to ensure RAT always triggers
+        vm.prank(address(1)); // proxy admin owner
+        rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
 
         // Fund test accounts
         vm.deal(CHALLENGER_1, 10 ether);
@@ -104,7 +109,8 @@ contract RAT_ProposerGasComparison_Test is CommonTest {
                     disputeGameFactory,
                     SLASH_BOND_AMOUNT,
                     EVIDENCE_SUBMISSION_PERIOD,
-                    MINIMUM_STAKE_AMOUNT
+                    MINIMUM_STAKE_AMOUNT,
+                    1000 // 1% default probability
                 )
             )
         );
@@ -247,7 +253,7 @@ contract RAT_ProposerGasComparison_Test is CommonTest {
         vm.prank(address(3));
         emptyRatProxy.upgradeToAndCall(
             address(emptyRatImpl),
-            abi.encodeCall(RAT.initialize, (disputeGameFactory, SLASH_BOND_AMOUNT, EVIDENCE_SUBMISSION_PERIOD, MINIMUM_STAKE_AMOUNT))
+            abi.encodeCall(RAT.initialize, (disputeGameFactory, SLASH_BOND_AMOUNT, EVIDENCE_SUBMISSION_PERIOD, MINIMUM_STAKE_AMOUNT, 1000))
         );
 
         vm.prank(PROPOSER);

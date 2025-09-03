@@ -5,6 +5,8 @@ import { CommonTest } from "test/setup/CommonTest.sol";
 import { RAT } from "src/L1/RAT.sol";
 import { Proxy } from "src/universal/Proxy.sol";
 import { IDisputeGameFactory } from "interfaces/dispute/IDisputeGameFactory.sol";
+import { IDisputeGame } from "interfaces/dispute/IDisputeGame.sol";
+import { GameTypes } from "src/dispute/lib/Types.sol";
 
 /// @title RAT_GasTest
 /// @notice Gas measurement tests for RAT contract
@@ -20,9 +22,14 @@ contract RAT_GasTest is CommonTest {
     function setUp() public override {
         super.setUp(); // CommonTest의 setUp()을 먼저 호출
 
-        // Create mock addresses
-        mockDisputeGameFactory = makeAddr("mockDisputeGameFactory");
+        // Use actual disputeGameFactory from CommonTest
+        mockDisputeGameFactory = address(disputeGameFactory);
         mockFaultDisputeGame = makeAddr("mockFaultDisputeGame");
+
+        // Set up game implementation for CANNON game type
+        // This is needed to avoid NoImplementation(0) error
+        vm.prank(disputeGameFactory.owner());
+        disputeGameFactory.setImplementation(GameTypes.CANNON, IDisputeGame(mockFaultDisputeGame));
 
         // Deploy RAT implementation
         RAT ratImpl = new RAT();
@@ -43,10 +50,15 @@ contract RAT_GasTest is CommonTest {
                     IDisputeGameFactory(mockDisputeGameFactory),
                     SLASH_BOND_AMOUNT,
                     EVIDENCE_SUBMISSION_PERIOD,
-                    MINIMUM_STAKE_AMOUNT
+                    MINIMUM_STAKE_AMOUNT,
+                    100000 // 100% default probability (MAX_PROBABILITY)
                 )
             )
         );
+
+        // Set probability to 100% to ensure RAT always triggers
+        vm.prank(address(1)); // proxy admin owner
+        rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
     }
 
     /// @notice Test stake() function gas usage
@@ -95,6 +107,10 @@ contract RAT_GasTest is CommonTest {
         vm.prank(challenger);
         rat.stake{value: 2 ether}(); // Make challenger valid
 
+        // Set probability to 100% to ensure trigger
+        vm.prank(address(1)); // proxy admin owner
+        rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
+
         // Test triggerAttentionTest
         address gameAddress = address(0x5678);
         bytes32 stateRoot = keccak256("test_state_root");
@@ -140,6 +156,10 @@ contract RAT_GasTest is CommonTest {
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
         rat.stake{value: 2 ether}();
+
+        // Set probability to 100% to ensure trigger
+        vm.prank(address(1)); // proxy admin owner
+        rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
 
         // // Check challenger status after staking
         // RAT.ChallengerInfo memory info = rat.getChallengerInfo(challenger);
@@ -202,6 +222,10 @@ contract RAT_GasTest is CommonTest {
         vm.prank(challenger);
         rat.stake{value: 2 ether}();
 
+        // Set probability to 100% to ensure trigger
+        vm.prank(address(1)); // proxy admin owner
+        rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
+
         address gameAddress = address(0x5678);
         bytes32 stateRoot = keccak256("test_state_root");
 
@@ -257,6 +281,10 @@ contract RAT_GasTest is CommonTest {
         vm.prank(challenger);
         rat.stake{value: 2 ether}();
 
+        // Set probability to 100% to ensure trigger
+        vm.prank(address(1)); // proxy admin owner
+        rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
+
         address gameAddress = address(0x5678);
         bytes32 proofLV = keccak256("left_value");
         bytes32 proofRV = keccak256("right_value");
@@ -286,6 +314,10 @@ contract RAT_GasTest is CommonTest {
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
         rat.stake{value: 2 ether}();
+
+        // Set probability to 100% to ensure trigger
+        vm.prank(address(1)); // proxy admin owner
+        rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
 
         address gameAddress = address(0x5678);
         bytes32 proofLV = keccak256("left_value");
@@ -363,5 +395,135 @@ contract RAT_GasTest is CommonTest {
 
         // Verify count is correct
         assertEq(count, 2); // 1 for dummy address(0) + 1 for challenger
+    }
+
+    /// @notice Test triggerAttentionTest() with probability = 0 (never trigger)
+    function test_triggerAttentionTest_probability_zero_gas_measurement() public {
+        // Setup challenger first
+        address challenger = address(0x1234);
+        vm.deal(challenger, 10 ether);
+        vm.prank(challenger);
+        rat.stake{value: 2 ether}();
+
+        // Set probability to 0 (never trigger)
+        vm.prank(address(1)); // proxy admin owner
+        rat.setRatTriggerProbability(0);
+
+        // Test triggerAttentionTest with probability 0
+        address gameAddress = address(0x5678);
+        bytes32 stateRoot = keccak256("test_state_root");
+        bytes32 blockHash = blockhash(block.number - 1);
+
+        vm.prank(mockDisputeGameFactory);
+        uint256 gasStart = gasleft();
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
+        uint256 gasUsed = gasStart - gasleft();
+
+        emit log_named_uint("RAT triggerAttentionTest() probability=0 gas used", gasUsed);
+
+        // Verify no attention test was created (probability check failed)
+        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
+        assertEq(storedStateRoot, bytes32(0)); // Should be empty
+    }
+
+    /// @notice Test triggerAttentionTest() with probability = MAX_PROBABILITY (always trigger)
+    function test_triggerAttentionTest_probability_max_gas_measurement() public {
+        // Setup challenger first
+        address challenger = address(0x1234);
+        vm.deal(challenger, 10 ether);
+        vm.prank(challenger);
+        rat.stake{value: 2 ether}();
+
+        // Set probability to MAX_PROBABILITY (always trigger)
+        vm.prank(address(1)); // proxy admin owner
+        rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
+
+        // Test triggerAttentionTest with probability MAX_PROBABILITY
+        address gameAddress = address(0x5678);
+        bytes32 stateRoot = keccak256("test_state_root");
+        bytes32 blockHash = blockhash(block.number - 1);
+
+        vm.prank(mockDisputeGameFactory);
+        uint256 gasStart = gasleft();
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
+        uint256 gasUsed = gasStart - gasleft();
+
+        emit log_named_uint("RAT triggerAttentionTest() probability=MAX gas used", gasUsed);
+
+        // Verify attention test was created (probability check passed)
+        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
+        assertEq(storedStateRoot, stateRoot);
+    }
+
+    /// @notice Test setRatTriggerProbability() function gas usage
+    function test_setRatTriggerProbability_gas_measurement() public {
+        uint256 newProbability = 1000; // 1% (1000/100000)
+
+        vm.prank(address(1)); // proxy admin owner
+        uint256 gasStart = gasleft();
+        rat.setRatTriggerProbability(newProbability);
+        uint256 gasUsed = gasStart - gasleft();
+
+        emit log_named_uint("RAT setRatTriggerProbability() gas used", gasUsed);
+
+        // Verify probability was set
+        assertEq(rat.ratTriggerProbability(), newProbability);
+    }
+
+    /// @notice Test shouldTriggerRAT() logic with different probabilities
+    function test_shouldTriggerRAT_different_probabilities_gas_measurement() public {
+        // Test with various probabilities to measure gas cost of shouldTriggerRAT()
+        uint256[5] memory probabilities = [uint256(0), 1, 50000, 99999, 100000]; // 0%, 0.001%, 50%, 99.999%, 100%
+
+        // Setup challenger for consistent test environment
+        address challenger = address(0x1234);
+        vm.deal(challenger, 10 ether);
+        vm.prank(challenger);
+        rat.stake{value: 2 ether}();
+
+        address gameAddress = address(0x5678);
+        bytes32 stateRoot = keccak256("test_state_root");
+        bytes32 blockHash = blockhash(block.number - 1);
+
+        for (uint i = 0; i < probabilities.length; i++) {
+            // Set probability
+            vm.prank(address(1)); // proxy admin owner
+            rat.setRatTriggerProbability(probabilities[i]);
+
+            // Test triggerAttentionTest
+            vm.prank(mockDisputeGameFactory);
+            uint256 gasStart = gasleft();
+            rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
+            uint256 gasUsed = gasStart - gasleft();
+
+            emit log_named_uint(
+                string(abi.encodePacked("RAT triggerAttentionTest() probability=", _toString(probabilities[i]), " gas used")),
+                gasUsed
+            );
+
+            // Use different game address for next test
+            gameAddress = address(uint160(gameAddress) + 1);
+        }
+    }
+
+    /// @notice Helper function to convert uint to string for logging
+    function _toString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) return "0";
+
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+
+        return string(buffer);
     }
 }

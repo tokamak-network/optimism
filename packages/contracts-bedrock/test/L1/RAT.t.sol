@@ -54,7 +54,8 @@ contract RAT_TestInit is CommonTest {
                     IDisputeGameFactory(mockDisputeGameFactory),
                     SLASH_BOND_AMOUNT,
                     EVIDENCE_SUBMISSION_PERIOD,
-                    MINIMUM_STAKE_AMOUNT
+                    MINIMUM_STAKE_AMOUNT,
+                    1000 // 1% default probability
                 )
             )
         );
@@ -188,7 +189,7 @@ contract RAT_TriggerAttentionTest_Test is RAT_TestInit {
         vm.prank(address(1));
         emptyRatProxy.upgradeToAndCall(
             address(ratImpl2),
-            abi.encodeCall(RAT.initialize, (IDisputeGameFactory(mockDisputeGameFactory), SLASH_BOND_AMOUNT, EVIDENCE_SUBMISSION_PERIOD, MINIMUM_STAKE_AMOUNT))
+            abi.encodeCall(RAT.initialize, (IDisputeGameFactory(mockDisputeGameFactory), SLASH_BOND_AMOUNT, EVIDENCE_SUBMISSION_PERIOD, MINIMUM_STAKE_AMOUNT, 1000))
         );
 
         GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
