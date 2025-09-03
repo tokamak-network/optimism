@@ -65,10 +65,18 @@ func (h *localPrestateHolder) GetPrestateInfo(ctx context.Context) (*PrestateInf
 	}
 
 	// Find and process all prestate files
-	matches, err := filepath.Glob(filepath.Join(buildDir, "prestate-proof*.json"))
+	matches, err := filepath.Glob(filepath.Join(buildDir, "prestate-proof-mt64.json"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find prestate files: %w", err)
 	}
+
+	// Create prestates directory for challenger compatibility
+	prestatesDir := filepath.Join(buildDir, "prestates")
+	if err := os.MkdirAll(prestatesDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create prestates directory: %w", err)
+	}
+
+	var prestateProofCopied bool
 
 	// Process each file to rename it to its hash
 	for _, filePath := range matches {
@@ -87,6 +95,17 @@ func (h *localPrestateHolder) GetPrestateInfo(ctx context.Context) (*PrestateInf
 		// Store hash with its corresponding key
 		if key, exists := fileToKey[filepath.Base(filePath)]; exists {
 			info.Hashes[key] = data.Pre
+		}
+
+		// Copy first prestate file to prestates/prestate-proof.json for challenger compatibility
+		if !prestateProofCopied {
+			prestateProofPath := filepath.Join(prestatesDir, "prestate-proof.json")
+			if err := os.WriteFile(prestateProofPath, content, 0644); err != nil {
+				return nil, fmt.Errorf("failed to copy prestate to prestates directory: %w", err)
+			}
+
+			log.Printf("Copied %s to prestates/prestate-proof.json for challenger compatibility", filepath.Base(filePath))
+			prestateProofCopied = true
 		}
 
 		// Rename files to hash-based names
@@ -108,6 +127,6 @@ func (h *localPrestateHolder) GetPrestateInfo(ctx context.Context) (*PrestateInf
 	}
 
 	h.info = info
-	
+
 	return info, nil
 }
