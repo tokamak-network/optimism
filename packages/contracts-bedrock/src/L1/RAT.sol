@@ -69,6 +69,12 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     /// @notice Minimum staking balance required
     uint256 public minimumStakingBalance;
 
+    /// @notice Maximum probability value (100,000 for extended probability range)
+    uint256 private constant MAX_PROBABILITY = 100_000;
+
+    /// @notice Probability for triggering RAT (0-50400, where 50400 = weekly)
+    uint256 public ratTriggerProbability;
+
 
 
     /// @notice Mapping from challenger address to challenger info
@@ -126,11 +132,13 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     /// @param _perTestBondAmount Bond amount per attention test
     /// @param _evidenceSubmissionPeriod Evidence submission period in blocks
     /// @param _minimumStakingBalance Minimum staking balance required
+    /// @param _ratTriggerProbability Initial RAT trigger probability (0-50400)
     function initialize(
         IDisputeGameFactory _disputeGameFactory,
         uint256 _perTestBondAmount,
         uint256 _evidenceSubmissionPeriod,
-        uint256 _minimumStakingBalance
+        uint256 _minimumStakingBalance,
+        uint256 _ratTriggerProbability
     )
         public
         payable
@@ -138,10 +146,12 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     {
         require(_perTestBondAmount < type(uint96).max, "Bond amount exceeds uint96 maximum");
         require(_perTestBondAmount <= _minimumStakingBalance, "Bond amount cannot exceed minimum staking balance");
+        require(_ratTriggerProbability <= MAX_PROBABILITY, "Invalid probability");
         disputeGameFactory = _disputeGameFactory;
         perTestBondAmount = _perTestBondAmount;
         evidenceSubmissionPeriod = _evidenceSubmissionPeriod;
         minimumStakingBalance = _minimumStakingBalance;
+        ratTriggerProbability = _ratTriggerProbability;
 
         // Initialize validChallengers with a dummy element at index 0
         validChallengers.push(address(0));
@@ -193,6 +203,9 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         external
         onlyDisputeGameFactory
     {
+        // First check if RAT should be triggered based on probability
+        if (!shouldTriggerRAT()) return;
+
         uint256 validChallengersLength = validChallengers.length;
         if (validChallengersLength > 1) {
 
@@ -363,6 +376,22 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         require(_balance > 0, "Balance must be positive");
         require(_balance <= 1000 ether, "Balance too large");
         minimumStakingBalance = _balance;
+    }
+
+    /// @notice Sets the RAT trigger probability (only proxy admin owner)
+    /// @param _probability New trigger probability (0-50400)
+    function setRatTriggerProbability(uint256 _probability) external {
+        _assertOnlyProxyAdminOwner();
+        require(_probability <= MAX_PROBABILITY, "Invalid probability");
+        ratTriggerProbability = _probability;
+    }
+
+    /// @notice Check if RAT should trigger based on probability
+    function shouldTriggerRAT() internal view returns (bool) {
+        uint256 prob = ratTriggerProbability;
+        if (prob == 0) return false;
+        if (prob >= MAX_PROBABILITY) return true;
+        return uint256(blockhash(block.number - 1)) % MAX_PROBABILITY < prob;
     }
 
 
