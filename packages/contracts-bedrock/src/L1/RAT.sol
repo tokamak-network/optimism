@@ -230,7 +230,7 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
             // Optimize challenger selection
             uint256 selectedIndex = validChallengersLength == 2 ? 1 :
-               ((uint256(keccak256(abi.encodePacked(_blockHash, _gameAddress, block.timestamp))) & 0xFFFF) % (validChallengersLength-1) )+1; // -1 to exclude the dummy address(0)
+               ((uint256(keccak256(abi.encodePacked(_blockHash, block.timestamp))) & 0xFFFF) % (validChallengersLength-1) )+1; // -1 to exclude the dummy address(0)
 
             address selectedChallenger = validChallengers[selectedIndex];
 
