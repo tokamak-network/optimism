@@ -1,6 +1,6 @@
-# Randomized Attention Test (RAT) PoC with LLM
+# Randomized Attention Test (RAT) PoC
 
-This repository contains a Proof of Concept (PoC) implementation for Randomized Attention Test (RAT) system using Large Language Models (LLM) to test whether challengers are monitoring diligently in the Optimism ecosystem.
+This repository contains a Proof of Concept (PoC) implementation for Randomized Attention Test (RAT) system to test whether challengers are monitoring diligently in the Optimism ecosystem.
 
 ## Current Development Scope
 
@@ -13,60 +13,70 @@ This repository contains a Proof of Concept (PoC) implementation for Randomized 
 - **Interface Updates**: All necessary interfaces updated for RAT integration
 
 **2. Documentation**
-- **`spec_game.md`**: Game-related knowledge points (Claim types, Position, GameId, etc.)
-- **`build_contract.md`**: Complete contract implementation details and build guide
-- **`spec_challenge.md`**: Challenger architecture specification and game flow
-- **`gas_cost_analysis_methods.md`**: Comprehensive gas cost analysis and optimization
+- **`gas_cost_analysis_methods.md`**: Documentation explaining gas cost analysis methodology and measurement criteria for the RAT contract
+- **`test_results_summary-script.md`**: Ready-to-use test execution scripts with actual gas measurements for individual RAT functions
+- **`test_results_summary.md`**: Gas usage measurement results and test case summary for each RAT contract function
 
 **3. Testing Infrastructure**
 - **RAT Test Suite** (`packages/contracts-bedrock/test/L1/RAT.t.sol`): Comprehensive test coverage including:
-  - Initialization tests
-  - Staking functionality (multiple staking, minimum amount validation)
-  - Attention trigger mechanism
-  - Evidence submission (correct/incorrect)
-  - Information query functions
-  - Admin functions
-- **Gas Measurement Tests**: Detailed gas cost analysis for all functions and scenarios
-- **DisputeGameFactory Gas Tests**: Gas measurement for game creation with RAT integration
+  - **RAT_Initialize_Test**: Contract initialization and version verification
+  - **RAT_Staking_Test**: Staking functionality (minimum amount validation, multiple staking)
+  - **RAT_TriggerAttentionTest_Test**: Attention trigger mechanism and challenger validation
+  - **RAT_Evidence_Test**: Evidence submission (correct/incorrect proofs, challenger validation)
+  - **RAT_ResolveClaim_Test**: Claim resolution and bond refunding
+  - **RAT_Admin_Test**: Admin functions (perTestBondAmount, evidenceSubmissionPeriod, minimumStakingBalance)
+- **RAT Gas Tests** (`packages/contracts-bedrock/test/L1/RAT_GasTest.sol`): Comprehensive gas measurement for all RAT functions including:
+  - Staking operations (valid/invalid challengers)
+  - Attention trigger mechanism (various probability scenarios)
+  - Evidence submission (correct/incorrect proofs, different challengers)
+  - Claim resolution and bond refunding
+  - Information query functions (challenger info, valid challenger count)
+  - Admin functions (probability settings)
+- **DisputeGameFactory Gas Tests** (`packages/contracts-bedrock/test/L1/DisputeGameFactory_GasTest.sol`): Gas measurement for dispute game creation scenarios:
+  - Game creation without RAT integration
+  - Game creation with RAT (not triggered)
+  - Game creation with RAT (triggered, single/multiple challengers)
 
-**4. Build & Test Verification**
-- ✅ `forge compile`: All contracts compile successfully
-- ✅ `forge test`: All tests pass successfully
-- ✅ Contract integration verified
-- ✅ RAT system functionality confirmed
-- ✅ Gas optimization verified
-- ✅ Security vulnerabilities addressed
+**4. RAT Test Verification**
+- ✅ `forge compile`: RAT contracts compile successfully
+- ✅ `forge test --match-contract RAT`: All RAT tests pass (18/18 tests)
+- ✅ RAT functionality verified:
+  - Contract initialization and version verification
+  - Staking mechanism (minimum amount validation, multiple staking)
+  - Attention trigger mechanism (probability-based selection)
+  - Evidence submission (correct/incorrect proofs, challenger validation)
+  - Claim resolution and bond refunding
+  - Admin functions (parameter updates)
+- ✅ Gas measurement tests completed for all RAT functions
+- ✅ Integration with DisputeGameFactory verified
 
-**5. Gas Analysis & Optimization**
-- **Complete Gas Cost Analysis**: All functions measured and documented
-- **Optimization Implemented**: Storage slot packing, conditional execution, gas-efficient operations
-- **Scenario-based Analysis**: 5 different scenarios analyzed with actual measurements
-- **Performance Comparison**: RAT vs non-RAT gas costs documented
+**5. Gas Analysis & Measurement**
+Ready-to-use scripts for measuring gas costs in specific scenarios:
 
-### 🔄 In Progress
+```bash
+# Run all RAT tests
+forge test --match-contract RAT -vv
 
-**1. Challenger Integration**
-- LLM prompt integration for evidence generation
-- RAT event monitoring in challenger
-- Automatic staking validation
-- Attention test response mechanism
+# Run individual function tests with gas measurement
+forge test --match-test test_stake_gas_measurement -vv
+forge test --match-test test_triggerAttentionTest_gas_measurement -vv
+forge test --match-test test_submitCorrectEvidence_gas_measurement -vv
+forge test --match-test test_resolveClaim_gas_measurement -vv
+```
 
-**2. LLM Integration**
-- Evidence generation using LLM
-- Decision making for game actions
-- Response validation and optimization
+**Detailed Analysis Documents:**
+- **`gas_cost_analysis_methods.md`**: 📊 **Comprehensive gas analysis** with 5 scenarios, complete function breakdown, and efficiency evaluation
+- **`test_results_summary.md`**: Complete gas usage results and test case summary for each RAT function
+- **`test_results_summary-script.md`**: Ready-to-use execution scripts with actual gas measurements
 
-### 📋 Next Steps
+**Key Findings from Analysis:**
+- **5 Scenario Analysis**: Complete gas cost comparison across all RAT scenarios
+- **Function-level Breakdown**: Detailed gas usage for each RAT function (stake, triggerAttentionTest, submitCorrectEvidence, resolveClaim)
+- **Efficiency Metrics**: RAT vs non-RAT comparison with actual network costs
+- **Optimization Results**: Storage packing, conditional execution, gas-efficient operations
+- **Real-world Costs**: Test environment vs actual network gas cost analysis
 
-**1. Immediate Tasks**
-- Implement challenger modifications as per `spec_challenge.md`
-- Create end-to-end testing scenarios
-- Deploy and test on testnet
-
-**2. Advanced Features**
-- Advanced attention test scenarios
-- Performance optimization
-- Production deployment preparation
+> **💡 Purpose**: These scripts and analysis documents provide comprehensive gas cost analysis and measurement across different RAT scenarios.
 
 ## Overview
 
@@ -144,47 +154,30 @@ cd scripts/go-ffi && go build
 ### 4. Run Tests
 
 ```bash
-# All testing should be done in optimism/packages/contracts-bedrock
-cd optimism/packages/contracts-bedrock
+# All testing should be done in packages/contracts-bedrock
+cd packages/contracts-bedrock
 
-# Run all tests
-forge test
+# Run all RAT tests (recommended)
+forge test --match-contract RAT -vv
 
-# Run specific RAT tests
-forge test --match-contract RAT
-
-# Run RAT test file
+# Run specific RAT test file
 forge test --match-path "test/L1/RAT.t.sol" -vv
 
-# Detailed gas report
-forge test --match-path "test/L1/RAT.t.sol" -vv --gas-report
+# Run gas measurement tests
+forge test --match-path "test/L1/RAT_GasTest.sol" -vv
 
-# Run tests with verbose output
-forge test -vvv
+# Run DisputeGameFactory gas tests
+forge test --match-path "test/L1/DisputeGameFactory_GasTest.sol" -vv
 
-# Save test results to file
-forge test --junit > test-results.xml
+# Detailed gas report for RAT tests
+forge test --match-contract RAT --gas-report
+
+# Run individual function tests (from test_results_summary-script.md)
+forge test --match-test test_stake_gas_measurement -vv
+forge test --match-test test_triggerAttentionTest_gas_measurement -vv
+forge test --match-test test_submitCorrectEvidence_gas_measurement -vv
+forge test --match-test test_resolveClaim_gas_measurement -vv
 ```
-
-## LLM Integration Setup
-
-### 1. LLM Prompt Configuration
-
-The LLM prompts are located in `op-challenger/rat/prompts/`:
-
-- `spec_challenge.md`: Challenger architecture specification and game flow
-- `spec_game.md`: Game-related knowledge points (Claim types, Position, GameId, etc.)
-- `build_contract.md`: Complete contract implementation details and build guide
-- `gas_cost_analysis_methods.md`: Comprehensive gas cost analysis and optimization
-
-### 2. Contract Implementation
-
-Based on the documentation in `build_contract.md`, the following contracts have been implemented:
-
-- **RAT Contract**: Core attention test functionality with gas optimization
-- **DisputeGameFactory Upgrade**: RAT integration for CANNON games
-- **FaultDisputeGame Upgrade**: RAT address support and resolve integration
-- **Interface Updates**: All necessary interfaces for RAT integration
 
 ### 3. Gas Analysis
 
@@ -216,9 +209,7 @@ go build -o op-challenger ./cmd/op-challenger
   --slash-bond-amount $SLASH_BOND_AMOUNT
 ```
 
-## Architecture
-
-### Core Components
+## Core Components
 
 1. **RAT Contract** (`packages/contracts-bedrock/src/L1/RAT.sol`)
    - Manages challenger staking and slashing
@@ -241,54 +232,6 @@ go build -o op-challenger ./cmd/op-challenger
    - Responds to attention tests
    - Submits evidence when required
 
-### LLM Integration Points
-
-1. **Evidence Generation**: LLM analyzes game state and generates correct evidence
-2. **Decision Making**: LLM determines optimal actions based on game context
-3. **Response Validation**: LLM validates challenger responses for correctness
-
-## Testing
-
-### Manual Testing
-
-**⚠️ To Be Implemented**
-
-Manual testing procedures will be implemented in future updates:
-
-```bash
-# All testing should be done in optimism/packages/contracts-bedrock
-cd optimism/packages/contracts-bedrock
-
-# Deploy contracts to local network
-anvil
-forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast
-
-# Run integration tests
-forge test --match-test "test_rat_integration" -vvv
-
-# Test attention trigger
-cast call $RAT_CONTRACT_ADDRESS "attentionTrigger(bytes32,bytes32,uint256,bytes32)" \
-  $GAME_ID $STATE_ROOT $L2_BLOCK_NUMBER $BLOCK_HASH
-```
-
-### Automated Testing
-
-```bash
-# All testing should be done in optimism/packages/contracts-bedrock
-cd optimism/packages/contracts-bedrock
-
-# Run all tests with coverage
-forge coverage
-
-# Run specific test suite
-forge test --match-contract RAT_Test -vvv
-
-# Generate test report
-forge test --junit > test-report.xml
-
-# Run gas measurement tests
-forge test --match-test test_.*_gas_measurement -vv
-```
 
 ## Gas Analysis Results
 
@@ -297,9 +240,9 @@ forge test --match-test test_.*_gas_measurement -vv
 | Function | Gas Usage | Optimization |
 |----------|-----------|--------------|
 | `DisputeGameFactory.create()` | 163,991 gas | Base cost (RAT independent) |
-| `triggerAttentionTest()` (success) | 132,378 gas | Full execution |
-| `triggerAttentionTest()` (ignored) | 14,677 gas | Conditional execution |
-| `submitCorrectEvidence()` | 7,520 gas | Very efficient |
+| `triggerAttentionTest()` (success) | 98,375 gas | Full execution |
+| `triggerAttentionTest()` (ignored) | 3,728 gas | Conditional execution |
+| `submitCorrectEvidence()` | 7,526 gas | Very efficient |
 | `resolveClaim()` (participant) | 4,857 gas | Bond refund |
 | `resolveClaim()` (non-participant) | 1,565 gas | Condition check only |
 
@@ -319,9 +262,9 @@ Monitor RAT events for system health:
 ```bash
 # Monitor attention triggers
 cast logs --from-block latest $RAT_CONTRACT_ADDRESS \
-  --event "AttentionTriggered(bytes32,bytes32,uint256,address)"
+  --event "AttentionTriggered(address,address)"
 
 # Monitor evidence submissions
 cast logs --from-block latest $RAT_CONTRACT_ADDRESS \
-  --event "CorrectEvidenceSubmitted(bytes32,address,uint256)"
+  --event "CorrectEvidenceSubmitted(address,address,uint256)"
 ```
