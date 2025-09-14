@@ -8,7 +8,12 @@ This document provides a comprehensive summary of the actual test execution resu
 
 ```bash
 cd /optimism/packages/contracts-bedrock
+forge test --match-path "test/L1/RAT.t.sol" -vv
+forge test --match-path "test/L1/RAT_Simple_Test.sol" -vv
+forge test --match-path "test/L1/RAT_GasTest.sol" -vv
+
 forge test --match-contract RAT_Simple_Test --gas-report -vv
+
 
 # Individual cases
 forge test --match-test test_stake_gas_measurement -vv

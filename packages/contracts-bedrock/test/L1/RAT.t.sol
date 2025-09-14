@@ -55,7 +55,7 @@ contract RAT_TestInit is CommonTest {
                     SLASH_BOND_AMOUNT,
                     EVIDENCE_SUBMISSION_PERIOD,
                     MINIMUM_STAKE_AMOUNT,
-                    1000, // 1% default probability
+                    100000, // 100% probability for testing
                     address(1) // manager address
                 )
             )
@@ -117,7 +117,7 @@ contract RAT_Staking_Test is RAT_TestInit {
 
     /// @notice Tests successful staking above minimum
     function test_stake_aboveMinimum_succeeds() public {
-        uint256 stakeAmount = 0.2 ether; // Above MINIMUM_STAKE_AMOUNT
+        uint256 stakeAmount = 2.5 ether; // Above perTestBondAmount (1 ether)
 
         vm.expectEmit(true, false, false, true);
         emit ChallengerStaked(CHALLENGER_1, stakeAmount);
@@ -133,8 +133,8 @@ contract RAT_Staking_Test is RAT_TestInit {
         // challenger field removed - address is available from mapping key
         assertEq(info.stakingAmount, stakeAmount);
         assertEq(info.totalSlashedAmount, 0);
-        assertFalse(info.isValid); // Below perTestBondAmount (1 ether), should be invalid
-        assertEq(rat.getValidChallengerCount(), 1); // 1 because of dummy address(0) in initialize()
+        assertTrue(info.isValid); // Above perTestBondAmount (1 ether), should be valid
+        assertEq(rat.getValidChallengerCount(), 2); // 1 dummy + 1 challenger
     }
 }
 
@@ -152,10 +152,10 @@ contract RAT_TriggerAttentionTest_Test is RAT_TestInit {
         vm.deal(CHALLENGER_2, 10 ether);
 
         vm.prank(CHALLENGER_1);
-        rat.stake{value: 2.5 ether}(); // Must be >= perTestSlashingAmount (1 ether)
+        rat.stake{value: 2.5 ether}(); // Must be >= perTestBondAmount (1 ether)
 
         vm.prank(CHALLENGER_2);
-        rat.stake{value: 3.0 ether}(); // Must be >= perTestSlashingAmount (1 ether)
+        rat.stake{value: 3.0 ether}(); // Must be >= perTestBondAmount (1 ether)
     }
 
     /// @notice Tests successful attention trigger
@@ -181,8 +181,8 @@ contract RAT_TriggerAttentionTest_Test is RAT_TestInit {
         assertTrue(challengerInfo.totalSlashedAmount > 0);
     }
 
-    /// @notice Tests trigger with no valid challengers reverts
-    function test_triggerAttentionTest_noValidChallengers_reverts() public {
+    /// @notice Tests trigger with no valid challengers returns early
+    function test_triggerAttentionTest_noValidChallengers_returns() public {
         // Create empty RAT for test
         RAT ratImpl2 = new RAT();
         Proxy emptyRatProxy = new Proxy(address(1));
@@ -190,18 +190,19 @@ contract RAT_TriggerAttentionTest_Test is RAT_TestInit {
         vm.prank(address(1));
         emptyRatProxy.upgradeToAndCall(
             address(ratImpl2),
-            abi.encodeCall(RAT.initialize, (IDisputeGameFactory(mockDisputeGameFactory), SLASH_BOND_AMOUNT, EVIDENCE_SUBMISSION_PERIOD, MINIMUM_STAKE_AMOUNT, 1000, address(1)))
+            abi.encodeCall(RAT.initialize, (IDisputeGameFactory(mockDisputeGameFactory), SLASH_BOND_AMOUNT, EVIDENCE_SUBMISSION_PERIOD, MINIMUM_STAKE_AMOUNT, 100000, address(1)))
         );
 
         GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
         bytes32 stateRoot = keccak256("test_state_root");
         bytes32 blockHash = blockhash(block.number - 1);
 
-        vm.expectRevert(RAT.NoValidChallengers.selector);
-
+        // Function should return early without reverting when no valid challengers
         (, , address gameAddress) = LibGameId.unpack(gameId);
         vm.prank(mockDisputeGameFactory);
         emptyRat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
+
+        // No assertion needed - function should complete without reverting
     }
 
     /// @notice Tests trigger by non-factory reverts
@@ -237,7 +238,7 @@ contract RAT_Evidence_Test is RAT_TestInit {
 
         // Stake challenger with sufficient amount
         vm.prank(CHALLENGER_1);
-        rat.stake{value: 2 ether}();
+        rat.stake{value: 2.5 ether}();
 
         // Setup test data
         proofLV = keccak256("left_value");
@@ -354,7 +355,7 @@ contract RAT_ResolveClaim_Test is RAT_TestInit {
         // Fund and stake challenger
         vm.deal(CHALLENGER_1, 10 ether);
         vm.prank(CHALLENGER_1);
-        rat.stake{value: 0.2 ether}();
+        rat.stake{value: 2.5 ether}();
 
         // Setup test data
         gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);

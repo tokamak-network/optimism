@@ -10,6 +10,29 @@ import { NoImplementation, IncorrectBondAmount, GameAlreadyExists } from "src/di
 import { IDisputeGame } from "interfaces/dispute/IDisputeGame.sol";
 import { DisputeGameFactory_FakeClone_Harness } from "../dispute/DisputeGameFactory.t.sol";
 
+/// @notice A fake clone used for testing the `DisputeGameFactory` contract's `create` function with RAT support.
+contract DisputeGameFactory_FakeClone_Harness_RAT {
+    function initialize() external payable {
+        // noop
+    }
+
+    function initialize(address _rat) external payable {
+        // noop - RAT address is ignored for testing
+    }
+
+    function extraData() external pure returns (bytes memory) {
+        return hex"FF0420";
+    }
+
+    function parentHash() external pure returns (bytes32) {
+        return bytes32(0);
+    }
+
+    function rootClaim() external pure returns (Claim) {
+        return Claim.wrap(bytes32(0));
+    }
+}
+
 contract DisputeGameFactory_GasTest is CommonTest {
     RAT public rat;
 
@@ -35,7 +58,9 @@ contract DisputeGameFactory_GasTest is CommonTest {
                 address(disputeGameFactory), // Use existing disputeGameFactory
                 PER_TEST_BOND_AMOUNT,
                 EVIDENCE_SUBMISSION_PERIOD,
-                MINIMUM_STAKE_AMOUNT
+                MINIMUM_STAKE_AMOUNT,
+                100000, // ratTriggerProbability (100%)
+                address(1) // manager
             )
         );
         rat = RAT(address(ratProxy));
@@ -50,7 +75,7 @@ contract DisputeGameFactory_GasTest is CommonTest {
 
         // Set up fake game implementations for testing
         DisputeGameFactory_FakeClone_Harness fakeClone1 = new DisputeGameFactory_FakeClone_Harness();
-        DisputeGameFactory_FakeClone_Harness fakeCloneCannon = new DisputeGameFactory_FakeClone_Harness();
+        DisputeGameFactory_FakeClone_Harness_RAT fakeCloneCannon = new DisputeGameFactory_FakeClone_Harness_RAT();
         vm.prank(address(this));
         disputeGameFactory.setImplementation(GameType.wrap(1), IDisputeGame(address(fakeClone1)));
         vm.prank(address(this));
