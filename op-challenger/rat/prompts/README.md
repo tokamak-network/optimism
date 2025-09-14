@@ -268,3 +268,5 @@ cast logs --from-block latest $RAT_CONTRACT_ADDRESS \
 cast logs --from-block latest $RAT_CONTRACT_ADDRESS \
   --event "CorrectEvidenceSubmitted(address,address,uint256)"
 ```
+
+
