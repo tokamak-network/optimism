@@ -53,18 +53,6 @@ This repository contains a Proof of Concept (PoC) implementation for Randomized 
 **5. Gas Analysis & Measurement**
 Ready-to-use scripts for measuring gas costs in specific scenarios:
 
-```bash
-# Run all RAT tests
-forge test --match-contract RAT -vv
-
-# Run individual function tests with gas measurement
-forge test --match-test test_stake_gas_measurement -vv
-forge test --match-test test_triggerAttentionTest_gas_measurement -vv
-forge test --match-test test_submitCorrectEvidence_gas_measurement -vv
-forge test --match-test test_resolveClaim_gas_measurement -vv
-```
-
-**Detailed Analysis Documents:**
 - **`gas_cost_analysis_methods.md`**: 📊 **Comprehensive gas analysis** with 5 scenarios, complete function breakdown, and efficiency evaluation
 - **`test_results_summary.md`**: Complete gas usage results and test case summary for each RAT function
 - **`test_results_summary-script.md`**: Ready-to-use execution scripts with actual gas measurements
@@ -144,9 +132,6 @@ cd optimism/packages/contracts-bedrock
 # Compile all contracts
 forge build
 
-# Verify compilation success
-forge build --sizes
-
 # Build go-ffi (required for tests)
 cd scripts/go-ffi && go build
 ```
@@ -179,13 +164,24 @@ forge test --match-test test_submitCorrectEvidence_gas_measurement -vv
 forge test --match-test test_resolveClaim_gas_measurement -vv
 ```
 
-### 3. Gas Analysis
+#### Key Performance Metrics
 
-The `gas_cost_analysis_methods.md` document provides:
-- Complete gas usage analysis for all functions
-- Scenario-based gas cost comparison
-- Optimization techniques and results
-- Performance benchmarks
+| Function | Gas Usage | Optimization |
+|----------|-----------|--------------|
+| `DisputeGameFactory.create()` | 163,991 gas | Base cost (RAT independent) |
+| `triggerAttentionTest()` (success) | 98,375 gas | Full execution |
+| `triggerAttentionTest()` (ignored) | 3,728 gas | Conditional execution |
+| `submitCorrectEvidence()` | 7,526 gas | Very efficient |
+| `resolveClaim()` (participant) | 4,857 gas | Bond refund |
+| `resolveClaim()` (non-participant) | 1,565 gas | Condition check only |
+
+#### Optimization Features
+
+1. **Conditional Execution**: Minimum gas overhead when no valid challengers
+2. **Storage Slot Packing**: Efficient data structures
+3. **Gas-efficient Operations**: Removal of unnecessary calculations
+4. **Safe Integration**: No impact on existing functionality
+
 
 ### 4. Start RAT System
 
@@ -232,26 +228,6 @@ go build -o op-challenger ./cmd/op-challenger
    - Responds to attention tests
    - Submits evidence when required
 
-
-## Gas Analysis Results
-
-### Key Performance Metrics
-
-| Function | Gas Usage | Optimization |
-|----------|-----------|--------------|
-| `DisputeGameFactory.create()` | 163,991 gas | Base cost (RAT independent) |
-| `triggerAttentionTest()` (success) | 98,375 gas | Full execution |
-| `triggerAttentionTest()` (ignored) | 3,728 gas | Conditional execution |
-| `submitCorrectEvidence()` | 7,526 gas | Very efficient |
-| `resolveClaim()` (participant) | 4,857 gas | Bond refund |
-| `resolveClaim()` (non-participant) | 1,565 gas | Condition check only |
-
-### Optimization Features
-
-1. **Conditional Execution**: Minimum gas overhead when no valid challengers
-2. **Storage Slot Packing**: Efficient data structures
-3. **Gas-efficient Operations**: Removal of unnecessary calculations
-4. **Safe Integration**: No impact on existing functionality
 
 ## Monitoring
 
