@@ -4,9 +4,9 @@
 - [About this repository/branch](#about-this-repository-branch)
 - [Contract development](#contract-development)
 - [Testing infrastructure](#testing-infrastructure)
-- [Requirements & Quick Start](#requirements--quick-start)
+- [Requirements & Quick start](#requirements--quick-start)
 - [How to test](#how-to-test)
-- [Expected Result](#expected-result)
+- [Expected result](#expected-result)
 - [Future work](#future-work)
 - [License & citation](#license--citation)
 - [Contact](#contact)
@@ -53,7 +53,7 @@ This repository contains a proof-of-concept smart contract and gas-cost measurem
   - Game creation with RAT (not triggered)  
   - Game creation with RAT (triggered; single/multiple challengers)
 
-## Requirements & Quick Start
+## Requirements & Quick start
 
 ### Prerequisites
 - Git
@@ -114,7 +114,7 @@ forge test --match-test test_submitCorrectEvidence_gas_measurement -vv
 forge test --match-test test_resolveClaim_gas_measurement -vv
 ```
 
-## Expected Result
+## Expected result
 
 - All tests pass.
 - A gas report is printed for relevant functions and scenarios.
