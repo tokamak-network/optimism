@@ -1,6 +1,17 @@
 # Randomized Attention Test (RAT) PoC
 
-## 1) About this repository/branch
+## Table of Contents
+- [About this repository/branch](#about-this-repository-branch)
+- [Contract development](#contract-development)
+- [Testing infrastructure](#testing-infrastructure)
+- [Requirements & Quick Start](#requirements--quick-start)
+- [How to test](#how-to-test)
+- [Expected Result](#expected-result)
+- [Future work](#future-work)
+- [License & citation](#license--citation)
+- [Contact](#contact)
+
+## About this repository/branch
 
 This repository contains a proof-of-concept smart contract and gas-cost measurements for the **Randomized Attention Test (RAT)** protocol. RAT probabilistically checks whether Optimistic Rollup validators are actively tracking L2 state transitions.
 
@@ -10,7 +21,7 @@ This repository contains a proof-of-concept smart contract and gas-cost measurem
 - **Paper Title:** *Looking for Attention: Randomized Attention Test Design for Validator Monitoring in Optimistic Rollups*  
 - **PDF Link:** https://arxiv.org/pdf/2505.24393
 
-## 2) Contract development
+## Contract development
 
 - **RAT Contract** — `packages/contracts-bedrock/src/L1/RAT.sol`  
   Core attention-test logic: staking, slashing, evidence submission, settlement.
@@ -21,7 +32,7 @@ This repository contains a proof-of-concept smart contract and gas-cost measurem
 - **Interface updates**  
   All required interfaces updated to expose RAT configuration and calls.
 
-## 3) Testing infrastructure
+## Testing infrastructure
 
 - **RAT Test Suite** — `packages/contracts-bedrock/test/L1/RAT.t.sol`  
   - `RAT_Initialize_Test` — Initialization and version checks  
@@ -42,7 +53,7 @@ This repository contains a proof-of-concept smart contract and gas-cost measurem
   - Game creation with RAT (not triggered)  
   - Game creation with RAT (triggered; single/multiple challengers)
 
-## 4) Requirements & Quick Start
+## Requirements & Quick Start
 
 ### Prerequisites
 - Git
@@ -72,7 +83,7 @@ forge build
 cd scripts/go-ffi && go build
 ```
 
-## 5) How to test
+## How to test
 ### Core Command (recommended)
 ```
 # All testing should be done in packages/contracts-bedrock
@@ -103,21 +114,21 @@ forge test --match-test test_submitCorrectEvidence_gas_measurement -vv
 forge test --match-test test_resolveClaim_gas_measurement -vv
 ```
 
-## 6) Expected Result
+## Expected Result
 
 - All tests pass.
 - A gas report is printed for relevant functions and scenarios.
 
-## 7) Future work
+## Future work
 
 - Integrate RAT response logic into the validator (Golang) code.
 - Stand up nodes and operate RAT in a testnet environment to evaluate behavior and costs end-to-end.
 
-## 8) License & citation
+## License & citation
 
 - MIT License
 - If you use this PoC or build on it, please cite the paper above and reference this repository/branch.
 
-## 9) Contact
+## Contact
 - zena @ tokamak.network
 - suhyeon @ tokamak.network
