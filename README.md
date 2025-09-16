@@ -1,7 +1,15 @@
 # Randomized Attention Test (RAT) PoC
 
+This repository contains a proof-of-concept smart contract and gas-cost measurements for the **Randomized Attention Test (RAT)** protocol. RAT probabilistically checks whether Optimistic Rollup validators are actively tracking L2 state transitions.
+
+- **Branch:** `feature/rat-poc-v1`  
+- **Origin:** Forked from [the official Optimism repository](https://github.com/ethereum-optimism/optimism)
+- **Authors:** Suhyeon Lee, Yeongju Bak  
+- **Paper Title:** *Looking for Attention: Randomized Attention Test Design for Validator Monitoring in Optimistic Rollups*  
+- **PDF Link:** https://arxiv.org/pdf/2505.24393
+
+
 ## Table of Contents
-- [About this repository/branch](#about-this-repository-branch)
 - [Contract development](#contract-development)
 - [Testing infrastructure](#testing-infrastructure)
 - [Requirements & Quick start](#requirements--quick-start)
@@ -11,15 +19,6 @@
 - [License & citation](#license--citation)
 - [Contact](#contact)
 
-## About this repository/branch
-
-This repository contains a proof-of-concept smart contract and gas-cost measurements for the **Randomized Attention Test (RAT)** protocol. RAT probabilistically checks whether Optimistic Rollup validators are actively tracking L2 state transitions.
-
-- **Branch:** `feature/rat-poc-v1`  
-- **Origin:** Forked from the official Optimism repository/branch  
-- **Authors:** Suhyeon Lee, Yeongju Bak  
-- **Paper Title:** *Looking for Attention: Randomized Attention Test Design for Validator Monitoring in Optimistic Rollups*  
-- **PDF Link:** https://arxiv.org/pdf/2505.24393
 
 ## Contract development
 
