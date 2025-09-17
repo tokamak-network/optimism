@@ -1,8 +1,8 @@
 # Issue 005: Dispute Game Duration Configuration
 
-**Date**: September 2, 2025  
-**Status**: RESOLVED  
-**Priority**: MEDIUM  
+**Date**: September 2, 2025
+**Status**: RESOLVED
+**Priority**: MEDIUM
 **Component**: op-deployer, dispute games
 
 ## Issue Summary
@@ -45,22 +45,23 @@ DisputeMaxClockDurationFlag = &cli.Uint64Flag{
 The parameter can be overridden through:
 1. **Command Line**: `--dispute-max-clock-duration`
 2. **Environment Variable**: `OP_DEPLOYER_DISPUTE_MAX_CLOCK_DURATION`
-3. **YAML Override**: `faultGameMaxClockDuration` in deployment overrides
+3. ⚠ Kurtosis `simple.yaml` overrides do not support this key; only `faultGameAbsolutePrestate` and `vmType` are allowed.
 
 ## Solution
 
 ### Configuration Method
-Add `faultGameMaxClockDuration` to the `overrides` section in `simple.yaml`:
+Use `op-deployer` CLI or environment variable when not deploying via Kurtosis:
 
-```yaml
-op_contract_deployer_params:
-  image: {{ localDockerImage "op-deployer" }}
-  l1_artifacts_locator: {{ localContractArtifacts "l1" }}
-  l2_artifacts_locator: {{ localContractArtifacts "l2" }}
-  overrides:
-    faultGameAbsolutePrestate: {{ localPrestate.Hashes.prestate_mt64 }}
-    vmType: "CANNON"
-    faultGameMaxClockDuration: 600  # 10 minutes (for development)
+```bash
+op-deployer deploy-chain \
+  --dispute-max-clock-duration 600
+```
+
+Or via environment variable:
+
+```bash
+export OP_DEPLOYER_DISPUTE_MAX_CLOCK_DURATION=600
+op-deployer deploy-chain
 ```
 
 ### Recommended Values by Environment
@@ -97,37 +98,30 @@ op_contract_deployer_params:
 ## Example Configurations
 
 ### Development Configuration
-```yaml
-op_contract_deployer_params:
-  overrides:
-    faultGameMaxClockDuration: 600  # 10 minutes
+```bash
+op-deployer deploy-chain --dispute-max-clock-duration 600
 ```
 
 ### Testing Configuration
-```yaml
-op_contract_deployer_params:
-  overrides:
-    faultGameMaxClockDuration: 120  # 2 minutes
+```bash
+op-deployer deploy-chain --dispute-max-clock-duration 120
 ```
 
 ### Multiple Overrides
-```yaml
-op_contract_deployer_params:
-  overrides:
-    faultGameAbsolutePrestate: {{ localPrestate.Hashes.prestate_mt64 }}
-    vmType: "CANNON"
-    faultGameMaxClockDuration: 600
-    faultGameMaxDepth: 73
-    faultGameSplitDepth: 30
-    faultGameClockExtension: 10800
+```bash
+op-deployer deploy-chain \
+  --dispute-max-clock-duration 600 \
+  --dispute-max-game-depth 73 \
+  --dispute-split-depth 30 \
+  --dispute-clock-extension 10800
 ```
 
 ## Verification
 
 ### 1. Check Deployment Configuration
 ```bash
-# Verify override is applied during deployment
-grep -r "faultGameMaxClockDuration" /tmp/devnet-desc/
+# Verify CLI flag/env var used during deployment (check deployer logs)
+grep -i "dispute-max-clock-duration" -r /tmp/devnet-desc/ || true
 ```
 
 ### 2. Query Contract State
@@ -164,17 +158,17 @@ cast call --rpc-url "$L1_RPC" "$GAME" "maxClockDuration() returns (uint64)"
 ## Related Configuration Parameters
 
 ### Chess Clock Settings
-```yaml
-overrides:
-  faultGameMaxClockDuration: 600      # Total game duration
-  faultGameClockExtension: 10800      # Time added per move
+```bash
+op-deployer deploy-chain \
+  --dispute-max-clock-duration 600 \
+  --dispute-clock-extension 10800
 ```
 
 ### Game Structure Settings
-```yaml
-overrides:
-  faultGameMaxDepth: 73               # Maximum game tree depth
-  faultGameSplitDepth: 30             # Depth where execution begins
+```bash
+op-deployer deploy-chain \
+  --dispute-max-game-depth 73 \
+  --dispute-split-depth 30
 ```
 
 ## Files Modified
@@ -188,7 +182,7 @@ overrides:
 - `/Users/zena/tokamak-projects/optimism/op-deployer/pkg/deployer/integration_test/apply_test.go:271`
 
 ## Resolution Status
-✅ **RESOLVED** - Dispute game duration is now configurable via simple.yaml overrides.
+✅ **RESOLVED** - Dispute game duration is configurable via `op-deployer` CLI/env; Kurtosis `simple.yaml` supports only `faultGameAbsolutePrestate` and `vmType`.
 
 ## Usage Instructions
 

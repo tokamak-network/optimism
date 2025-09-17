@@ -1,12 +1,18 @@
 # Dispute Game Configuration Guide
 
-**Last Updated**: September 2, 2025  
-**Version**: 1.0  
+**Last Updated**: September 15, 2025
+**Version**: 1.1
 **Target**: Optimism Devnet Developers
 
 ## Overview
 
 This guide explains how to configure dispute game parameters in Optimism devnet deployments using `simple.yaml`. These settings control the behavior and timing of fault dispute games.
+
+> Important: When deploying via `kurtosis-devnet` using the `ethpandaops/optimism-package`, the `op_contract_deployer_params.overrides` currently only accepts two fields: `faultGameAbsolutePrestate` and `vmType`. Adding other keys like `faultGameMaxClockDuration`, `faultGameClockExtension`, `faultGameMaxDepth`, `faultGameSplitDepth`, or `respectedGameType` will fail with an error similar to:
+>
+> `Invalid parameter faultGameClockExtension for overrides. Allowed fields: ["faultGameAbsolutePrestate", "vmType"]`
+>
+> Workaround: keep only the allowed keys in `simple.yaml`. To tweak timing/depth parameters, run `op-deployer` directly (see "Command Line Equivalents") or use a package/version that exposes these settings.
 
 ## Configuration Location
 
@@ -31,10 +37,11 @@ op_contract_deployer_params:
 - **Description**: Maximum total time (chess clock) each player has to make all their moves
 - **Default**: `302400` seconds (3.5 days)
 - **Format**: Integer (seconds)
+- ⚠ Not available via Kurtosis `simple.yaml` overrides. Use `op-deployer` CLI when deploying outside Kurtosis:
 
-```yaml
-overrides:
-  faultGameMaxClockDuration: 600  # 10 minutes for development
+```bash
+op-deployer deploy-chain \
+  --dispute-max-clock-duration 600
 ```
 
 **Recommended Values**:
@@ -49,10 +56,11 @@ overrides:
 - **Description**: Time added to a player's clock when they make a move
 - **Default**: `10800` seconds (3 hours)
 - **Format**: Integer (seconds)
+- ⚠ Not available via Kurtosis `simple.yaml` overrides. Use `op-deployer` CLI when deploying outside Kurtosis:
 
-```yaml
-overrides:
-  faultGameClockExtension: 3600  # 1 hour extension per move
+```bash
+op-deployer deploy-chain \
+  --dispute-clock-extension 3600
 ```
 
 ### 2. Game Structure Settings
@@ -61,20 +69,22 @@ overrides:
 - **Description**: Maximum depth of the dispute game tree
 - **Default**: `73`
 - **Format**: Integer
+- ⚠ Not available via Kurtosis `simple.yaml` overrides. Use `op-deployer` CLI when deploying outside Kurtosis:
 
-```yaml
-overrides:
-  faultGameMaxDepth: 73  # Standard depth
+```bash
+op-deployer deploy-chain \
+  --dispute-max-game-depth 73
 ```
 
 #### `faultGameSplitDepth`
 - **Description**: Depth at which the game transitions from bisection to execution
 - **Default**: `30`
 - **Format**: Integer
+- ⚠ Not available via Kurtosis `simple.yaml` overrides. Use `op-deployer` CLI when deploying outside Kurtosis:
 
-```yaml
-overrides:
-  faultGameSplitDepth: 30  # Standard split depth
+```bash
+op-deployer deploy-chain \
+  --dispute-split-depth 30
 ```
 
 ### 3. VM and Prestate Settings
@@ -105,11 +115,7 @@ overrides:
 - **Description**: The dispute game type that is respected by the system
 - **Default**: `1` (PERMISSIONED)
 - **Format**: Integer
-
-```yaml
-overrides:
-  respectedGameType: 1  # PERMISSIONED game type
-```
+- ⚠ Not available via Kurtosis `simple.yaml` overrides.
 
 ## Environment-Specific Configurations
 
@@ -121,9 +127,14 @@ op_contract_deployer_params:
   overrides:
     faultGameAbsolutePrestate: {{ localPrestate.Hashes.prestate_mt64 }}
     vmType: "CANNON"
-    faultGameMaxClockDuration: 600      # 10 minutes
-    faultGameClockExtension: 300        # 5 minutes per move
-    respectedGameType: 1
+```
+
+If deploying without Kurtosis, set timing via CLI:
+
+```bash
+op-deployer deploy-chain \
+  --dispute-max-clock-duration 600 \
+  --dispute-clock-extension 300
 ```
 
 ### Testing Environment
@@ -134,9 +145,14 @@ op_contract_deployer_params:
   overrides:
     faultGameAbsolutePrestate: {{ localPrestate.Hashes.prestate_mt64 }}
     vmType: "CANNON"
-    faultGameMaxClockDuration: 120      # 2 minutes
-    faultGameClockExtension: 60         # 1 minute per move
-    respectedGameType: 1
+```
+
+If deploying without Kurtosis, set timing via CLI:
+
+```bash
+op-deployer deploy-chain \
+  --dispute-max-clock-duration 120 \
+  --dispute-clock-extension 60
 ```
 
 ### Staging Environment
@@ -147,9 +163,14 @@ op_contract_deployer_params:
   overrides:
     faultGameAbsolutePrestate: {{ localPrestate.Hashes.prestate_mt64 }}
     vmType: "CANNON"
-    faultGameMaxClockDuration: 1800     # 30 minutes
-    faultGameClockExtension: 900        # 15 minutes per move
-    respectedGameType: 1
+```
+
+If deploying without Kurtosis, set timing via CLI:
+
+```bash
+op-deployer deploy-chain \
+  --dispute-max-clock-duration 1800 \
+  --dispute-clock-extension 900
 ```
 
 ## Advanced Configuration
@@ -161,25 +182,19 @@ For specialized testing scenarios:
 ```yaml
 op_contract_deployer_params:
   overrides:
-    # Standard parameters
+    # Standard parameters (Kurtosis-allowed)
     faultGameAbsolutePrestate: {{ localPrestate.Hashes.prestate_mt64 }}
     vmType: "CANNON"
-    
-    # Timing parameters
-    faultGameMaxClockDuration: 300      # 5 minutes
-    faultGameClockExtension: 60         # 1 minute per move
-    
-    # Structure parameters
-    faultGameMaxDepth: 73
-    faultGameSplitDepth: 30
-    
-    # Game type
-    respectedGameType: 1
-    
-    # Additional proof parameters
-    withdrawalDelaySeconds: 604800      # 1 week
-    proofMaturityDelaySeconds: 604800   # 1 week
-    disputeGameFinalityDelaySeconds: 302400  # 3.5 days
+```
+
+Then, when deploying without Kurtosis, pass timing/structure via CLI:
+
+```bash
+op-deployer deploy-chain \
+  --dispute-max-clock-duration 300 \
+  --dispute-clock-extension 60 \
+  --dispute-max-game-depth 73 \
+  --dispute-split-depth 30
 ```
 
 ### Multiple Game Types
@@ -201,7 +216,7 @@ chains:
 ## Deployment Process
 
 ### 1. Edit Configuration
-Update your `simple.yaml` file with desired parameters:
+Update your `simple.yaml` file with allowed overrides:
 
 ```bash
 vim /Users/zena/tokamak-projects/optimism/kurtosis-devnet/simple.yaml
@@ -235,8 +250,8 @@ Verify your configuration before deployment:
 # Check YAML syntax
 python -c "import yaml; yaml.safe_load(open('simple.yaml'))"
 
-# Verify required parameters are present
-grep -E "(faultGameMaxClockDuration|faultGameAbsolutePrestate|vmType)" simple.yaml
+# Verify allowed override parameters are present
+grep -E "(faultGameAbsolutePrestate|vmType)" simple.yaml
 ```
 
 ### Game Lifecycle Testing
@@ -313,7 +328,7 @@ cast call --rpc-url "$L1_RPC" "$GAME_FACTORY_ADDRESS" "gameImpls(uint32) returns
 - **Flags**: `/Users/zena/tokamak-projects/optimism/op-deployer/pkg/deployer/manage/flags.go`
 
 ### Command Line Equivalents
-All YAML overrides can also be set via command line:
+Timing/depth parameters are set via command line when not using Kurtosis:
 
 ```bash
 op-deployer deploy-chain \
@@ -324,7 +339,7 @@ op-deployer deploy-chain \
 ```
 
 ### Environment Variables
-Or via environment variables:
+Or via environment variables when not using Kurtosis:
 
 ```bash
 export OP_DEPLOYER_DISPUTE_MAX_CLOCK_DURATION=600

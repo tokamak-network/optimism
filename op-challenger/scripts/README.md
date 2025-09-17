@@ -47,6 +47,8 @@ cd /optimism/kurtosis-devnet
 
 **📖 Complete Configuration Guide**: [Configuration Guide](./docs/configuration-guide.md)
 
+**🚀 Fast Dispute Game Setup**: [Fast Dispute Game Setup Guide](./docs/fast-dispute-game-setup.md) - Configure 20-minute dispute games instead of 3.5 days for faster testing
+
 **Quick Settings Summary:**
 - **Game Type**: Set `proposer_params.game_type` (0=CANNON, 1=PERMISSIONED)
 - **Network Issues**: Use Docker restart/cleanup if registry timeouts occur
@@ -100,6 +102,9 @@ Autofix mode helps recover from failed devnet deployments by automatically clean
    - Use when you need a fresh start
 
 #### Step 5: Run Challenger
+When running Devnet, a default challenger is included.
+In that case, there's no need to run the challenger with the command below.
+
 ```bash
 cd /optimism/op-challenger/scripts
 ./run-challenger-devnet.sh
@@ -125,7 +130,31 @@ cd /optimism/op-challenger/scripts
 
 ### Quick Verification
 
-After deploying your devnet, verify that contract modifications were properly applied:
+After deploying your devnet, verify the deployment and account funding:
+
+#### 1. Basic Deployment Check
+```bash
+# Check devnet status
+kurtosis enclave inspect simple-devnet
+
+# Verify all services are RUNNING
+# Should see: L1 (geth + teku), L2 (op-geth + op-node), op-batcher, op-proposer, op-challenger
+```
+
+#### 2. Account Funding Verification
+```bash
+# Check pre-funded test accounts have ETH
+L1_RPC="http://127.0.0.1:57834"  # Check actual port from enclave inspect
+cast balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url $L1_RPC
+cast balance 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 --rpc-url $L1_RPC
+
+# Should show non-zero balances (e.g., 10000000000000000000000)
+# If all accounts show 0, the devnet funding failed
+```
+
+#### 3. Contract Configuration Verification
+
+After confirming accounts are funded, verify that contract modifications were properly applied:
 
 ```bash
 # Download deployment info
@@ -264,6 +293,17 @@ docker rm op-challenger
 ./challenger-healthcheck.sh
 ```
 
+### 🤖 Automated Dispute Game Resolution
+
+For fast testing with 20-minute dispute games, use the auto-resolve script:
+
+```bash
+# Auto-resolve dispute games after their duration expires
+./auto-resolve-game.sh 0x<GAME_ADDRESS>
+```
+
+**📖 Auto-Resolve Guide**: [Auto-Resolve Script Guide](./docs/auto-resolve-script-guide.md) - Complete guide for automated dispute game resolution
+
 ### Important Notes
 
 ⚠️ **For development and testing purposes only**
@@ -357,6 +397,8 @@ cast send $DGF "create(uint32,bytes32,bytes)" \
 **References**:
 - [AnchorStateRegistry Fix Guide](./docs/anchor-state-fix.md) for detailed explanation
 - [Game Types Guide](./docs/game-types.md) for CANNON vs PERMISSIONED differences
+- [Fast Dispute Game Setup Guide](./docs/fast-dispute-game-setup.md) for 20-minute game configuration
+- [Auto-Resolve Script Guide](./docs/auto-resolve-script-guide.md) for automated game resolution
 
 #### 4. Docker Resource Issues
 
@@ -409,8 +451,25 @@ If you encounter issues not covered here:
 
 3. **Complete environment reset**:
    ```bash
-   AUTOFIX=nuke just simple-devnet
+   # Stop all background processes first
+   pkill -f "just.*devnet" || true
+   pkill -f "AUTOFIX" || true
+
+   # Clean up devnet
+   kurtosis enclave rm --force simple-devnet
+
+   # Fresh start
+   AUTOFIX=true just simple-devnet
    ```
+
+4. **Check account funding after deployment**:
+   ```bash
+   # Verify accounts have ETH before proceeding
+   L1_RPC="http://127.0.0.1:XXXX"  # Use actual port from inspect
+   cast balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url $L1_RPC
+   ```
+
+**💡 Best Practice**: Always do a complete cleanup before redeploying if you encounter multiple failed processes or account funding issues.
 
 **📖 For more detailed troubleshooting, see the documentation in `./docs/`**
 
