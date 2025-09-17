@@ -1,4 +1,4 @@
-# Phase 1 Challenger Network
+# Build Local Network for Challenger Test
 
 ## 🚀 Quick Installation
 
@@ -38,27 +38,50 @@ The binary builder supports different modes:
 **💡 Important**: Always use `--force` after modifying contracts to ensure cannon/prestate files are regenerated with your changes.
 
 #### Step 3: Configure Devnet Settings
-Configure game type, challenger prestate settings, and network options in `simple.yaml`:
+
+Edit `simple.yaml` to configure testing-optimized settings:
 
 ```bash
 cd /optimism/kurtosis-devnet
-# Edit simple.yaml with your preferred settings
+vi simple.yaml  # or your preferred editor
 ```
 
-**📖 Complete Configuration Guide**: [Configuration Guide](./docs/configuration-guide.md)
+**Required Configuration Checks and Edits:**
 
-**🚀 Fast Dispute Game Setup**: [Fast Dispute Game Setup Guide](./docs/fast-dispute-game-setup.md) - Configure 20-minute dispute games instead of 3.5 days for faster testing
+1. **L1 Account Funding** - Find and verify `ethereum_package` section:
+   ```yaml
+   ethereum_package:
+     network_params:
+       prefunded_accounts: '{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {"balance": "1000ETH"}}'
+   ```
+   **If missing**: Add this section to ensure test accounts have ETH for transactions.
 
-**Quick Settings Summary:**
-- **Game Type**: Set `proposer_params.game_type` (0=CANNON, 1=PERMISSIONED)
-- **Network Issues**: Use Docker restart/cleanup if registry timeouts occur
+2. **20-Minute Dispute Games** - Find and add `overrides` section:
+   ```yaml
+   overrides:
+     deployer:
+       faultGameMaxClockDuration: 1200
+       faultGameClockExtension: 300
+   ```
+   **If missing**: Add this section to enable fast 20-minute dispute games instead of 3.5-day games.
 
-##### Supported Game Types
-| Type | Name | Purpose | Challenger Config | Status |
-|------|------|---------|-------------------|--------|
-| **0** | CANNON | Complete fault proof | Auto uses `cannon` | ⚠️ needs testing |
-| **1** | PERMISSIONED | Fast development/testing | Auto uses `cannon` | ✅ **working** |
-| **2** | ASTERISC | Asterisc VM | Auto uses `asterisc` | ⚠️ needs testing |
+3. **CANNON Game Type** - Find and verify `proposer_params` section:
+   ```yaml
+   proposer_params:
+     game_type: 0
+   ```
+   **If missing or different**: Set `game_type: 0` to use CANNON dispute games.
+
+**Verification**: Check that all three sections exist in your `simple.yaml` before proceeding to Step 4.
+
+**📖 Complete Setup Guide**: [Fast Dispute Game Setup Guide](./docs/fast-dispute-game-setup.md) - Detailed configuration instructions and troubleshooting
+
+**Supported Game Types:**
+| Type | Name | Purpose | Status |
+|------|------|---------|--------|
+| **0** | CANNON | Complete fault proof | ✅ **recommended** |
+| **1** | PERMISSIONED | Fast development/testing | ✅ working |
+| **2** | ASTERISC | Asterisc VM | ⚠️ needs testing |
 
 #### Step 4: Build Devnet Environment
 
@@ -74,10 +97,10 @@ docker builder prune
 
 ```bash
 # For normal cleanup
-AUTOFIX=true just simple-devnet
+LOG_LEVEL=debug AUTOFIX=true just simple-devnet
 
 # For complete reset (use when code is changed and recompiled)
-AUTOFIX=nuke just simple-devnet
+LOG_LEVEL=debug AUTOFIX=nuke just simple-devnet
 
 # If Traefik network error occurs, run this after deployment:
 cd /optimism/kurtosis-devnet && just fix-traefik
@@ -101,16 +124,18 @@ Autofix mode helps recover from failed devnet deployments by automatically clean
    - Removes all networks and containers
    - Use when you need a fresh start
 
-#### Step 5: Run Challenger
-When running Devnet, a default challenger is included.
-In that case, there's no need to run the challenger with the command below.
 
-```bash
-cd /optimism/op-challenger/scripts
-./run-challenger-devnet.sh
-```
+
 
 ## 📋 Deployment Verification
+
+**🚀 Quick Post-Deployment Check**: [Post-Deployment Verification Guide](./docs/post-deployment-verification-guide-en.md) - Complete automated verification process with scripts
+
+**What the verification guide includes:**
+- ✅ Automated contract configuration verification
+- ✅ Complete game status monitoring
+- ✅ Auto-resolve dispute game testing
+- ✅ Step-by-step troubleshooting
 
 ### Log Monitoring
 
@@ -128,94 +153,32 @@ cd /optimism/op-challenger/scripts
 - **Challenger**: `kurtosis service logs simple-devnet op-challenger-challenger-2151908`
 - **Faucet**: `kurtosis service logs simple-devnet op-faucet`
 
-### Quick Verification
+### Post-Deployment Verification
 
-After deploying your devnet, verify the deployment and account funding:
+After deploying your devnet, use the comprehensive automated verification process:
 
-#### 1. Basic Deployment Check
+**🚀 Complete Verification**: [Post-Deployment Verification Guide](./docs/post-deployment-verification-guide-en.md)
+
+**Quick automated commands:**
 ```bash
-# Check devnet status
-kurtosis enclave inspect simple-devnet
+cd /optimism/op-challenger/scripts
 
-# Verify all services are RUNNING
-# Should see: L1 (geth + teku), L2 (op-geth + op-node), op-batcher, op-proposer, op-challenger
+# Verify all contract configurations
+./verify-contract-settings.sh
+
+# Check all dispute games status
+./check-all-games.sh
+
+# Auto-resolve specific dispute game
+./auto-resolve-game.sh [GAME_ADDRESS]
 ```
 
-#### 2. Account Funding Verification
-```bash
-# Check pre-funded test accounts have ETH
-L1_RPC="http://127.0.0.1:57834"  # Check actual port from enclave inspect
-cast balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url $L1_RPC
-cast balance 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 --rpc-url $L1_RPC
-
-# Should show non-zero balances (e.g., 10000000000000000000000)
-# If all accounts show 0, the devnet funding failed
-```
-
-#### 3. Contract Configuration Verification
-
-After confirming accounts are funded, verify that contract modifications were properly applied:
-
-```bash
-# Download deployment info
-kurtosis files download simple-devnet devnet-descriptor-0 /tmp/devnet-desc
-
-# Get contract addresses and RPC endpoint
-L1_RPC=$(grep -o '"rpc":"http://[^"]*' /tmp/devnet-desc/env.json | cut -d'"' -f4)
-OPCM_ADDRESS=$(grep -o 'OPContractsManager[^"]*":"[^"]*' /tmp/devnet-desc/env.json | cut -d'"' -f3)
-OP_PORTAL=$(grep -o 'OptimismPortalProxy[^"]*":"[^"]*' /tmp/devnet-desc/env.json | cut -d'"' -f3)
-
-# Verify deployment version (should show your version string)
-cast call $OPCM_ADDRESS "getDeploymentVersion()(string)" --rpc-url $L1_RPC
-
-# Verify respectedGameType (should be 0 for CANNON, matches your simple.yaml)
-cast call $OP_PORTAL "respectedGameType()(uint32)" --rpc-url $L1_RPC
-
-# Check challenger logs (should have no prestate errors)
-docker logs $(docker ps | grep challenger | awk '{print $1}') --tail 10
-```
-
-### Expected Results
-
-| Check | Expected Result | Meaning |
-|-------|----------------|---------|
-| `getDeploymentVersion()` | `"v2.0-fixed-disputeGameType"` | Contract changes deployed |
-| `respectedGameType()` | `0` (if using CANNON) | Settings properly applied |
-| Challenger logs | No prestate mismatch errors | System working correctly |
-
-### Troubleshooting Verification
-
-If verification fails:
-
-1. **Wrong deployment version**: Contract changes not included
-   ```bash
-   # Rebuild contracts and redeploy
-   cd /optimism/packages/contracts-bedrock && forge build --force
-   cd /optimism/op-challenger/scripts && ./build-binaries-for-challenger.sh --force
-   cd /optimism/kurtosis-devnet && AUTOFIX=nuke just simple-devnet
-   ```
-
-2. **Wrong respectedGameType**: Configuration mismatch
-   ```bash
-   # Check simple.yaml game_type setting matches expected respectedGameType
-   # game_type: 0 should result in respectedGameType = 0
-   ```
-
-3. **Challenger prestate errors**: Missing or incorrect prestate configuration
-   ```bash
-   # Check challenger logs for prestate issues:
-   docker logs $(docker ps | grep challenger | awk '{print $1}') | grep -i prestate
-
-   # If prestate errors found, see Configuration Guide for proper setup
-   # Then rebuild and redeploy:
-   AUTOFIX=nuke just simple-devnet
-   ```
-
-**📖 Configuration Guide**: [Configuration Guide](./docs/configuration-guide.md)
-
-**🔍 Deployment Monitoring**: [Log Monitoring Guide](./docs/monitoring-deployment-logs.md)
-
-**🚀 Deployment Verification**: [Deployment Verification Guide](./docs/deployment-verification-guide.md)
+The verification guide includes:
+- ✅ Service status verification
+- ✅ Contract configuration verification
+- ✅ Account funding verification
+- ✅ Dispute game creation and resolution testing
+- ✅ Complete end-to-end workflow validation
 
 ## 🛠️ System Tools Auto Installation
 
@@ -472,5 +435,33 @@ If you encounter issues not covered here:
 **💡 Best Practice**: Always do a complete cleanup before redeploying if you encounter multiple failed processes or account funding issues.
 
 **📖 For more detailed troubleshooting, see the documentation in `./docs/`**
+
+---
+
+## 🔍 Post-Deployment Testing
+
+After successful deployment, use the comprehensive verification process:
+
+**🚀 Automated Verification**: [Post-Deployment Verification Guide](./docs/post-deployment-verification-guide-en.md)
+
+**Quick Commands:**
+```bash
+cd /optimism/op-challenger/scripts
+
+# 1. Verify contract configurations
+./verify-contract-settings.sh
+
+# 2. Check all dispute games status
+./check-all-games.sh
+
+# 3. Test auto-resolve functionality
+./auto-resolve-game.sh [GAME_ADDRESS]
+```
+
+**What gets verified:**
+- ✅ Contract configuration (20-minute dispute games, CANNON type)
+- ✅ Account funding status
+- ✅ Game creation and resolution process
+- ✅ Complete end-to-end dispute game lifecycle
 
 

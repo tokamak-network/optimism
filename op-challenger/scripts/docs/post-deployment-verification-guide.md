@@ -87,17 +87,15 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 
 **💡 상세한 수동 검증이 필요한 경우:** [컨트랙트 설정 상세 검증 가이드](contract-verification-detailed.md)를 참조하세요.
 
-**⚠️ 중요: L1 계정 자금 조달 설정**
+**⚠️ 중요: 배포 전 설정 확인**
 
-L1 계정에 초기 이더가 없는 경우, `simple.yaml` 파일에 다음 설정을 추가해야 합니다:
+테스트를 위해 다음 설정이 올바르게 되어 있는지 확인하세요:
 
-```yaml
-ethereum_package:
-  network_params:
-    prefunded_accounts: '{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {"balance": "1000ETH"}, "0x70997970C51812dc3A010C7d01b50e0d17dc79c8": {"balance": "1000ETH"}, "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC": {"balance": "1000ETH"}}'
-```
+- **L1 계정 자금 조달**: `simple.yaml`에 `prefunded_accounts` 설정
+- **20분 Dispute Game**: `simple.yaml`에 타이밍 overrides 설정
+- **CANNON 게임 타입**: `proposer_params.game_type: 0` 설정
 
-이 설정 없이는 L1 테스트 계정들이 0 ETH 상태로 배포되어 dispute game resolve 테스트를 수행할 수 없습니다.
+**자세한 설정 방법**: [Fast Dispute Game Setup Guide](fast-dispute-game-setup.md)를 참조하세요.
 
 
 ### 5단계: 전체 게임 현황 확인
