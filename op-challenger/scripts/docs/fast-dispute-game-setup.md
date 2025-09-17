@@ -87,15 +87,18 @@ Our configuration: `600 ≤ 1200` ✅
 ### 1. Game Creation (Automatic)
 - Proposer creates games every 10 minutes
 - Each game proposes a new L2 state root
-- Game duration: 20 minutes
+- Game duration: `maxClockDuration` (1200s = 20 minutes)
 
 ### 2. Challenge Period (Optional)
-- Challengers have 20 minutes to dispute
+- Challengers have `maxClockDuration` (1200s = 20 minutes) to dispute
 - If no challenges: Game resolves as DEFENDER_WINS
 - If challenged: Bisection game begins
 
 ### 3. Game Resolution (Manual)
-- After 20 minutes, anyone can call `resolve()`
+- After `maxClockDuration` expires, resolution requires two steps:
+  1. **`resolveClaim(uint256, uint256)`**: Resolves specific claims in the dispute tree
+  2. **`resolve()`**: Finalizes the game and updates AnchorStateRegistry
+- For uncontested games (no challengers), call `resolveClaim(0, 0)` first
 - Winning state root updates AnchorStateRegistry
 - New games use updated root as checkpoint
 
@@ -173,9 +176,9 @@ RPC_URL="http://127.0.0.1:57834" ADDR_FILE="/tmp/devnet-desc/env.json" ./check-a
 
 3. **Game Never Resolves**
    ```
-   Game stays IN_PROGRESS after 20 minutes
+   Game stays IN_PROGRESS after maxClockDuration expires
    ```
-   **Solution**: Call `resolve()` manually or use auto-resolve script
+   **Solution**: Must call `resolveClaim(0, 0)` first, then `resolve()`. Use auto-resolve script for automated two-step process
 
 ### Debug Commands
 ```bash
@@ -206,29 +209,30 @@ This setup required changes to the following files:
 
 ## Technical Background
 
-### Clock Extension Calculation
-The system calculates maximum clock extension as:
-```solidity
-uint256 splitDepthExtension = clockExtension * 2;  // Bisection phase
-uint256 maxGameDepthExtension = clockExtension + challengePeriod;  // Execution phase
-uint256 maxClockExtension = Math.max(splitDepthExtension, maxGameDepthExtension);
-```
-
 ### State Root Progression
 1. **Genesis**: AnchorStateRegistry = `0xdead` (placeholder)
 2. **First Game**: Proposes actual state root
-3. **Resolution**: Updates AnchorStateRegistry to winning root
+3. **Resolution**: Two-step process updates AnchorStateRegistry
+   - `resolveClaim(0, 0)`: Resolves the root claim as valid
+   - `resolve()`: Finalizes game and updates registry to winning root
 4. **Future Games**: Use confirmed root as starting point
 
 This creates a checkpoint system where past state roots don't need re-validation.
+
+### Game Resolution Process
+For uncontested games (typical in devnet testing):
+1. **Wait for expiration**: Game must exceed `maxClockDuration` (1200s = 20 minutes)
+2. **Resolve claims**: Call `resolveClaim(0, 0)` to mark root claim as resolved
+3. **Finalize game**: Call `resolve()` to complete the game and update state
+4. **Verification**: Game status changes from `0` (IN_PROGRESS) to `2` (DEFENDER_WINS)
 
 ## Best Practices
 
 ### Development Workflow
 1. Deploy devnet with fast configuration
-2. Let first game auto-resolve (establishes checkpoint)
-3. Test scenarios with 20-minute game cycles
-4. Use auto-resolve script for hands-free testing
+2. Wait for first game to expire (`maxClockDuration` = 1200s = 20 minutes), then manually resolve using auto-resolve script (establishes checkpoint and fixes AnchorStateRegistry cold start)
+3. Test scenarios with configured game cycles
+4. Use auto-resolve script for subsequent games
 
 ### Production Notes
 - Never use fast timing in production
