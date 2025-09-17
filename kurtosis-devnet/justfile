@@ -34,6 +34,7 @@ _docker_build TAG TARGET CONTEXT DOCKERFILE *ARGS: _prerequisites
         -t {{TAG}} \
         -f {{CONTEXT}}/{{DOCKERFILE}} \
         {{ if TARGET != '' {  "--target " + TARGET } else { "" } }} \
+        {{ if env_var_or_default("LOG_LEVEL", "") == "debug" { "--progress=plain" } else { "" } }} \
         --build-arg GIT_COMMIT={git_commit} \
         --build-arg GIT_DATE={git_date} \
         {{ ARGS }} \

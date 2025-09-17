@@ -1,3 +1,9 @@
+overrides:
+  deployer:
+    faultGameMaxClockDuration: 1200
+    faultGameClockExtension: 300
+    preimageOracleChallengePeriod: 300
+    vmType: "CANNON"
 optimism_package:
   faucet:
     enabled: true
@@ -66,6 +72,9 @@ optimism_package:
     overrides:
       faultGameAbsolutePrestate: {{ localPrestate.Hashes.prestate_mt64 }}
       vmType: "CANNON"
+      faultGameMaxClockDuration: 1200
+      faultGameClockExtension: 300
+      preimageOracleChallengePeriod: 300
   global_log_level: "debug"
   global_node_selectors: {}
   global_tolerations: []
@@ -78,6 +87,7 @@ ethereum_package:
   network_params:
     preset: minimal
     genesis_delay: 10
+    prefunded_accounts: '{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {"balance": "1000ETH"}, "0x70997970C51812dc3A010C7d01b50e0d17dc79c8": {"balance": "1000ETH"}, "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC": {"balance": "1000ETH"}, "0x90F79bf6EB2c4f870365E785982E1f101E93b906": {"balance": "1000ETH"}, "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65": {"balance": "1000ETH"}}'
     additional_preloaded_contracts: |
       {
         "0x4e59b44847b379578588920cA78FbF26c0B4956C": {

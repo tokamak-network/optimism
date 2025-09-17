@@ -25,10 +25,11 @@ optimism_package:
     image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-deployer:v0.4.0-rc.2
     l1_artifacts_locator: {{ dig "overrides" "urls" "l1_artifacts" (localContractArtifacts "l1") $context }}
     l2_artifacts_locator: {{ dig "overrides" "urls" "l2_artifacts" (localContractArtifacts "l2") $context }}
-{{ if $interop }}
     global_deploy_overrides:
       faultGameAbsolutePrestate: {{ dig "overrides" "deployer" "prestate" (localPrestate.Hashes.prestate_mt64) $context }}
-{{ end }}
+{{- range $key, $value := dig "overrides" "deployer" (dict) $context }}
+      {{ $key }}: {{ $value }}
+{{- end }}
   global_log_level: "info"
   global_node_selectors: {}
   global_tolerations: []
