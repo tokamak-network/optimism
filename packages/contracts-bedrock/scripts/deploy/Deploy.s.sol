@@ -432,7 +432,14 @@ contract Deploy is Deployer {
             disputeMaxGameDepth: cfg.faultGameMaxDepth(),
             disputeSplitDepth: cfg.faultGameSplitDepth(),
             disputeClockExtension: Duration.wrap(uint64(cfg.faultGameClockExtension())),
-            disputeMaxClockDuration: Duration.wrap(uint64(cfg.faultGameMaxClockDuration()))
+            disputeMaxClockDuration: Duration.wrap(uint64(cfg.faultGameMaxClockDuration())),
+            // RAT configuration from deploy config
+            deployRAT: cfg.deployRAT(),
+            ratPerTestBondAmount: cfg.ratPerTestBondAmount(),
+            ratEvidenceSubmissionPeriod: cfg.ratEvidenceSubmissionPeriod(),
+            ratMinimumStakingBalance: cfg.ratMinimumStakingBalance(),
+            ratTriggerProbability: cfg.ratTriggerProbability(),
+            ratManager: cfg.ratManager()
         });
     }
 }

@@ -23,6 +23,7 @@ import { IL1ERC721Bridge } from "interfaces/L1/IL1ERC721Bridge.sol";
 import { IL1StandardBridge } from "interfaces/L1/IL1StandardBridge.sol";
 import { IOptimismMintableERC20Factory } from "interfaces/universal/IOptimismMintableERC20Factory.sol";
 import { IETHLockbox } from "interfaces/L1/IETHLockbox.sol";
+import { IRAT } from "interfaces/L1/IRAT.sol";
 import { IOPContractsManagerStandardValidator } from "interfaces/L1/IOPContractsManagerStandardValidator.sol";
 
 interface IOPContractsManagerContractsContainer {
@@ -146,6 +147,13 @@ interface IOPContractsManager {
         uint256 disputeSplitDepth;
         Duration disputeClockExtension;
         Duration disputeMaxClockDuration;
+        // RAT configuration parameters.
+        bool deployRAT;
+        uint256 ratPerTestBondAmount;
+        uint256 ratEvidenceSubmissionPeriod;
+        uint256 ratMinimumStakingBalance;
+        uint256 ratTriggerProbability;
+        address ratManager;
     }
 
     /// @notice The full set of outputs from deploying a new OP Stack chain.
@@ -166,6 +174,7 @@ interface IOPContractsManager {
         IPermissionedDisputeGame permissionedDisputeGame;
         IDelayedWETH delayedWETHPermissionedGameProxy;
         IDelayedWETH delayedWETHPermissionlessGameProxy;
+        IRAT ratProxy;
     }
 
     /// @notice Addresses of ERC-5202 Blueprint contracts. There are used for deploying full size
@@ -187,6 +196,7 @@ interface IOPContractsManager {
         address superPermissionedDisputeGame2;
         address superPermissionlessDisputeGame1;
         address superPermissionlessDisputeGame2;
+        address rat;
     }
 
     /// @notice The latest implementation contracts for the OP Stack.
@@ -204,6 +214,7 @@ interface IOPContractsManager {
         address anchorStateRegistryImpl;
         address delayedWETHImpl;
         address mipsImpl;
+        address ratImpl;
     }
 
     /// @notice The input required to identify a chain for upgrading.
@@ -379,6 +390,7 @@ interface IOPCMImplementationsWithoutLockbox {
         address anchorStateRegistryImpl;
         address delayedWETHImpl;
         address mipsImpl;
+        address ratImpl;
     }
 
     /// @notice Returns the implementation contracts without the ETHLockbox.

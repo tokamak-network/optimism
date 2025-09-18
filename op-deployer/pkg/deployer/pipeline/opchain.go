@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/addresses"
 	"github.com/ethereum-optimism/optimism/op-service/jsonutil"
@@ -10,7 +11,13 @@ import (
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/standard"
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/state"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
+
+func mustHexBigFromHex(hex string) *big.Int {
+	num := hexutil.MustDecodeBig(hex)
+	return num
+}
 
 func DeployOPChain(env *Env, intent *state.Intent, st *state.State, chainID common.Hash) error {
 	lgr := env.Logger.New("stage", "deploy-opchain")
@@ -81,6 +88,13 @@ func makeDCI(intent *state.Intent, thisIntent *state.ChainIntent, chainID common
 			DisputeSplitDepth:       standard.DisputeSplitDepth,
 			DisputeClockExtension:   standard.DisputeClockExtension,
 			DisputeMaxClockDuration: standard.DisputeMaxClockDuration,
+			// RAT defaults
+			DeployRAT:                   standard.DeployRAT,
+			RATPerTestBondAmount:        mustHexBigFromHex(standard.RATPerTestBondAmount),
+			RATEvidenceSubmissionPeriod: standard.RATEvidenceSubmissionPeriod,
+			RATMinimumStakingBalance:    mustHexBigFromHex(standard.RATMinimumStakingBalance),
+			RATTriggerProbability:       standard.RATTriggerProbability,
+			RATManager:                  common.Address{}, // Default to zero address
 		},
 		intent.GlobalDeployOverrides,
 		thisIntent.DeployOverrides,
@@ -111,6 +125,13 @@ func makeDCI(intent *state.Intent, thisIntent *state.ChainIntent, chainID common
 		AllowCustomDisputeParameters: proofParams.DangerouslyAllowCustomDisputeParameters,
 		OperatorFeeScalar:            thisIntent.OperatorFeeScalar,
 		OperatorFeeConstant:          thisIntent.OperatorFeeConstant,
+		// RAT configuration - TODO: Add RAT parameters from intent
+		DeployRAT:                    proofParams.DeployRAT, // Default to false for now
+		RATPerTestBondAmount:         proofParams.RATPerTestBondAmount,
+		RATEvidenceSubmissionPeriod:  proofParams.RATEvidenceSubmissionPeriod,
+		RATMinimumStakingBalance:     proofParams.RATMinimumStakingBalance,
+		RATTriggerProbability:        proofParams.RATTriggerProbability,
+		RATManager:                   proofParams.RATManager,
 	}, nil
 }
 
@@ -131,6 +152,7 @@ func makeChainState(chainID common.Hash, dco opcm.DeployOPChainOutput) *state.Ch
 	opChainContracts.PermissionedDisputeGameImpl = dco.PermissionedDisputeGame
 	opChainContracts.DelayedWethPermissionedGameProxy = dco.DelayedWETHPermissionedGameProxy
 	opChainContracts.DelayedWethPermissionlessGameProxy = dco.DelayedWETHPermissionlessGameProxy
+	opChainContracts.RATProxy = dco.RATProxy
 
 	return &state.ChainState{
 		ID:               chainID,

@@ -46,6 +46,7 @@ type ImplementationsContracts struct {
 	OptimismMintableErc20FactoryImpl common.Address
 	DisputeGameFactoryImpl           common.Address
 	AnchorStateRegistryImpl          common.Address
+	RATImpl                          common.Address
 }
 
 // OpChainContracts struct contains all the contracts for a specific L2 OpChain
@@ -80,6 +81,7 @@ type OpChainFaultProofsContracts struct {
 	PermissionedDisputeGameImpl        common.Address
 	DelayedWethPermissionedGameProxy   common.Address
 	DelayedWethPermissionlessGameProxy common.Address
+	RATProxy                           common.Address
 }
 
 type OpChainAltDAContracts struct {

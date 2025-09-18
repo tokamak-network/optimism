@@ -30,6 +30,7 @@ import { IL1ERC721Bridge } from "interfaces/L1/IL1ERC721Bridge.sol";
 import { IL1StandardBridge } from "interfaces/L1/IL1StandardBridge.sol";
 import { IOptimismMintableERC20Factory } from "interfaces/universal/IOptimismMintableERC20Factory.sol";
 import { IETHLockbox } from "interfaces/L1/IETHLockbox.sol";
+import { IRAT } from "interfaces/L1/IRAT.sol";
 
 contract DeployOPChainInput is BaseDeployIO {
     address internal _opChainProxyAdminOwner;
@@ -59,6 +60,14 @@ contract DeployOPChainInput is BaseDeployIO {
     uint32 internal _operatorFeeScalar;
     uint64 internal _operatorFeeConstant;
 
+    // RAT configuration
+    bool internal _deployRAT;
+    uint256 internal _ratPerTestBondAmount;
+    uint256 internal _ratEvidenceSubmissionPeriod;
+    uint256 internal _ratMinimumStakingBalance;
+    uint256 internal _ratTriggerProbability;
+    address internal _ratManager;
+
     function set(bytes4 _sel, address _addr) public {
         require(_addr != address(0), "DeployOPChainInput: cannot set zero address");
         if (_sel == this.opChainProxyAdminOwner.selector) _opChainProxyAdminOwner = _addr;
@@ -68,6 +77,7 @@ contract DeployOPChainInput is BaseDeployIO {
         else if (_sel == this.proposer.selector) _proposer = _addr;
         else if (_sel == this.challenger.selector) _challenger = _addr;
         else if (_sel == this.opcm.selector) _opcm = IOPContractsManager(_addr);
+        else if (_sel == this.ratManager.selector) _ratManager = _addr;
         else revert("DeployOPChainInput: unknown selector");
     }
 
@@ -93,8 +103,16 @@ contract DeployOPChainInput is BaseDeployIO {
             _disputeMaxClockDuration = Duration.wrap(SafeCast.toUint64(_value));
         } else if (_sel == this.operatorFeeScalar.selector) {
             _operatorFeeScalar = SafeCast.toUint32(_value);
-        } else if (_sel == this.operatorFeeConstant.selector) {
+        }         else if (_sel == this.operatorFeeConstant.selector) {
             _operatorFeeConstant = SafeCast.toUint64(_value);
+        } else if (_sel == this.ratPerTestBondAmount.selector) {
+            _ratPerTestBondAmount = _value;
+        } else if (_sel == this.ratEvidenceSubmissionPeriod.selector) {
+            _ratEvidenceSubmissionPeriod = _value;
+        } else if (_sel == this.ratMinimumStakingBalance.selector) {
+            _ratMinimumStakingBalance = _value;
+        } else if (_sel == this.ratTriggerProbability.selector) {
+            _ratTriggerProbability = _value;
         } else {
             revert("DeployOPChainInput: unknown selector");
         }
@@ -113,6 +131,7 @@ contract DeployOPChainInput is BaseDeployIO {
 
     function set(bytes4 _sel, bool _value) public {
         if (_sel == this.allowCustomDisputeParameters.selector) _allowCustomDisputeParameters = _value;
+        else if (_sel == this.deployRAT.selector) _deployRAT = _value;
         else revert("DeployOPChainInput: unknown selector");
     }
 
@@ -226,6 +245,31 @@ contract DeployOPChainInput is BaseDeployIO {
     function operatorFeeConstant() public view returns (uint64) {
         return _operatorFeeConstant;
     }
+
+    // RAT getters
+    function deployRAT() public view returns (bool) {
+        return _deployRAT;
+    }
+
+    function ratPerTestBondAmount() public view returns (uint256) {
+        return _ratPerTestBondAmount;
+    }
+
+    function ratEvidenceSubmissionPeriod() public view returns (uint256) {
+        return _ratEvidenceSubmissionPeriod;
+    }
+
+    function ratMinimumStakingBalance() public view returns (uint256) {
+        return _ratMinimumStakingBalance;
+    }
+
+    function ratTriggerProbability() public view returns (uint256) {
+        return _ratTriggerProbability;
+    }
+
+    function ratManager() public view returns (address) {
+        return _ratManager;
+    }
 }
 
 contract DeployOPChainOutput is BaseDeployIO {
@@ -244,6 +288,7 @@ contract DeployOPChainOutput is BaseDeployIO {
     IPermissionedDisputeGame internal _permissionedDisputeGame;
     IDelayedWETH internal _delayedWETHPermissionedGameProxy;
     IDelayedWETH internal _delayedWETHPermissionlessGameProxy;
+    IRAT internal _ratProxy;
 
     function set(bytes4 _sel, address _addr) public virtual {
         require(_addr != address(0), "DeployOPChainOutput: cannot set zero address");
@@ -263,6 +308,7 @@ contract DeployOPChainOutput is BaseDeployIO {
         else if (_sel == this.permissionedDisputeGame.selector) _permissionedDisputeGame = IPermissionedDisputeGame(_addr) ;
         else if (_sel == this.delayedWETHPermissionedGameProxy.selector) _delayedWETHPermissionedGameProxy = IDelayedWETH(payable(_addr)) ;
         else if (_sel == this.delayedWETHPermissionlessGameProxy.selector) _delayedWETHPermissionlessGameProxy = IDelayedWETH(payable(_addr)) ;
+        else if (_sel == this.ratProxy.selector) _ratProxy = IRAT(_addr) ;
         else revert("DeployOPChainOutput: unknown selector");
         // forgefmt: disable-end
     }
@@ -352,6 +398,12 @@ contract DeployOPChainOutput is BaseDeployIO {
         // DeployUtils.assertValidContractAddress(address(_delayedWETHPermissionlessGameProxy));
         return _delayedWETHPermissionlessGameProxy;
     }
+
+    function ratProxy() public returns (IRAT) {
+        DeployUtils.assertValidContractAddress(address(_ratProxy));
+        DeployUtils.assertERC1967ImplementationSet(address(_ratProxy));
+        return _ratProxy;
+    }
 }
 
 contract DeployOPChain is Script {
@@ -381,7 +433,13 @@ contract DeployOPChain is Script {
             disputeMaxGameDepth: _doi.disputeMaxGameDepth(),
             disputeSplitDepth: _doi.disputeSplitDepth(),
             disputeClockExtension: _doi.disputeClockExtension(),
-            disputeMaxClockDuration: _doi.disputeMaxClockDuration()
+            disputeMaxClockDuration: _doi.disputeMaxClockDuration(),
+            deployRAT: _doi.deployRAT(),
+            ratPerTestBondAmount: _doi.ratPerTestBondAmount(),
+            ratEvidenceSubmissionPeriod: _doi.ratEvidenceSubmissionPeriod(),
+            ratMinimumStakingBalance: _doi.ratMinimumStakingBalance(),
+            ratTriggerProbability: _doi.ratTriggerProbability(),
+            ratManager: _doi.ratManager()
         });
 
         vm.broadcast(msg.sender);
@@ -404,6 +462,12 @@ contract DeployOPChain is Script {
         // TODO: Eventually switch from Permissioned to Permissionless.
         // vm.label(address(deployOutput.delayedWETHPermissionlessGameProxy), "delayedWETHPermissionlessGameProxy");
 
+        // Label RAT if deployed
+        if (_doi.deployRAT() && address(deployOutput.ratProxy) != address(0)) {
+            vm.label(address(deployOutput.ratProxy), "ratProxy");
+        }
+
+
         _doo.set(_doo.opChainProxyAdmin.selector, address(deployOutput.opChainProxyAdmin));
         _doo.set(_doo.addressManager.selector, address(deployOutput.addressManager));
         _doo.set(_doo.l1ERC721BridgeProxy.selector, address(deployOutput.l1ERC721BridgeProxy));
@@ -425,6 +489,12 @@ contract DeployOPChain is Script {
         //     _doo.delayedWETHPermissionlessGameProxy.selector,
         // address(deployOutput.delayedWETHPermissionlessGameProxy)
         // );
+
+        // Set RAT if deployed
+        if (_doi.deployRAT() && address(deployOutput.ratProxy) != address(0)) {
+            _doo.set(_doo.ratProxy.selector, address(deployOutput.ratProxy));
+        }
+
 
         checkOutput(_doi, _doo);
     }
@@ -450,6 +520,13 @@ contract DeployOPChain is Script {
             address(_doo.delayedWETHPermissionedGameProxy()),
             address(_doo.ethLockboxProxy())
         );
+
+        // Add RAT address if deployed
+        if (_doi.deployRAT() && address(_doo.ratProxy()) != address(0)) {
+            address[] memory addrs3 = Solarray.addresses(address(_doo.ratProxy()));
+            addrs2 = Solarray.extend(addrs2, addrs3);
+        }
+
         // TODO: Eventually switch from Permissioned to Permissionless. Add this address back in.
         // address(_delayedWETHPermissionlessGameProxy)
 
@@ -517,6 +594,16 @@ contract DeployOPChain is Script {
         ChainAssertions.checkSystemConfig(proxies, _doi, true);
         assertValidAddressManager(_doi, _doo);
         assertValidOPChainProxyAdmin(_doi, _doo);
+
+        // Validate RAT if deployed
+        if (_doi.deployRAT() && address(_doo.ratProxy()) != address(0)) {
+            DeployUtils.assertInitialized({
+                _contractAddress: address(_doo.ratProxy()),
+                _isProxy: true,
+                _slot: 0,
+                _offset: 0
+            });
+        }
     }
 
     function assertValidAddressManager(DeployOPChainInput, DeployOPChainOutput _doo) internal view {
@@ -579,6 +666,15 @@ contract DeployOPChain is Script {
                 == DeployUtils.assertERC1967ImplementationSet(address(_doo.ethLockboxProxy())),
             "OPCPA-120"
         );
+
+        // Validate RAT proxy implementation if deployed
+        if (_doi.deployRAT() && address(_doo.ratProxy()) != address(0)) {
+            require(
+                admin.getProxyImplementation(address(_doo.ratProxy()))
+                    == DeployUtils.assertERC1967ImplementationSet(address(_doo.ratProxy())),
+                "OPCPA-130"
+            );
+        }
     }
 
     // -------- Utilities --------
@@ -593,4 +689,5 @@ contract DeployOPChain is Script {
         doi_ = DeployOPChainInput(DeployUtils.toIOAddress(msg.sender, "optimism.DeployOPChainInput"));
         doo_ = DeployOPChainOutput(DeployUtils.toIOAddress(msg.sender, "optimism.DeployOPChainOutput"));
     }
+
 }

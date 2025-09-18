@@ -32,6 +32,7 @@ import { IL1StandardBridge } from "interfaces/L1/IL1StandardBridge.sol";
 import { IOptimismMintableERC20Factory } from "interfaces/universal/IOptimismMintableERC20Factory.sol";
 import { IHasSuperchainConfig } from "interfaces/L1/IHasSuperchainConfig.sol";
 import { IETHLockbox } from "interfaces/L1/IETHLockbox.sol";
+import { IRAT } from "interfaces/L1/IRAT.sol";
 import { OPContractsManagerStandardValidator } from "src/L1/OPContractsManagerStandardValidator.sol";
 
 contract OPContractsManagerContractsContainer {
@@ -1190,6 +1191,21 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
             data
         );
 
+        // Deploy RAT if requested
+        if (_input.deployRAT) {
+            output.ratProxy = IRAT(
+                deployProxy(_input.l2ChainId, output.opChainProxyAdmin, _input.saltMixer, "RAT")
+            );
+
+            data = encodeRATInitializer(_input, output);
+            upgradeToAndCall(
+                output.opChainProxyAdmin,
+                address(output.ratProxy),
+                implementation.ratImpl,
+                data
+            );
+        }
+
         // -------- Finalize Deployment --------
         // Transfer ownership of the ProxyAdmin from this contract to the specified owner.
         transferOwnership(address(output.opChainProxyAdmin), _input.roles.opChainProxyAdminOwner);
@@ -1394,6 +1410,28 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
         returns (bytes memory)
     {
         return abi.encodeCall(IDelayedWETH.initialize, (_output.systemConfigProxy));
+    }
+
+    function encodeRATInitializer(
+        OPContractsManager.DeployInput memory _input,
+        OPContractsManager.DeployOutput memory _output
+    )
+        internal
+        view
+        virtual
+        returns (bytes memory)
+    {
+        return abi.encodeCall(
+            IRAT.initialize,
+            (
+                address(_output.disputeGameFactoryProxy), // _disputeGameFactory
+                _input.ratPerTestBondAmount,              // _perTestBondAmount
+                _input.ratEvidenceSubmissionPeriod,       // _evidenceSubmissionPeriod
+                _input.ratMinimumStakingBalance,          // _minimumStakingBalance
+                _input.ratTriggerProbability,             // _ratTriggerProbability
+                _input.ratManager                         // _manager
+            )
+        );
     }
 }
 
@@ -1711,6 +1749,13 @@ contract OPContractsManager is ISemver {
         uint256 disputeSplitDepth;
         Duration disputeClockExtension;
         Duration disputeMaxClockDuration;
+        // RAT configuration parameters.
+        bool deployRAT;
+        uint256 ratPerTestBondAmount;
+        uint256 ratEvidenceSubmissionPeriod;
+        uint256 ratMinimumStakingBalance;
+        uint256 ratTriggerProbability;
+        address ratManager;
     }
 
     /// @notice The full set of outputs from deploying a new OP Stack chain.
@@ -1731,6 +1776,7 @@ contract OPContractsManager is ISemver {
         IPermissionedDisputeGame permissionedDisputeGame;
         IDelayedWETH delayedWETHPermissionedGameProxy;
         IDelayedWETH delayedWETHPermissionlessGameProxy;
+        IRAT ratProxy;
     }
 
     /// @notice Addresses of ERC-5202 Blueprint contracts. There are used for deploying full size
@@ -1752,6 +1798,7 @@ contract OPContractsManager is ISemver {
         address superPermissionedDisputeGame2;
         address superPermissionlessDisputeGame1;
         address superPermissionlessDisputeGame2;
+        address rat;
     }
 
     /// @notice The latest implementation contracts for the OP Stack.
@@ -1769,6 +1816,7 @@ contract OPContractsManager is ISemver {
         address anchorStateRegistryImpl;
         address delayedWETHImpl;
         address mipsImpl;
+        address ratImpl;
     }
 
     /// @notice The input required to identify a chain for upgrading, along with new prestate hashes

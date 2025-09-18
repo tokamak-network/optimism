@@ -8,6 +8,8 @@ import { IReinitializableBase } from "interfaces/universal/IReinitializableBase.
 /// @title IRAT
 /// @notice Interface for the Randomized Attention Test contract
 interface IRAT is IProxyAdminOwnedBase, IReinitializableBase {
+    /// @notice Constructor function
+    function __constructor__() external;
     /// @notice Challenger information structure
     /// @dev Packed to minimize storage slots
     struct ChallengerInfo {
@@ -92,4 +94,20 @@ interface IRAT is IProxyAdminOwnedBase, IReinitializableBase {
 
     /// @notice Returns the version
     function version() external view returns (string memory);
+
+    /// @notice Initializes the RAT contract
+    /// @param _disputeGameFactory The DisputeGameFactory contract address
+    /// @param _perTestBondAmount The bond amount required per test
+    /// @param _evidenceSubmissionPeriod The period for evidence submission
+    /// @param _minimumStakingBalance The minimum staking balance required
+    /// @param _ratTriggerProbability The probability of triggering RAT
+    /// @param _manager The manager address
+    function initialize(
+        address _disputeGameFactory,
+        uint256 _perTestBondAmount,
+        uint256 _evidenceSubmissionPeriod,
+        uint256 _minimumStakingBalance,
+        uint256 _ratTriggerProbability,
+        address _manager
+    ) external payable;
 }

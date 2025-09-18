@@ -43,6 +43,14 @@ type DeployOPChainInput struct {
 
 	OperatorFeeScalar   uint32
 	OperatorFeeConstant uint64
+
+	// RAT configuration
+	DeployRAT                    bool
+	RATPerTestBondAmount         uint64
+	RATEvidenceSubmissionPeriod  *big.Int
+	RATMinimumStakingBalance     *big.Int
+	RATTriggerProbability        uint64
+	RATManager                   common.Address
 }
 
 func (input *DeployOPChainInput) InputSet() bool {
@@ -70,6 +78,7 @@ type DeployOPChainOutput struct {
 	PermissionedDisputeGame            common.Address
 	DelayedWETHPermissionedGameProxy   common.Address
 	DelayedWETHPermissionlessGameProxy common.Address
+	RATProxy                           common.Address
 }
 
 func (output *DeployOPChainOutput) CheckOutput(input common.Address) error {

@@ -78,6 +78,14 @@ contract DeployConfig is Script {
     bool public useInterop;
     bool public useUpgradedFork;
 
+    // RAT configuration
+    bool public deployRAT;
+    uint256 public ratPerTestBondAmount;
+    uint256 public ratEvidenceSubmissionPeriod;
+    uint256 public ratMinimumStakingBalance;
+    uint256 public ratTriggerProbability;
+    address public ratManager;
+
     function read(string memory _path) public {
         console.log("DeployConfig: reading file %s", _path);
         try vm.readFile(_path) returns (string memory data_) {
@@ -150,6 +158,14 @@ contract DeployConfig is Script {
 
         useInterop = _readOr(_json, "$.useInterop", false);
         useUpgradedFork;
+
+        // RAT configuration with default values
+        deployRAT = _readOr(_json, "$.deployRAT", false);
+        ratPerTestBondAmount = _readOr(_json, "$.ratPerTestBondAmount", 0.01 ether); // 0.01 ETH in wei
+        ratEvidenceSubmissionPeriod = _readOr(_json, "$.ratEvidenceSubmissionPeriod", 1 days); // 1 day in seconds
+        ratMinimumStakingBalance = _readOr(_json, "$.ratMinimumStakingBalance", 1 ether); // 1 ETH in wei
+        ratTriggerProbability = _readOr(_json, "$.ratTriggerProbability", 10000); // 10% (10000/100000)
+        ratManager = _readOr(_json, "$.ratManager", address(0));
     }
 
     function fork() public view returns (Fork fork_) {

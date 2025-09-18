@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -39,6 +40,14 @@ type ChainProofParams struct {
 	DisputeClockExtension                   uint64      `json:"faultGameClockExtension" toml:"faultGameClockExtension"`
 	DisputeMaxClockDuration                 uint64      `json:"faultGameMaxClockDuration" toml:"faultGameMaxClockDuration"`
 	DangerouslyAllowCustomDisputeParameters bool        `json:"dangerouslyAllowCustomDisputeParameters" toml:"dangerouslyAllowCustomDisputeParameters"`
+
+	// RAT configuration
+	DeployRAT                    bool          `json:"deployRAT" toml:"deployRAT"`
+	RATPerTestBondAmount         uint64        `json:"ratPerTestBondAmount" toml:"ratPerTestBondAmount"`
+	RATEvidenceSubmissionPeriod  *big.Int      `json:"ratEvidenceSubmissionPeriod" toml:"ratEvidenceSubmissionPeriod"`
+	RATMinimumStakingBalance     *big.Int      `json:"ratMinimumStakingBalance" toml:"ratMinimumStakingBalance"`
+	RATTriggerProbability        uint64        `json:"ratTriggerProbability" toml:"ratTriggerProbability"`
+	RATManager                   common.Address `json:"ratManager" toml:"ratManager"`
 }
 
 type AdditionalDisputeGame struct {
