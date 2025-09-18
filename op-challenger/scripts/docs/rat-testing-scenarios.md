@@ -1,17 +1,18 @@
-# RAT (Refund Address Tracker) Testing Scenarios
+# RAT (Randomized Attention Test) Testing Scenarios
 
 ## 📋 개요
 
-이 문서는 RAT(Refund Address Tracker) 컨트랙트에 대한 다양한 테스트 시나리오를 제안합니다. 현재 Solidity 단위 테스트는 구현되어 있지만, 추가적인 테스트 레벨들을 통해 더 포괄적인 검증을 할 수 있습니다.
+이 문서는 RAT(Randomized Attention Test) 컨트랙트에 대한 포괄적인 테스트 시나리오를 정의합니다. RAT는 challenger의 활성도와 정확성을 검증하는 핵심 보안 메커니즘으로, 경제적 인센티브를 통해 시스템의 무결성을 보장합니다.
 
 ## 🎯 RAT 컨트랙트 개요
 
-RAT는 challenger 모니터링 및 테스트를 위한 컨트랙트로, 다음과 같은 주요 기능을 제공합니다:
+RAT는 challenger 모니터링 및 검증을 위한 경제적 보안 메커니즘으로, 다음과 같은 핵심 기능을 제공합니다:
 
-- **Challenger Staking**: Challenger들이 stake를 걸고 참여
-- **Attention Test Triggering**: DisputeGameFactory에서 attention test 트리거
-- **Evidence Submission**: Challenger들이 올바른 증거 제출
-- **Bond Refunding**: 성공적인 증거 제출 시 bond 반환
+- **Challenger Staking**: Challenger들이 최소 요구 금액 이상을 stake하여 시스템 참여
+- **Randomized Selection**: 확률적으로 challenger를 선택하여 attention test 실시
+- **Economic Constraints**: Bond 차감을 통한 경제적 자격 요건 적용
+- **Evidence Verification**: 암호학적 증거 검증 및 올바른 제출 시 bond 복원
+- **Automatic Validation**: Stake 수준에 따른 challenger 자격 자동 관리
 
 ## 🧪 현재 구현된 테스트
 
@@ -27,449 +28,282 @@ RAT는 challenger 모니터링 및 테스트를 위한 컨트랙트로, 다음�
 - ✅ Bond 반환 테스트 (`RAT_Refund_Test`)
 - ✅ Admin 기능 테스트 (`RAT_Admin_Test`)
 
-## 🚀 제안하는 새로운 테스트 시나리오
+## 🧬 핵심 경제적 메커니즘
 
-### B. Go 통합 테스트 (Integration Tests)
+### 💰 Stake 및 Bond 관리
+- **Minimum Staking Balance**: Challenger가 유효하려면 최소 stake 유지 필요
+- **Per-Test Bond Amount**: 각 attention test마다 stake에서 bond 차감
+- **Dynamic Validation**: Stake이 minimum 미만이 되면 자동으로 invalid 처리
+- **Bond Restoration**: 올바른 증거 제출 시 해당 test의 bond만 복원
 
-#### 1. RAT-Challenger 통합 테스트
+### 🎲 확률적 선택 메커니즘
+- **Trigger Probability**: 설정 가능한 확률로 attention test 활성화
+- **Random Selection**: 유효한 challenger 중 랜덤 선택 (더미 제외)
+- **Multiple Selection**: 동일 challenger가 여러 test에 동시 참여 가능
+- **Availability**: 경제적 자격 요건을 만족하는 challenger만 선택 가능
 
-**목적**: RAT 컨트랙트와 op-challenger 서비스 간의 통합 동작 검증
+## 🚀 구현된 테스트 시나리오
 
+### B. Go 통합 테스트 (✅ 구현됨)
+
+#### 1. RAT-Challenger 기본 통합 테스트 (`TestRATChallengerIntegration`)
+
+**목적**: RAT 컨트랙트의 핵심 워크플로우 검증
+
+**시나리오**:
+1. **RAT 배포**: Proxy 패턴으로 배포 및 초기화
+2. **Challenger Staking**: 2.5 ETH stake (minimum 2 ETH 이상)
+3. **Attention Test 트리거**: 잘못된 state root로 첫 번째 테스트
+4. **Bond 차감 검증**: 1 ETH bond 차감으로 1.5 ETH 잔여
+5. **올바른 증거 제출**: 두 번째 테스트에서 정확한 증거 제출
+6. **Bond 복원 확인**: 해당 테스트 bond만 복원
+
+**핵심 학습**:
+- 각 attention test는 독립적으로 bond 관리
+- 여러 test에 동시 참여 가능하지만 각각 bond 차감
+- 올바른 암호학적 증거 검증: `keccak256(abi.encodePacked(proofLV, proofRV))`
+
+#### 2. 다중 Challenger 테스트 (`TestRATMultipleChallengers`)
+
+**목적**: 여러 challenger 환경에서의 선택 및 격리 메커니즘 검증
+
+**시나리오**:
+1. **4명의 Challenger 생성**: 각각 2.5 ETH stake
+2. **랜덤 선택 검증**: attention test에서 1명만 선택됨을 확인
+3. **격리 확인**: 선택되지 않은 challenger들은 영향 없음
+4. **Bond 차감 검증**: 선택된 challenger만 bond 차감
+
+**핵심 학습**:
+- 공정한 랜덤 선택 메커니즘
+- Challenger 간 경제적 격리
+- 시스템의 확장성 검증
+
+#### 3. 확률적 트리거 테스트 (`TestRATTriggerProbability`)
+
+**목적**: RAT trigger 확률 메커니즘과 경제적 제약사항 검증
+
+**시나리오**:
+1. **10% 확률 테스트**: 30회 시도로 통계적 검증
+2. **100% 확률 테스트**: 모든 가능한 선택 검증
+3. **경제적 고갈**: Stake 부족으로 선택 불가능한 상황
+4. **0% 확률 테스트**: 완전히 비활성화된 상태
+
+**핵심 학습**:
+- 확률적 메커니즘의 정확성
+- 경제적 자격 요건의 중요성
+- Challenger가 multiple test로 인한 stake 고갈 현상
+
+#### 4. 잘못된 증거 제출 테스트 (`TestRATIncorrectEvidenceSubmission`) ✅ 구현됨
+
+**목적**: 잘못된 증거 제출 시 RAT 계약의 거부 메커니즘 검증
+
+**시나리오**:
+1. **Challenger Staking**: 3 ETH stake으로 충분한 여유 확보
+2. **Attention Test 생성**: 올바른 state root로 테스트 트리거
+3. **잘못된 증거 제출**: 의도적으로 부정확한 proof 값 제출
+4. **거부 확인**: `execution reverted` 오류로 거부됨 검증
+5. **상태 불변성**: Challenger 상태가 변경되지 않음 확인
+6. **올바른 증거로 복구**: 정상적인 증거 제출로 시스템 작동 확인
+
+**핵심 학습**:
+- RAT 계약의 암호학적 검증 정확성
+- 잘못된 증거 제출 시 penalty 없이 단순 거부
+- 시스템의 보안성과 복구 가능성
+
+## 🔄 제안하는 추가 테스트 시나리오
+
+### C. 실제 Challenge 성공 시나리오 (🚧 구현 필요)
+
+#### 1. 잘못된 State Root Challenge 성공 테스트
+**목적**: 실제 dispute game에서 잘못된 state root를 발견하고 challenge해서 bond를 회수하는 완전한 워크플로우 검증
+
+**시나리오**:
 ```go
-// op-challenger/game/fault/rat_integration_test.go
-func TestRATChallengerIntegration(t *testing.T) {
-    // 1. RAT 컨트랙트 배포 및 초기화
-    ratContract := deployRATContract(t)
+func TestRATSuccessfulChallenge(t *testing.T) {
+    // 1. Challenger가 RAT에 충분한 stake (5 ETH)
+    challenger.StakeToRAT(5 ETH)
 
-    // 2. Challenger 서비스 시작
-    challenger := startChallengerService(t, ratContract.Address())
+    // 2. 악의적/잘못된 proposer가 잘못된 state root로 dispute game 생성
+    maliciousGame := createDisputeGameWithIncorrectStateRoot(t, "incorrect_root_123")
 
-    // 3. Challenger가 RAT에 stake
-    challenger.StakeToRAT(2.5 ether)
+    // 3. DisputeGameFactory가 RAT attention test 자동 트리거
+    // 4. RAT가 challenger를 선택하고 bond 차감 (1 ETH)
+    // 5. Challenger가 올바른 증거로 잘못된 state root 반박
 
-    // 4. Dispute game 생성 (잘못된 state root)
-    game := createDisputeGameWithIncorrectRoot(t)
+    correctProofLV := generateCorrectLeftValue(t, maliciousGame)
+    correctProofRV := generateCorrectRightValue(t, maliciousGame)
 
-    // 5. RAT attention test 트리거
-    ratContract.TriggerAttentionTest(game.Address(), incorrectStateRoot, blockHash)
+    // 6. RAT에 증거 제출
+    challenger.SubmitCorrectEvidence(maliciousGame.Address(), correctProofLV, correctProofRV)
 
-    // 6. Challenger가 자동으로 evidence 제출하는지 확인
-    waitForEvidenceSubmission(t, challenger, game.Address())
+    // 7. Challenge 성공으로 bond 복원 + 추가 보상 확인
+    finalBalance := challenger.GetStakingAmount()
+    expectedBalance := initialBalance + challengeReward  // Bond 복원 + 보상
+    require.Equal(t, expectedBalance, finalBalance)
 
-    // 7. Bond 반환 확인
-    assertBondRefunded(t, challenger, expectedRefundAmount)
+    // 8. 잘못된 proposer 처벌 확인
+    assertProposerSlashed(t, maliciousGame.Proposer())
 }
 ```
 
-#### 2. RAT-Multiple Challengers 테스트
+**핵심 학습**:
+- 실제 state root 검증 메커니즘
+- Challenge 성공 시 경제적 인센티브 구조
+- 악의적 행동에 대한 처벌 시스템
 
-**목적**: 여러 challenger가 동시에 RAT에 참여하는 시나리오
+#### 2. 여러 Challenger 경쟁 시나리오 테스트
+**목적**: 동일한 잘못된 state root에 대해 여러 challenger가 경쟁하는 상황
 
+**시나리오**:
 ```go
-func TestRATMultipleChallengers(t *testing.T) {
-    // 1. 여러 challenger 생성
-    challengers := []*Challenger{
-        createChallenger(t, "challenger1"),
-        createChallenger(t, "challenger2"),
-        createChallenger(t, "challenger3"),
-    }
-
-    // 2. 모든 challenger가 RAT에 stake
-    for _, challenger := range challengers {
-        challenger.StakeToRAT(2.5 ether)
-    }
-
-    // 3. Dispute game 생성
-    game := createDisputeGameWithIncorrectRoot(t)
-
-    // 4. RAT attention test 트리거
-    ratContract.TriggerAttentionTest(game.Address(), incorrectStateRoot, blockHash)
-
-    // 5. 선택된 challenger만 evidence 제출하는지 확인
-    selectedChallenger := getSelectedChallenger(t, ratContract, game.Address())
-
-    // 6. 다른 challenger들은 evidence 제출하지 않는지 확인
-    for _, challenger := range challengers {
-        if challenger.Address() != selectedChallenger.Address() {
-            assertNoEvidenceSubmission(t, challenger, game.Address())
-        }
-    }
+func TestRATMultipleChallengerCompetition(t *testing.T) {
+    // 1. 3명의 challenger 각각 3 ETH stake
+    // 2. 잘못된 dispute game 생성
+    // 3. RAT가 1명만 선택하지만, 다른 challenger들도 독립적으로 challenge 가능한지 확인
+    // 4. 첫 번째 성공한 challenger만 보상 받는지 확인
+    // 5. 나머지 challenger들의 bond 처리 방식 확인
 }
 ```
 
-#### 3. RAT-Probability 테스트
+### D. 경제적 Edge Cases 테스트 (🚧 구현 필요)
 
-**목적**: RAT trigger probability 설정에 따른 동작 검증
+#### 3. Stake 고갈 시나리오 테스트
+**목적**: 경제적 제약으로 인한 시스템 동작 검증
 
+**시나리오**:
 ```go
-func TestRATTriggerProbability(t *testing.T) {
-    // 1. 낮은 probability로 RAT 설정 (10%)
-    ratContract := deployRATContract(t, 10000) // 10% probability
-
-    // 2. 여러 dispute game 생성
-    games := make([]*DisputeGame, 10)
-    for i := 0; i < 10; i++ {
-        games[i] = createDisputeGameWithIncorrectRoot(t)
-    }
-
-    // 3. 모든 game에 대해 attention test 트리거 시도
-    triggeredCount := 0
-    for _, game := range games {
-        if ratContract.TriggerAttentionTest(game.Address(), incorrectStateRoot, blockHash) {
-            triggeredCount++
-        }
-    }
-
-    // 4. 약 10% 정도만 트리거되는지 확인 (통계적 검증)
-    assertProbabilityWithinRange(t, triggeredCount, 10, 0.1, 0.2) // 10-20% 범위
+func TestRATStakeDepletion(t *testing.T) {
+    // 1. 최소 stake로 challenger 등록 (2 ETH)
+    // 2. 연속적인 attention test로 stake 고갈
+    // 3. Invalid 상태 전환 확인
+    // 4. 추가 staking으로 복구 검증
 }
 ```
 
-### C. E2E 테스트 (End-to-End Tests)
+#### 2. 동시다발적 Attention Test 테스트
+**목적**: 높은 부하 상황에서의 bond 관리 검증
 
-#### 1. RAT-Full Workflow E2E 테스트
-
-**목적**: RAT를 포함한 전체 fault proof 워크플로우 검증
-
+**시나리오**:
 ```go
-// op-e2e/faultproofs/rat_e2e_test.go
-func TestRATFullWorkflowE2E(t *testing.T) {
-    // 1. Devnet 배포 (RAT 포함)
-    sys := deployDevnetWithRAT(t)
-
-    // 2. Challenger 서비스 시작
-    challenger := startChallengerWithRAT(t, sys)
-
-    // 3. Proposer가 잘못된 state root 제출
-    proposer := sys.Proposer
-    proposer.SubmitIncorrectStateRoot(t, incorrectRoot)
-
-    // 4. Dispute game 자동 생성 확인
-    game := waitForDisputeGameCreation(t, sys)
-
-    // 5. RAT attention test 자동 트리거 확인
-    waitForRATAttentionTest(t, sys.RATContract, game.Address())
-
-    // 6. Challenger가 자동으로 evidence 제출하는지 확인
-    waitForEvidenceSubmission(t, challenger, game.Address())
-
-    // 7. Game resolution 및 bond 반환 확인
-    waitForGameResolution(t, game, GameStatusChallengerWon)
-    assertBondRefunded(t, challenger, expectedRefundAmount)
+func TestRATConcurrentAttentionTests(t *testing.T) {
+    // 1. 10개의 simultaneous dispute games 생성
+    // 2. 동일 challenger가 여러 test에 선택됨
+    // 3. 각 test의 독립적 bond 관리 확인
+    // 4. 부분적 evidence 제출 시나리오
 }
 ```
 
-#### 2. RAT-Stress 테스트
+#### 3. Bond Amount Edge Cases 테스트
+**목적**: 다양한 bond 크기에서의 시스템 동작 검증
 
-**목적**: RAT 시스템의 부하 및 성능 검증
-
+**시나리오**:
 ```go
-func TestRATStressTest(t *testing.T) {
-    // 1. 대량의 challenger 생성
-    challengers := createMultipleChallengers(t, 100)
-
-    // 2. 모든 challenger가 RAT에 stake
-    for _, challenger := range challengers {
-        challenger.StakeToRAT(2.5 ether)
-    }
-
-    // 3. 동시에 여러 dispute game 생성
-    games := createMultipleDisputeGames(t, 50)
-
-    // 4. 모든 game에 대해 attention test 트리거
-    for _, game := range games {
-        go func(g *DisputeGame) {
-            ratContract.TriggerAttentionTest(g.Address(), incorrectStateRoot, blockHash)
-        }(game)
-    }
-
-    // 5. 시스템이 안정적으로 동작하는지 확인
-    waitForAllGamesResolved(t, games)
-    assertAllBondsRefunded(t, challengers)
+func TestRATBondAmountVariations(t *testing.T) {
+    // 1. Per-test bond > stake 인 경우
+    // 2. Stake == minimum balance 정확히 일치하는 경우
+    // 3. 극소량 stake으로 한계 테스트
 }
 ```
 
-### D. 성능 테스트 (Performance Tests)
+### D. 시간 기반 테스트 (🚧 구현 필요)
 
-#### 1. RAT-Gas Optimization 테스트
+#### 4. Evidence Submission Period 테스트
+**목적**: 시간 제한과 관련된 메커니즘 검증
 
-**목적**: RAT 컨트랙트의 가스 사용량 최적화 검증
-
+**시나리오**:
 ```go
-func TestRATGasOptimization(t *testing.T) {
-    // 1. 기본 RAT 배포
-    ratContract := deployRATContract(t)
-
-    // 2. 각 함수의 가스 사용량 측정
-    gasTests := []struct {
-        name string
-        test func() error
-    }{
-        {"stake", func() error { return ratContract.Stake(2.5 ether) }},
-        {"triggerAttentionTest", func() error { return ratContract.TriggerAttentionTest(gameAddr, stateRoot, blockHash) }},
-        {"submitCorrectEvidence", func() error { return ratContract.SubmitCorrectEvidence(gameAddr, proofLV, proofRV) }},
-    }
-
-    // 3. 가스 사용량 검증
-    for _, test := range gasTests {
-        gasUsed := measureGasUsage(t, test.test)
-        assertGasUsageWithinLimit(t, test.name, gasUsed, expectedGasLimit)
-    }
+func TestRATEvidenceSubmissionTimeout(t *testing.T) {
+    // 1. Evidence submission period 내 제출
+    // 2. Period 초과 시 bond 손실 확인
+    // 3. 기간 경과 후 새로운 test 가능성 검증
 }
 ```
 
-#### 2. RAT-Scalability 테스트
+#### 5. 블록 진행과 함께하는 장기 테스트
+**목적**: 블록체인 진행에 따른 시스템 안정성 검증
 
-**목적**: RAT 시스템의 확장성 검증
+### E. 악의적 행동 테스트 (🚧 구현 필요)
 
+#### 6. 잘못된 Evidence 제출 테스트
+**목적**: 부정확한 증거 제출에 대한 처벌 메커니즘 검증
+
+**시나리오**:
 ```go
-func TestRATScalability(t *testing.T) {
-    // 1. 다양한 challenger 수로 테스트
-    challengerCounts := []int{10, 50, 100, 500}
-
-    for _, count := range challengerCounts {
-        t.Run(fmt.Sprintf("challengers_%d", count), func(t *testing.T) {
-            // 2. 지정된 수의 challenger 생성
-            challengers := createMultipleChallengers(t, count)
-
-            // 3. 모든 challenger가 stake
-            for _, challenger := range challengers {
-                challenger.StakeToRAT(2.5 ether)
-            }
-
-            // 4. 성능 측정
-            start := time.Now()
-
-            // 5. Dispute game 생성 및 처리
-            game := createDisputeGameWithIncorrectRoot(t)
-            ratContract.TriggerAttentionTest(game.Address(), incorrectStateRoot, blockHash)
-            waitForEvidenceSubmission(t, challengers[0], game.Address())
-
-            // 6. 처리 시간 검증
-            duration := time.Since(start)
-            assertProcessingTimeWithinLimit(t, count, duration, expectedTimeLimit)
-        })
-    }
+func TestRATIncorrectEvidenceSubmission(t *testing.T) {
+    // 1. 의도적으로 잘못된 proof 제출
+    // 2. Bond 손실 확인
+    // 3. Challenger 자격 박탈 검증
 }
 ```
 
-### E. 보안 테스트 (Security Tests)
+#### 7. Replay Attack 방어 테스트
+**목적**: 동일한 evidence의 중복 사용 방지 검증
 
-#### 1. RAT-Access Control 테스트
+#### 8. Front-running 방어 테스트
+**목적**: MEV 공격에 대한 시스템 보안성 검증
 
-**목적**: RAT 컨트랙트의 접근 제어 검증
+### F. 성능 및 가스 최적화 테스트 (🚧 구현 필요)
 
-```go
-func TestRATAccessControl(t *testing.T) {
-    // 1. RAT 컨트랙트 배포
-    ratContract := deployRATContract(t)
+#### 9. 가스 소모량 분석 테스트
+**목적**: 각 기능별 가스 효율성 측정 및 최적화 지점 식별
 
-    // 2. 권한이 없는 사용자로 함수 호출 시도
-    unauthorizedUser := createAccount(t)
+#### 10. 대규모 Challenger Pool 테스트
+**목적**: 100+ challenger 환경에서의 선택 성능 검증
 
-    // 3. 각 함수에 대한 접근 제어 테스트
-    accessTests := []struct {
-        name string
-        test func() error
-    }{
-        {"triggerAttentionTest", func() error { return ratContract.TriggerAttentionTest(gameAddr, stateRoot, blockHash) }},
-        {"setPerTestBondAmount", func() error { return ratContract.SetPerTestBondAmount(1 ether) }},
-        {"setEvidenceSubmissionPeriod", func() error { return ratContract.SetEvidenceSubmissionPeriod(3600) }},
-    }
+## 📊 테스트 우선순위
 
-    for _, test := range accessTests {
-        t.Run(test.name, func(t *testing.T) {
-            // 4. 권한이 없는 사용자로 호출 시 revert 확인
-            err := test.test()
-            assertRevertWithMessage(t, err, "AccessControl: account")
-        })
-    }
-}
-```
+### 🔥 High Priority (즉시 구현 필요)
+1. **잘못된 State Root Challenge 성공 테스트** - 핵심 비즈니스 로직 검증
+2. **잘못된 Evidence 제출 테스트** - 보안 메커니즘 검증
+3. **Stake 고갈 시나리오 테스트** - 경제적 안전성 핵심
 
-#### 2. RAT-Reentrancy 테스트
+### 🔸 Medium Priority (단기 구현)
+4. **동시다발적 Attention Test 테스트** - 시스템 부하 검증
+5. **Bond Amount Edge Cases 테스트** - 경계값 안정성
+6. **Replay Attack 방어 테스트** - 보안 강화
 
-**목적**: RAT 컨트랙트의 재진입 공격 방어 검증
+### 🔹 Low Priority (중장기 구현)
+7. **Front-running 방어 테스트** - MEV 보안
+8. **가스 최적화 테스트** - 효율성 개선
+9. **대규모 Pool 테스트** - 확장성 검증
 
-```go
-func TestRATReentrancyProtection(t *testing.T) {
-    // 1. 재진입 공격을 시도하는 악성 컨트랙트 배포
-    maliciousContract := deployMaliciousContract(t)
+## 🚀 실행 가이드
 
-    // 2. RAT 컨트랙트 배포
-    ratContract := deployRATContract(t)
-
-    // 3. 악성 컨트랙트가 RAT에 stake
-    maliciousContract.StakeToRAT(2.5 ether)
-
-    // 4. 재진입 공격 시도
-    err := maliciousContract.AttemptReentrancyAttack(ratContract.Address())
-
-    // 5. 공격이 실패하는지 확인
-    assertRevertWithMessage(t, err, "ReentrancyGuard: reentrant call")
-}
-```
-
-### F. 모니터링 테스트 (Monitoring Tests)
-
-#### 1. RAT-Metrics 테스트
-
-**목적**: RAT 관련 메트릭스 수집 및 모니터링 검증
-
-```go
-func TestRATMetrics(t *testing.T) {
-    // 1. 메트릭스 서버 시작
-    metricsServer := startMetricsServer(t)
-
-    // 2. RAT 컨트랙트 배포
-    ratContract := deployRATContract(t)
-
-    // 3. Challenger stake
-    challenger := createChallenger(t)
-    challenger.StakeToRAT(2.5 ether)
-
-    // 4. 메트릭스 확인
-    metrics := getRATMetrics(t, metricsServer)
-    assertMetricValue(t, "rat_challenger_count", metrics.ChallengerCount, 1)
-    assertMetricValue(t, "rat_total_staked", metrics.TotalStaked, 2.5 ether)
-
-    // 5. Attention test 트리거 후 메트릭스 업데이트 확인
-    game := createDisputeGameWithIncorrectRoot(t)
-    ratContract.TriggerAttentionTest(game.Address(), incorrectStateRoot, blockHash)
-
-    updatedMetrics := getRATMetrics(t, metricsServer)
-    assertMetricValue(t, "rat_attention_tests_triggered", updatedMetrics.AttentionTestsTriggered, 1)
-}
-```
-
-## 🔧 테스트 구현 가이드
-
-### 1. 테스트 환경 설정
-
-```go
-// test_setup.go
-type RATTestEnvironment struct {
-    L1Client     *ethclient.Client
-    L2Client     *ethclient.Client
-    RATContract  *RATContract
-    Challenger   *ChallengerService
-    Proposer     *ProposerService
-    GameFactory  *DisputeGameFactory
-}
-
-func setupRATTestEnvironment(t *testing.T) *RATTestEnvironment {
-    // 1. L1/L2 네트워크 설정
-    l1Client := setupL1Network(t)
-    l2Client := setupL2Network(t)
-
-    // 2. RAT 컨트랙트 배포
-    ratContract := deployRATContract(t, l1Client)
-
-    // 3. Challenger 서비스 시작
-    challenger := startChallengerService(t, ratContract.Address())
-
-    // 4. Proposer 서비스 시작
-    proposer := startProposerService(t)
-
-    return &RATTestEnvironment{
-        L1Client:    l1Client,
-        L2Client:    l2Client,
-        RATContract: ratContract,
-        Challenger:  challenger,
-        Proposer:    proposer,
-    }
-}
-```
-
-### 2. 테스트 헬퍼 함수
-
-```go
-// test_helpers.go
-func createDisputeGameWithIncorrectRoot(t *testing.T, env *RATTestEnvironment) *DisputeGame {
-    // 1. 잘못된 state root 생성
-    incorrectRoot := generateIncorrectStateRoot(t)
-
-    // 2. Proposer가 잘못된 root 제출
-    env.Proposer.SubmitStateRoot(t, incorrectRoot)
-
-    // 3. Dispute game 생성 대기
-    game := waitForDisputeGameCreation(t, env.GameFactory)
-
-    return game
-}
-
-func waitForEvidenceSubmission(t *testing.T, challenger *ChallengerService, gameAddr common.Address) {
-    // 1. Evidence 제출 대기
-    timeout := time.After(30 * time.Second)
-    ticker := time.NewTicker(1 * time.Second)
-    defer ticker.Stop()
-
-    for {
-        select {
-        case <-timeout:
-            t.Fatal("Timeout waiting for evidence submission")
-        case <-ticker.C:
-            if challenger.HasSubmittedEvidence(gameAddr) {
-                return
-            }
-        }
-    }
-}
-```
-
-## 📊 테스트 실행 방법
-
-### 1. Go 통합 테스트 실행
-
+### 기존 테스트 실행
 ```bash
-# RAT 통합 테스트 실행
-cd op-challenger
-go test -v ./game/fault -run "TestRAT.*"
+# 모든 RAT 통합 테스트 실행 (4개 테스트)
+go test ./op-challenger/game/fault -run "TestRAT.*" -v
 
-# 특정 테스트 실행
-go test -v ./game/fault -run "TestRATChallengerIntegration"
+# 개별 테스트 실행 (모두 실제 계약 검증)
+go test ./op-challenger/game/fault -run TestRATChallengerIntegration -v
+go test ./op-challenger/game/fault -run TestRATMultipleChallengers -v
+go test ./op-challenger/game/fault -run TestRATTriggerProbability -v
+go test ./op-challenger/game/fault -run TestRATIncorrectEvidenceSubmission -v
 ```
 
-### 2. E2E 테스트 실행
-
-```bash
-# RAT E2E 테스트 실행
-cd op-e2e
-go test -v ./faultproofs -run "TestRAT.*"
-
-# 전체 RAT 워크플로우 테스트
-go test -v ./faultproofs -run "TestRATFullWorkflowE2E"
+### 테스트 실행 결과 예시
+```
+=== RUN   TestRATChallengerIntegration
+    === RAT-Challenger Integration Test PASSED ===
+=== RUN   TestRATMultipleChallengers
+    === RAT Multiple Challengers Test PASSED ===
+=== RUN   TestRATTriggerProbability
+    === RAT Trigger Probability Test PASSED ===
+=== RUN   TestRATIncorrectEvidenceSubmission
+    === RAT Incorrect Evidence Submission Test PASSED ===
+PASS
+ok  	github.com/ethereum-optimism/optimism/op-challenger/game/fault	~0.5s
 ```
 
-### 3. 성능 테스트 실행
+### 새로운 테스트 구현 가이드
+1. **테스트 파일 생성**: `op-challenger/game/fault/rat_edge_cases_test.go`
+2. **Helper 함수 활용**: `test/rat_helpers.go`의 기존 환경 설정
+3. **Proxy 패턴 사용**: 실제 계약 배포 및 초기화
+4. **경제적 제약 고려**: Minimum stake, bond amount 등 현실적 값 사용
 
-```bash
-# RAT 성능 테스트 실행
-go test -v ./game/fault -run "TestRAT.*Performance" -bench=.
+## 📚 참고 자료
 
-# 가스 최적화 테스트
-go test -v ./game/fault -run "TestRATGasOptimization"
-```
-
-## 🎯 테스트 우선순위
-
-### Phase 1: 핵심 기능 테스트
-1. **RAT-Challenger 통합 테스트** - 기본 워크플로우 검증
-2. **RAT-Multiple Challengers 테스트** - 다중 challenger 시나리오
-3. **RAT-Full Workflow E2E 테스트** - 전체 시스템 통합
-
-### Phase 2: 고급 기능 테스트
-4. **RAT-Probability 테스트** - 확률적 트리거 검증
-5. **RAT-Stress 테스트** - 부하 및 성능 검증
-6. **RAT-Scalability 테스트** - 확장성 검증
-
-### Phase 3: 보안 및 모니터링 테스트
-7. **RAT-Access Control 테스트** - 접근 제어 검증
-8. **RAT-Reentrancy 테스트** - 보안 검증
-9. **RAT-Metrics 테스트** - 모니터링 검증
-
-## 🔗 관련 문서
-
-- [Proposer State Root Challenge Tests](./proposer-state-root-challenge-tests.md) - 기본 fault proof 테스트
-- [RAT 배포 구현](./rat-deployment-implementation.md) - RAT 컨트랙트 배포 가이드
-- [Post-Deployment 검증 가이드](./post-deployment-verification-guide-en.md) - 배포 후 검증
+- **RAT Solidity Contract**: `packages/contracts-bedrock/src/L1/RAT.sol`
+- **RAT Interface**: `packages/contracts-bedrock/interfaces/L1/IRAT.sol`
+- **기존 Go Bindings**: `op-challenger/game/fault/contracts/rat.go`
+- **Test Helpers**: `op-challenger/game/fault/test/rat_helpers.go`
