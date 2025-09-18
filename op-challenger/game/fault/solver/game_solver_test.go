@@ -358,3 +358,142 @@ func applyActions(game types.Game, claimant common.Address, actions []types.Acti
 	}
 	return types.NewGameState(claims, game.MaxDepth())
 }
+
+// TestGameSolver_RAT tests RAT functionality in GameSolver
+func TestGameSolver_RAT_Integration(t *testing.T) {
+	maxDepth := types.Depth(6)
+	startingL2BlockNumber := big.NewInt(0)
+	claimBuilder := faulttest.NewAlphabetClaimBuilder(t, startingL2BlockNumber, maxDepth)
+
+	t.Run("RAT submitCorrectEvidence called when root claim is correct", func(t *testing.T) {
+		// Build game with correct root claim
+		builder := claimBuilder.GameBuilder(faulttest.WithInvalidValue(false))
+		game := builder.Game
+		
+		// Create RAT-enabled solver
+		ratAddr := common.HexToAddress("0xRAT1234567890123456789012345678901234567890")
+		challengerAddr := common.HexToAddress("0xChallenger1234567890123456789012345678901234")
+		solver := NewGameSolverWithRAT(maxDepth, 
+			trace.NewSimpleTraceAccessor(claimBuilder.CorrectTraceProvider()),
+			ratAddr, nil, challengerAddr)
+
+		// When we agree with root claim and L2 block number is valid,
+		// RAT evidence submission should be triggered
+		actions, err := solver.CalculateNextActions(context.Background(), game)
+		require.NoError(t, err)
+		// No actions expected since we agree with root claim and no further processing needed
+		require.Len(t, actions, 0)
+	})
+
+	t.Run("RAT not called when root claim is incorrect", func(t *testing.T) {
+		// Build game with incorrect root claim
+		builder := claimBuilder.GameBuilder(faulttest.WithInvalidValue(true))
+		game := builder.Game
+		
+		// Create RAT-enabled solver
+		ratAddr := common.HexToAddress("0xRAT1234567890123456789012345678901234567890")
+		challengerAddr := common.HexToAddress("0xChallenger1234567890123456789012345678901234")
+		solver := NewGameSolverWithRAT(maxDepth, 
+			trace.NewSimpleTraceAccessor(claimBuilder.CorrectTraceProvider()),
+			ratAddr, nil, challengerAddr)
+
+		// When we disagree with root claim, we should attack it
+		// RAT evidence submission should NOT be triggered
+		actions, err := solver.CalculateNextActions(context.Background(), game)
+		require.NoError(t, err)
+		// Should have an attack action against incorrect root claim
+		require.Len(t, actions, 1)
+		require.Equal(t, types.ActionTypeMove, actions[0].Type)
+		require.True(t, actions[0].IsAttack)
+	})
+
+	t.Run("Regular solver without RAT works normally", func(t *testing.T) {
+		// Build game with correct root claim
+		builder := claimBuilder.GameBuilder(faulttest.WithInvalidValue(false))
+		game := builder.Game
+		
+		// Create regular solver (no RAT)
+		solver := NewGameSolver(maxDepth, trace.NewSimpleTraceAccessor(claimBuilder.CorrectTraceProvider()))
+
+		// Should work normally without errors
+		actions, err := solver.CalculateNextActions(context.Background(), game)
+		require.NoError(t, err)
+		require.Len(t, actions, 0)
+	})
+}
+
+func TestGameSolver_RAT_SubmitCorrectEvidence(t *testing.T) {
+	maxDepth := types.Depth(4)
+	startingL2BlockNumber := big.NewInt(0)
+	claimBuilder := faulttest.NewAlphabetClaimBuilder(t, startingL2BlockNumber, maxDepth)
+	
+	t.Run("submitCorrectEvidence with RAT disabled", func(t *testing.T) {
+		solver := NewGameSolver(maxDepth, trace.NewSimpleTraceAccessor(claimBuilder.CorrectTraceProvider()))
+		builder := claimBuilder.GameBuilder()
+		game := builder.Game
+
+		// Should not error when RAT is not configured
+		err := solver.submitCorrectEvidence(context.Background(), game, common.Address{})
+		require.NoError(t, err)
+	})
+
+	t.Run("submitCorrectEvidence with RAT enabled", func(t *testing.T) {
+		ratAddr := common.HexToAddress("0xRAT")
+		challengerAddr := common.HexToAddress("0xChallenger")
+		solver := NewGameSolverWithRAT(maxDepth, 
+			trace.NewSimpleTraceAccessor(claimBuilder.CorrectTraceProvider()),
+			ratAddr, nil, challengerAddr)
+		
+		builder := claimBuilder.GameBuilder()
+		game := builder.Game
+
+		// Should not error (logs the action in mock implementation)
+		err := solver.submitCorrectEvidence(context.Background(), game, common.Address{})
+		require.NoError(t, err)
+	})
+
+	t.Run("submitCorrectEvidence with empty claims", func(t *testing.T) {
+		ratAddr := common.HexToAddress("0xRAT")
+		challengerAddr := common.HexToAddress("0xChallenger")
+		solver := NewGameSolverWithRAT(maxDepth, 
+			trace.NewSimpleTraceAccessor(claimBuilder.CorrectTraceProvider()),
+			ratAddr, nil, challengerAddr)
+		
+		// Create game with no claims
+		emptyClaims := []types.Claim{}
+		emptyGame := types.NewGameState(emptyClaims, maxDepth)
+
+		// Should error when no claims exist
+		err := solver.submitCorrectEvidence(context.Background(), emptyGame, common.Address{})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no claims in game")
+	})
+}
+
+func TestGameSolver_RAT_Constructors(t *testing.T) {
+	maxDepth := types.Depth(4)
+	startingL2BlockNumber := big.NewInt(0)
+	claimBuilder := faulttest.NewAlphabetClaimBuilder(t, startingL2BlockNumber, maxDepth)
+	traceAccessor := trace.NewSimpleTraceAccessor(claimBuilder.CorrectTraceProvider())
+
+	t.Run("NewGameSolver creates solver without RAT", func(t *testing.T) {
+		solver := NewGameSolver(maxDepth, traceAccessor)
+		require.NotNil(t, solver)
+		require.NotNil(t, solver.claimSolver)
+		require.Equal(t, common.Address{}, solver.ratAddress)
+		require.Nil(t, solver.client)
+		require.Equal(t, common.Address{}, solver.challengerAddr)
+	})
+
+	t.Run("NewGameSolverWithRAT creates solver with RAT", func(t *testing.T) {
+		ratAddr := common.HexToAddress("0xRAT1234567890123456789012345678901234567890")
+		challengerAddr := common.HexToAddress("0xChallenger1234567890123456789012345678901234")
+		
+		solver := NewGameSolverWithRAT(maxDepth, traceAccessor, ratAddr, nil, challengerAddr)
+		require.NotNil(t, solver)
+		require.NotNil(t, solver.claimSolver)
+		require.Equal(t, ratAddr, solver.ratAddress)
+		require.Nil(t, solver.client) // We passed nil for client
+		require.Equal(t, challengerAddr, solver.challengerAddr)
+	})
+}

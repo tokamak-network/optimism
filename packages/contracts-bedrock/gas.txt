@@ -1,0 +1,312 @@
+Compiling 183 files with Solc 0.8.15
+Compiling 177 files with Solc 0.8.25
+Compiling 18 files with Solc 0.8.19
+Compiling 467 files with Solc 0.8.15
+Solc 0.8.19 finished in 629.78ms
+Solc 0.8.25 finished in 6.31s
+Solc 0.8.15 finished in 12.55s
+Solc 0.8.15 finished in 96.98s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/L1/RAT_GasComparison_Complete.t.sol:100:9:
+    |
+100 |         uint256 gasUsed = gasStart - gasleft();
+    |         ^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/L1/RAT_GasComparison_Complete.t.sol:38:5:
+   |
+38 |     uint256 gasUsed;
+   |     ^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/L1/RAT_GasComparison_Complete.t.sol:128:9:
+    |
+128 |         uint256 gasUsed = gasStart - gasleft();
+    |         ^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/L1/RAT_GasComparison_Complete.t.sol:38:5:
+   |
+38 |     uint256 gasUsed;
+   |     ^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/L1/RAT_GasComparison_Complete.t.sol:169:9:
+    |
+169 |         uint256 gasUsed = gasStart - gasleft();
+    |         ^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/L1/RAT_GasComparison_Complete.t.sol:38:5:
+   |
+38 |     uint256 gasUsed;
+   |     ^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/L1/RAT_GasComparison_Complete.t.sol:211:9:
+    |
+211 |         uint256 gasUsed = gasStart - gasleft();
+    |         ^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/L1/RAT_GasComparison_Complete.t.sol:38:5:
+   |
+38 |     uint256 gasUsed;
+   |     ^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/L1/RAT_GasComparison_Complete.t.sol:248:9:
+    |
+248 |         uint256 gasUsed = gasStart - gasleft();
+    |         ^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/L1/RAT_GasComparison_Complete.t.sol:38:5:
+   |
+38 |     uint256 gasUsed;
+   |     ^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/L1/RAT_GasComparison_Complete.t.sol:281:9:
+    |
+281 |         uint256 gasUsed = gasStart - gasleft();
+    |         ^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/L1/RAT_GasComparison_Complete.t.sol:38:5:
+   |
+38 |     uint256 gasUsed;
+   |     ^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/L1/RAT.t.sol:256:10:
+    |
+256 |         (bytes32 attentionStateRoot, uint256 bondAmount, address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/L1/RAT.t.sol:256:38:
+    |
+256 |         (bytes32 attentionStateRoot, uint256 bondAmount, address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+    |                                      ^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/L1/RAT.t.sol:262:10:
+    |
+262 |         (bytes32 verifyStateRoot, uint256 verifyBondAmount, address challenger, , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+    |          ^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/L1/RAT.t.sol:262:35:
+    |
+262 |         (bytes32 verifyStateRoot, uint256 verifyBondAmount, address challenger, , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/L1/RAT.t.sol:262:61:
+    |
+262 |         (bytes32 verifyStateRoot, uint256 verifyBondAmount, address challenger, , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+    |                                                             ^^^^^^^^^^^^^^^^^^
+
+Warning (4591): There are more than 256 warnings. Ignoring the rest.
+
+Ran 1 test for test/periphery/drippie/dripchecks/CheckBalanceLow.t.sol:CheckBalanceLow_Unclassified_Test
+[PASS] test_name_succeeds() (gas: 13377)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 9.14ms (678.21µs CPU time)
+
+Ran 1 test for test/CompileTest.t.sol:CompileTest
+[PASS] test_compiles() (gas: 2753623)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 9.13ms (1.44ms CPU time)
+
+Ran 1 test for test/libraries/Constants.t.sol:Constants_Test
+[PASS] test_eip1967Constants_succeeds() (gas: 4334)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 147.63µs (89.58µs CPU time)
+
+Ran 2 tests for test/periphery/drippie/dripchecks/CheckSecrets.t.sol:CheckSecrets_Reveal_Test
+[PASS] test_reveal_succeeds() (gas: 68673)
+[PASS] test_reveal_twice_fails() (gas: 101171)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 9.62ms (1.37ms CPU time)
+
+Ran 1 test for test/periphery/drippie/dripchecks/CheckSecrets.t.sol:CheckSecrets_Unclassified_Test
+[PASS] test_name_succeeds() (gas: 13377)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 134.92µs (21.79µs CPU time)
+
+Ran 7 tests for test/periphery/drippie/dripchecks/CheckSecrets.t.sol:CheckSecrets_Check_Test
+[PASS] test_check_firstAndSecondSecretRevealed_fails() (gas: 124383)
+[PASS] test_check_secondSecretRevealed_fails() (gas: 73317)
+[PASS] test_check_secretNotRevealed_fails() (gas: 24794)
+[PASS] test_check_secretRevealedBeforeDelay_fails() (gas: 73657)
+[PASS] test_check_secretRevealedWithDelayEq_succeeds() (gas: 75666)
+[PASS] test_check_secretRevealedWithDelayGt_succeeds() (gas: 75883)
+[PASS] test_check_secretRevealedZeroDelay_succeeds() (gas: 70312)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 512.42µs (388.38µs CPU time)
+
+Ran 1 test for test/periphery/drippie/dripchecks/CheckTrue.t.sol:CheckTrue_Check_Test
+[PASS] testFuzz_check_alwaysTrue_succeeds(bytes) (runs: 64, μ: 11040, ~: 10993)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 2.26ms (2.18ms CPU time)
+
+Ran 1 test for test/periphery/drippie/dripchecks/CheckTrue.t.sol:CheckTrue_Unclassified_Test
+[PASS] test_name_succeeds() (gas: 13377)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 105.17µs (19.13µs CPU time)
+
+Ran 4 tests for test/libraries/Bytes.t.sol:Bytes_ToNibbles_Test
+[PASS] testFuzz_toNibbles_memorySafety_succeeds(bytes) (runs: 64, μ: 13648, ~: 12252)
+[PASS] test_toNibbles_expectedResult128Bytes_works() (gas: 22921)
+[PASS] test_toNibbles_expectedResult5Bytes_works() (gas: 6492)
+[PASS] test_toNibbles_zeroLengthInput_works() (gas: 6035)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 12.23ms (4.06ms CPU time)
+
+Ran 6 tests for test/periphery/drippie/Drippie.t.sol:Drippie_Create_Test
+[PASS] testFuzz_create_ownerUnauthorized_reverts(address) (runs: 64, μ: 47392, ~: 47392)
+[PASS] test_create_calledTwice_reverts() (gas: 279540)
+[PASS] test_create_dripReentrant_reverts() (gas: 49557)
+[PASS] test_create_notReentrantZeroInterval_reverts() (gas: 49589)
+[PASS] test_create_reentrant_succeeds() (gas: 286650)
+[PASS] test_create_succeeds() (gas: 341174)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 3.42ms (3.07ms CPU time)
+
+Ran 2 tests for test/libraries/Bytes.t.sol:Bytes_Equal_Test
+[PASS] testDiff_equal_works(bytes,bytes) (runs: 64, μ: 5217, ~: 5211)
+[PASS] testFuzz_equal_notEqual_works(bytes,bytes) (runs: 64, μ: 5546, ~: 5543)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 14.02ms (5.84ms CPU time)
+
+Ran 3 tests for test/legacy/DeployerWhitelist.t.sol:DeployerWhitelist_SetOwner_Test
+[PASS] test_setOwner_callerNotOwner_reverts(address,address) (runs: 64, μ: 46180, ~: 46279)
+[PASS] test_setOwner_succeeds(address) (runs: 64, μ: 68811, ~: 68893)
+[PASS] test_setOwner_zeroAddress_reverts() (gas: 45033)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 14.45ms (5.43ms CPU time)
+
+Ran 1 test for test/dispute/lib/LibPosition.t.sol:LibPosition_RightIndex_Test
+[PASS] testFuzz_rightIndex_correctness_succeeds(uint8,uint8,uint128) (runs: 64, μ: 15656, ~: 14253)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 14.52ms (6.89ms CPU time)
+
+Ran 6 tests for test/periphery/drippie/Drippie.t.sol:Drippie_Drip_Test
+[PASS] test_drip_amount_succeeds() (gas: 502975)
+[PASS] test_drip_notActive_reverts() (gas: 290861)
+[PASS] test_drip_notExist_reverts() (gas: 39888)
+[PASS] test_drip_triggerOneFunction_succeeds() (gas: 548409)
+[PASS] test_drip_triggerTwoFunctions_succeeds() (gas: 754873)
+[PASS] test_twice_inOneInterval_reverts() (gas: 619142)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 1.30ms (973.96µs CPU time)
+
+Ran 2 tests for test/periphery/drippie/dripchecks/CheckBalanceLow.t.sol:CheckBalanceLow_Check_Test
+[PASS] testFuzz_check_highBalance_fails(address,uint256) (runs: 64, μ: 22060, ~: 22060)
+[PASS] testFuzz_check_succeeds(address,uint256) (runs: 64, μ: 17236, ~: 17315)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 3.48ms (3.35ms CPU time)
+
+Ran 1 test for test/dispute/lib/LibPosition.t.sol:LibPosition_Right_Test
+[PASS] testFuzz_right_correctness_succeeds(uint8,uint128) (runs: 64, μ: 12020, ~: 12719)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.99ms (1.93ms CPU time)
+
+Ran 1 test for test/dispute/lib/LibPosition.t.sol:LibPosition_TraceAncestorBounded_Test
+[PASS] testFuzz_traceAncestorBounded_correctness_succeeds(uint8,uint128) (runs: 64, μ: 14386, ~: 14441)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.94ms (1.88ms CPU time)
+
+Ran 2 tests for test/legacy/DeployerWhitelist.t.sol:DeployerWhitelist_SetWhitelistedDeployer_Test
+[PASS] test_setWhitelistedDeployer_callerNotOwner_reverts(address,address,bool) (runs: 64, μ: 46808, ~: 46868)
+[PASS] test_setWhitelistedDeployer_succeeds(address,bool) (runs: 64, μ: 87824, ~: 97295)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 5.16ms (4.97ms CPU time)
+
+Ran 1 test for test/dispute/lib/LibPosition.t.sol:LibPosition_TraceAncestor_Test
+[PASS] testFuzz_traceAncestor_correctness_succeeds(uint8,uint128) (runs: 64, μ: 12915, ~: 12834)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.70ms (1.65ms CPU time)
+
+Ran 1 test for test/dispute/lib/LibPosition.t.sol:LibPosition_Unclassified_Test
+[PASS] test_pos_correctness_succeeds() (gas: 141557)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 364.88µs (299.88µs CPU time)
+
+Ran 9 tests for test/periphery/drippie/Drippie.t.sol:Drippie_Status_Test
+[PASS] test_status_nameNotExist_reverts() (gas: 44147)
+[PASS] test_status_setNone_reverts() (gas: 281024)
+[PASS] test_status_setSame_reverts() (gas: 283794)
+[PASS] test_status_set_succeeds() (gas: 372397)
+[PASS] test_status_shouldArchiveIfPaused_succeeds() (gas: 301250)
+[PASS] test_status_shouldNotAllowActiveIfArchived_reverts() (gas: 319322)
+[PASS] test_status_shouldNotAllowPausedIfArchived_reverts() (gas: 319366)
+[PASS] test_status_shouldNotArchiveIfActive_reverts() (gas: 327192)
+[PASS] test_status_unauthorized_reverts(address) (runs: 64, μ: 281742, ~: 281742)
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 6.43ms (6.14ms CPU time)
+
+Ran 8 tests for test/libraries/Bytes.t.sol:Bytes_Slice_Test
+[PASS] testFuzz_slice_lengthOverflows_reverts(bytes,uint256,uint256) (runs: 64, μ: 19688, ~: 19704)
+[PASS] testFuzz_slice_memorySafety_succeeds(bytes,uint256,uint256) (runs: 64, μ: 19741, ~: 19933)
+[PASS] testFuzz_slice_outOfBounds_reverts(bytes,uint256,uint256) (runs: 64, μ: 21583, ~: 21685)
+[PASS] testFuzz_slice_rangeOverflows_reverts(bytes,uint256,uint256) (runs: 64, μ: 26361, ~: 26424)
+[PASS] test_slice_acrossMultipleWords_works() (gas: 4929)
+[PASS] test_slice_acrossWords_works() (gas: 4640)
+[PASS] test_slice_fromNonZeroIdx_works() (gas: 19275)
+[PASS] test_slice_fromZeroIdx_works() (gas: 22527)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 11.65ms (11.52ms CPU time)
+
+Ran 1 test for test/safe/LivenessGuard.t.sol:LivenessGuard_CheckAfterExecution_Test
+[PASS] test_checkAfterExecution_callerIsNotSafe_reverts() (gas: 30812)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 5.40ms (39.92µs CPU time)
+
+Ran 2 tests for test/safe/LivenessGuard.t.sol:LivenessGuard_CheckTransaction_Test
+[PASS] test_checkTransaction_callerIsNotSafe_reverts() (gas: 37212)
+[PASS] test_checkTransaction_succeeds() (gas: 917812)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 6.72ms (2.97ms CPU time)
+
+Ran 4 tests for test/libraries/EOA.t.sol:EOA_isSenderEOA_Test
+[PASS] testFuzz_isSenderEOA_is7702EOA_succeeds(uint256,address) (runs: 64, μ: 25002, ~: 24963)
+[PASS] testFuzz_isSenderEOA_isContract23BytesNot7702_succeeds(uint256) (runs: 64, μ: 18740, ~: 18701)
+[PASS] testFuzz_isSenderEOA_isContract_succeeds(uint256,bytes) (runs: 64, μ: 17827, ~: 17768)
+[PASS] testFuzz_isSenderEOA_isStandardEOA_succeeds(uint256) (runs: 64, μ: 16583, ~: 16544)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 12.26ms (12.17ms CPU time)
+
+Ran 1 test for test/safe/LivenessGuard.t.sol:LivenessGuard_Constructor_Test
+[PASS] test_constructor_works() (gas: 2141207)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 3.97ms (208.00µs CPU time)
+
+Ran 1 test for test/safe/LivenessGuard.t.sol:LivenessGuard_Safe_Test
+[PASS] test_safe_works() (gas: 20204)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 4.15ms (41.29µs CPU time)
+
+Ran 2 tests for test/safe/LivenessGuard.t.sol:LivenessGuard_ShowLiveness_Test
+[PASS] test_showLiveness_callIsNotSafeOwner_reverts() (gas: 40871)
+[PASS] test_showLiveness_succeeds() (gas: 57132)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 3.85ms (86.54µs CPU time)
+
+Ran 3 tests for test/dispute/DisputeGameFactory.t.sol:DisputeGameFactory_Unclassified_Test
+[PASS] test_owner_succeeds() (gas: 16304)
+[PASS] test_transferOwnership_notOwner_reverts() (gas: 38408)
+[PASS] test_transferOwnership_succeeds() (gas: 50929)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 227.92ms (1.37ms CPU time)
+
+Ran 1 test for test/dispute/AnchorStateRegistry.t.sol:AnchorStateRegistry_IsGameClaimValid_Test
+[FAIL: BadExtraData()] setUp() (gas: 0)
+Suite result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 254.31ms (0.00ns CPU time)
+
+Ran 1 test for test/dispute/AnchorStateRegistry.t.sol:AnchorStateRegistry_SetRespectedGameType_Test
+[FAIL: BadExtraData()] setUp() (gas: 0)
+Suite result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 254.52ms (0.00ns CPU time)
+
+Ran 1 test for test/L1/ETHLockbox.t.sol:ETHLockbox_Version_Test
+[PASS] test_version_succeeds() (gas: 11909)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 256.27ms (452.83µs CPU time)
+
+Ran 1 test for test/dispute/AnchorStateRegistry.t.sol:AnchorStateRegistry_IsGameResolved_Test
+[FAIL: BadExtraData()] setUp() (gas: 0)
+Suite result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 262.87ms (0.00ns CPU time)
+
+Ran 1 test for test/dispute/AnchorStateRegistry.t.sol:AnchorStateRegistry_BlacklistDisputeGame_Test
+[FAIL: BadExtraData()] setUp() (gas: 0)
+Suite result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 270.79ms (0.00ns CPU time)
+
+Ran 1 test for test/dispute/DisputeGameFactory.t.sol:DisputeGameFactory_GetGameUUID_Test
+[PASS] testDiff_getGameUUID_succeeds(uint32,bytes32,bytes) (runs: 64, μ: 23122, ~: 23248)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 265.81ms (30.38ms CPU time)
+
+Ran 5 tests for test/L1/DataAvailabilityChallenge.t.sol:DataAvailabilityChallenge_UnlockBond_Test
+[PASS] test_unlockBond_expiredChallengeTwice_fails() (gas: 323121)
+[PASS] test_unlockBond_nonExistentChallenge_reverts() (gas: 47756)
+[PASS] test_unlockBond_resolveWindowNotClosed_reverts() (gas: 237032)
+[PASS] test_unlockBond_resolvedChallenge_reverts() (gas: 312381)
+[PASS] test_unlockBond_succeeds(bytes,uint256) (runs: 64, μ: 424878, ~: 424606)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 294.60ms (43.33ms CPU time)
+
+Ran 3 tests for test/L2/ETHLiquidity.t.sol:ETHLiquidity_Burn_Test
+[PASS] testFuzz_burn_fromAuthorizedCaller_succeeds(uint256) (runs: 64, μ: 49199, ~: 49201)
+[PASS] testFuzz_burn_fromUnauthorizedCaller_fails(uint256,address) (runs: 64, μ: 51305, ~: 51218)
+[PASS] test_setup_succeeds() (gas: 8116)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 279.91ms (65.95ms CPU time)
+
+Ran 6 tests for test/universal/CrossDomainMessenger.t.sol:CrossDomainMessenger_BaseGas_Test
+[PASS] testFuzz_baseGas_maxLogic_succeeds(bytes,uint32) (runs: 64, μ: 230137, ~: 230125)
+[PASS] testFuzz_baseGas_portalMinGasLimit_succeeds(bytes,uint32) (runs: 64, μ: 40135, ~: 40128)
+[PASS] testFuzz_baseGas_succeeds(uint32) (runs: 64, μ: 24824, ~: 24824)

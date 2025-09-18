@@ -20,9 +20,10 @@ This guide helps you set up a local Optimism devnet environment for challenger t
 
 ## Step 1: Install System Tools
 ```bash
-cd op-challenger/scripts
+cd /optimism/op-challenger/scripts
 ./install-tools.sh
 ```
+This installs Docker, Go, Kurtosis, and all required tools automatically.
 
 ## Step 2: Compile Contracts and Create Artifacts
 ```bash
@@ -116,8 +117,8 @@ LOG_LEVEL=debug AUTOFIX=true just simple-devnet
 # For complete reset (use when code is changed and recompiled)
 LOG_LEVEL=debug AUTOFIX=nuke just simple-devnet
 
-# If Traefik network error occurs, run this after deployment:
-cd /optimism/kurtosis-devnet && just fix-traefik
+# Full reset (recommended when changing code)
+AUTOFIX=nuke just simple-devnet
 ```
 
 **💡 Pro Tips**: Use `just devnet-with-fix simple.yaml` in kurtosis-devnet directory to automatically handle common issues.
@@ -195,6 +196,7 @@ The verification guide includes:
 
 ## What the Auto-Installation Script Does
 
+### Check Status
 ```bash
 # Install system tools only
 ./install-tools.sh
@@ -237,3 +239,4 @@ For common deployment issues and solutions, see the comprehensive troubleshootin
 - ✅ Kurtosis engine connection issues
 - ✅ Complete environment reset procedures
 
+**🎉 Happy Challenging!**
