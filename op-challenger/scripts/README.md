@@ -15,6 +15,7 @@ This guide helps you set up a local Optimism devnet environment for challenger t
 - [Fast Dispute Game Setup](./docs/fast-dispute-game-setup.md) - 20-minute game configuration
 - [Post-Deployment Verification](./docs/post-deployment-verification-guide-en.md) - Automated testing
 - [Devnet Management](./docs/devnet-management.md) - Operations and monitoring
+- [Proposer State Root Challenge Tests](./docs/proposer-state-root-challenge-tests.md) - Test scenarios for dishonest proposer detection
 
 ---
 
@@ -110,20 +111,61 @@ docker pull consensys/teku:25.7.0
 docker builder prune
 ```
 
+### Using build-devnet.sh (Recommended)
+
+The `build-devnet.sh` script provides an automated way to build and deploy the devnet with comprehensive error handling and verification:
+
+```bash
+# Basic deployment (uses game_type from simple.yaml)
+./build-devnet.sh
+
+# Deploy with specific game type
+./build-devnet.sh --game-type=0  # CANNON (complete fault proof)
+./build-devnet.sh --game-type=1  # PERMISSIONED (development mode, default)
+./build-devnet.sh --game-type=2  # ASTERISC (asterisc VM)
+
+# Show help
+./build-devnet.sh --help
+```
+
+### build-devnet.sh Features
+
+The script automatically handles:
+
+1. **Docker Image Building**
+   - Builds all required services: op-node, op-batcher, op-proposer, op-faucet, op-challenger, op-deployer
+   - Handles Git commit information for reproducible builds
+   - Provides detailed build progress and error reporting
+
+2. **Devnet Deployment**
+   - Uses `simple.yaml` configuration (includes RAT settings)
+   - Deploys via `optimism-package-trampoline`
+   - Includes retry logic for GRPC communication issues
+   - 10-minute timeout with intelligent success detection
+
+3. **Service Verification**
+   - Verifies L1/L2 chain services are running
+   - Tests RPC connections (L1, L2, Rollup RPC)
+   - Provides connection information and management commands
+
+4. **Error Recovery**
+   - Automatic cleanup of failed deployments
+   - Detailed logging to `/tmp/devnet-build.log`
+   - Pre-deployment safety checks
+
+### Alternative: Manual Deployment
+
+If you prefer manual control or need to troubleshoot:
+
 ```bash
 # For normal cleanup
 LOG_LEVEL=debug AUTOFIX=true just simple-devnet
 
 # For complete reset (use when code is changed and recompiled)
 LOG_LEVEL=debug AUTOFIX=nuke just simple-devnet
-
-# Full reset (recommended when changing code)
-AUTOFIX=nuke just simple-devnet
 ```
 
-**💡 Pro Tips**: Use `just devnet-with-fix simple.yaml` in kurtosis-devnet directory to automatically handle common issues.
-
-### Autofix Mode
+### Autofix Mode (Manual Deployment)
 
 Autofix mode helps recover from failed devnet deployments by automatically cleaning up the environment:
 
@@ -149,6 +191,23 @@ Autofix mode helps recover from failed devnet deployments by automatically clean
 - ✅ Auto-resolve dispute game testing
 - ✅ Step-by-step troubleshooting
 
+### build-devnet.sh Verification
+
+If you used `build-devnet.sh`, the script already performs basic verification:
+
+- ✅ L1/L2 chain services running
+- ✅ RPC connections tested (L1, L2, Rollup RPC)
+- ✅ Service status verification
+- ✅ Connection information provided
+
+The script will display connection information upon successful completion:
+```
+=== Connection Information ===
+L1 RPC: http://localhost:53620
+L2 RPC: http://localhost:56781
+Rollup RPC: http://localhost:57029
+```
+
 ## Log Monitoring
 
 ### L1 (Ethereum)
@@ -167,7 +226,7 @@ Autofix mode helps recover from failed devnet deployments by automatically clean
 
 ## Post-Deployment Verification
 
-After deploying your devnet, use the comprehensive automated verification process:
+After deploying your devnet (using either `build-devnet.sh` or manual deployment), use the comprehensive automated verification process:
 
 **🚀 Complete Verification**: [Post-Deployment Verification Guide](./docs/post-deployment-verification-guide-en.md)
 
@@ -191,6 +250,20 @@ The verification guide includes:
 - ✅ Account funding verification
 - ✅ Dispute game creation and resolution testing
 - ✅ Complete end-to-end workflow validation
+
+### RAT Contract Verification
+
+If you deployed with RAT enabled (included in `simple.yaml`), verify RAT deployment:
+
+```bash
+# Check RAT deployment logs
+kurtosis enclave logs simple-devnet | grep -i rat
+
+# Verify RAT contract initialization
+cast call <RAT_PROXY_ADDRESS> "version()" --rpc-url http://localhost:53620
+cast call <RAT_PROXY_ADDRESS> "perTestBondAmount()" --rpc-url http://localhost:53620
+cast call <RAT_PROXY_ADDRESS> "manager()" --rpc-url http://localhost:53620
+```
 
 # 🛠️ System Tools Auto Installation
 
@@ -238,5 +311,16 @@ For common deployment issues and solutions, see the comprehensive troubleshootin
 - ✅ Resource and port conflicts
 - ✅ Kurtosis engine connection issues
 - ✅ Complete environment reset procedures
+
+## 📖 Additional Documentation
+
+For comprehensive understanding of the fault proof system and testing:
+
+**🧪 Testing & Development**:
+- [Proposer State Root Challenge Tests](./docs/proposer-state-root-challenge-tests.md) - Complete guide to dishonest proposer detection and correction scenarios
+  - Solidity unit tests for contract-level validation
+  - Go E2E tests for integration-level validation
+  - Test patterns for creating dishonest state roots
+  - Game resolution verification methods
 
 **🎉 Happy Challenging!**
