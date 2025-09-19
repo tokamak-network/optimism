@@ -7,6 +7,7 @@ import { Constants } from "src/libraries/Constants.sol";
 import { Bytes } from "src/libraries/Bytes.sol";
 import { Claim, Duration, GameType, Hash, GameTypes, Proposal } from "src/dispute/lib/Types.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { console } from "forge-std/console.sol";
 
 // Interfaces
 import { ISemver } from "interfaces/universal/ISemver.sol";
@@ -1164,6 +1165,18 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
             implementation.disputeGameFactoryImpl,
             data
         );
+
+        // Deploy RAT if requested - before DisputeGameFactory initialization
+        // RAT only needs the DisputeGameFactory proxy address, not full initialization
+        if (_input.deployRAT) {
+            output.ratProxy = IRAT(deployProxy(_input.l2ChainId, output.opChainProxyAdmin, _input.saltMixer, "RAT"));
+
+            data = encodeRATInitializer(_input, output);
+            upgradeToAndCall(output.opChainProxyAdmin, address(output.ratProxy), implementation.ratImpl, data);
+
+            IDisputeGameFactory(output.disputeGameFactoryProxy).setRAT(address(output.ratProxy));
+        }
+
         // Register the deployed game implementation in the DisputeGameFactory
         if (_input.disputeGameType.raw() == GameTypes.CANNON.raw()) {
             // Register FaultDisputeGame for CANNON (GameType 0)
@@ -1188,22 +1201,6 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
             implementation.anchorStateRegistryImpl,
             data
         );
-
-        // Deploy RAT if requested
-        if (_input.deployRAT) {
-            // console.log("OPContractsManager: Starting RAT deployment...");
-            // console.log("OPContractsManager: implementation.ratImpl =", implementation.ratImpl);
-
-            output.ratProxy = IRAT(deployProxy(_input.l2ChainId, output.opChainProxyAdmin, _input.saltMixer, "RAT"));
-            // console.log("OPContractsManager: RAT proxy deployed at:", address(output.ratProxy));
-
-            data = encodeRATInitializer(_input, output);
-            // console.log("OPContractsManager: RAT initializer data encoded, length:", data.length);
-
-            // console.log("OPContractsManager: About to call upgradeToAndCall for RAT");
-            upgradeToAndCall(output.opChainProxyAdmin, address(output.ratProxy), implementation.ratImpl, data);
-            // console.log("OPContractsManager: RAT deployment completed successfully");
-        }
 
         // -------- Finalize Deployment --------
         // Transfer ownership of the ProxyAdmin from this contract to the specified owner.
@@ -1422,7 +1419,7 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
         return abi.encodeCall(
             IRAT.initialize,
             (
-                address(_output.disputeGameFactoryProxy), // _disputeGameFactory
+                IDisputeGameFactory(_output.disputeGameFactoryProxy), // _disputeGameFactory
                 _input.perTestBondAmount, // _perTestBondAmount
                 _input.evidenceSubmissionPeriod, // _evidenceSubmissionPeriod
                 _input.minimumStakingBalance, // _minimumStakingBalance

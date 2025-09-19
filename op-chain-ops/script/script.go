@@ -357,10 +357,13 @@ func (h *Host) Call(from common.Address, to common.Address, input []byte, gas ui
 			// Cast to a string to check the error message. If it's not a string it's
 			// an unexpected panic and we should re-raise it.
 			rStr, ok := r.(string)
-			if !ok || !strings.Contains(strings.ToLower(rStr), "revision id 1") {
-				fmt.Println("panic", rStr)
+			if !ok || !strings.Contains(strings.ToLower(rStr), "revision id") {
+				fmt.Printf("Unexpected panic in script execution: %v\n", r)
 				panic(r)
 			}
+
+			// Log the revision id error for debugging
+			fmt.Printf("Caught revision id error: %s\n", rStr)
 
 			if h.evmRevertErr != nil {
 				err = h.evmRevertErr
