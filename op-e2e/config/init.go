@@ -376,6 +376,12 @@ func defaultIntent(root string, loc *artifacts.Locator, deployer common.Address,
 			"preimageOracleChallengePeriod":            120,
 			"proofMaturityDelaySeconds":                12,
 			"disputeGameFinalityDelaySeconds":          6,
+			"deployRAT":                                true,
+			"perTestBondAmount":                        "0x5af3107a4000",       // 0.0001 ETH in wei (100000000000000)
+			"evidenceSubmissionPeriod":                 600,                    // 10 minutes in seconds
+			"minimumStakingBalance":                    "0xde0b6b3a7640000",   // 1 ETH in wei (1000000000000000000)
+			"ratTriggerProbability":                    "0x186a0",              // 100000
+			"ratManager":                               deployer.Hex(),        // Use deployer as RAT manager
 		},
 		Chains: []*state.ChainIntent{
 			{

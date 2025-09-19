@@ -202,8 +202,15 @@ func (h *FactoryHelper) startOutputCannonGameOfType(ctx context.Context, l2Node 
 	h.Require.NoError(err, "create fault dispute game")
 	rcpt, err := wait.ForReceiptOK(ctx, h.Client, tx.Hash())
 	h.Require.NoError(err, "wait for create fault dispute game receipt to be OK")
-	h.Require.Len(rcpt.Logs, 2, "should have emitted a single DisputeGameCreated event")
-	createdEvent, err := h.Factory.ParseDisputeGameCreated(*rcpt.Logs[1])
+	// Find DisputeGameCreated event from logs (RAT may add additional events)
+	var createdEvent *bindings.DisputeGameFactoryDisputeGameCreated
+	for _, log := range rcpt.Logs {
+		if event, err := h.Factory.ParseDisputeGameCreated(*log); err == nil {
+			createdEvent = event
+			break
+		}
+	}
+	h.Require.NotNil(createdEvent, "should have emitted a DisputeGameCreated event")
 	h.Require.NoError(err)
 	game, err := contracts.NewFaultDisputeGameContract(ctx, metrics.NoopContractMetrics, createdEvent.DisputeProxy, batching.NewMultiCaller(h.Client.Client(), batching.DefaultBatchSize))
 	h.Require.NoError(err)
@@ -267,8 +274,15 @@ func (h *FactoryHelper) startSuperCannonGameOfType(ctx context.Context, timestam
 	h.Require.NoErrorf(err, "create fault dispute game at timestamp %v. extraData: %x", timestamp, extraData)
 	rcpt, err := wait.ForReceiptOK(ctx, h.Client, tx.Hash())
 	h.Require.NoError(err, "wait for create fault dispute game receipt to be OK")
-	h.Require.Len(rcpt.Logs, 2, "should have emitted a single DisputeGameCreated event")
-	createdEvent, err := h.Factory.ParseDisputeGameCreated(*rcpt.Logs[1])
+	// Find DisputeGameCreated event from logs (RAT may add additional events)
+	var createdEvent *bindings.DisputeGameFactoryDisputeGameCreated
+	for _, log := range rcpt.Logs {
+		if event, err := h.Factory.ParseDisputeGameCreated(*log); err == nil {
+			createdEvent = event
+			break
+		}
+	}
+	h.Require.NotNil(createdEvent, "should have emitted a DisputeGameCreated event")
 	h.Require.NoError(err)
 	game, err := contracts.NewFaultDisputeGameContract(ctx, metrics.NoopContractMetrics, createdEvent.DisputeProxy, batching.NewMultiCaller(h.Client.Client(), batching.DefaultBatchSize))
 	h.Require.NoError(err)
@@ -321,8 +335,15 @@ func (h *FactoryHelper) StartOutputAlphabetGame(ctx context.Context, l2Node stri
 	h.Require.NoError(err, "create output bisection game")
 	rcpt, err := wait.ForReceiptOK(ctx, h.Client, tx.Hash())
 	h.Require.NoError(err, "wait for create output bisection game receipt to be OK")
-	h.Require.Len(rcpt.Logs, 2, "should have emitted a single DisputeGameCreated event")
-	createdEvent, err := h.Factory.ParseDisputeGameCreated(*rcpt.Logs[1])
+	// Find DisputeGameCreated event from logs (RAT may add additional events)
+	var createdEvent *bindings.DisputeGameFactoryDisputeGameCreated
+	for _, log := range rcpt.Logs {
+		if event, err := h.Factory.ParseDisputeGameCreated(*log); err == nil {
+			createdEvent = event
+			break
+		}
+	}
+	h.Require.NotNil(createdEvent, "should have emitted a DisputeGameCreated event")
 	h.Require.NoError(err)
 	game, err := contracts.NewFaultDisputeGameContract(ctx, metrics.NoopContractMetrics, createdEvent.DisputeProxy, batching.NewMultiCaller(h.Client.Client(), batching.DefaultBatchSize))
 	h.Require.NoError(err)
