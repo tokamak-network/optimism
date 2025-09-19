@@ -41,6 +41,7 @@ type DeployImplementationsOutput struct {
 	OptimismMintableERC20FactoryImpl common.Address `json:"optimismMintableERC20FactoryImplAddress"`
 	DisputeGameFactoryImpl           common.Address `json:"disputeGameFactoryImplAddress"`
 	AnchorStateRegistryImpl          common.Address `json:"anchorStateRegistryImplAddress"`
+	RATImpl                          common.Address `json:"ratImplAddress" abi:"ratImpl"`
 	SuperchainConfigImpl             common.Address `json:"superchainConfigImplAddress"`
 	ProtocolVersionsImpl             common.Address `json:"protocolVersionsImplAddress"`
 }

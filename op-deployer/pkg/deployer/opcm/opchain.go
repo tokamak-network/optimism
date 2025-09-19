@@ -45,12 +45,12 @@ type DeployOPChainInput struct {
 	OperatorFeeConstant uint64
 
 	// RAT configuration
-	DeployRAT                    bool
-	RATPerTestBondAmount         uint64
-	RATEvidenceSubmissionPeriod  *big.Int
-	RATMinimumStakingBalance     *big.Int
-	RATTriggerProbability        uint64
-	RATManager                   common.Address
+	DeployRAT                bool
+	PerTestBondAmount        *big.Int
+	EvidenceSubmissionPeriod *big.Int
+	MinimumStakingBalance    *big.Int
+	RatTriggerProbability    *big.Int
+	RatManager               common.Address
 }
 
 func (input *DeployOPChainInput) InputSet() bool {

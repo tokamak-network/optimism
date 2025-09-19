@@ -3,6 +3,7 @@ package pipeline
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum-optimism/optimism/op-chain-ops/addresses"
 	"github.com/ethereum-optimism/optimism/op-service/jsonutil"
@@ -14,9 +15,30 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-func mustHexBigFromHex(hex string) *big.Int {
-	num := hexutil.MustDecodeBig(hex)
-	return num
+// uint96MaxValue represents the maximum value for uint96 (2^96 - 1)
+var uint96MaxValue = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 96), big.NewInt(1))
+
+func mustHexBigFromHex(value string) *big.Int {
+	// Handle both hex strings (with 0x prefix) and decimal strings
+	if strings.HasPrefix(value, "0x") || strings.HasPrefix(value, "0X") {
+		num := hexutil.MustDecodeBig(value)
+		return num
+	} else {
+		// Parse as decimal string
+		num, ok := new(big.Int).SetString(value, 10)
+		if !ok {
+			panic(fmt.Sprintf("invalid number format: %s", value))
+		}
+		return num
+	}
+}
+
+// mustBigIntWithUint96Limit ensures *big.Int doesn't exceed uint96 max value for contract compatibility
+func mustBigIntWithUint96Limit(value *big.Int, fieldName string) *big.Int {
+	if value.Cmp(uint96MaxValue) > 0 {
+		panic(fmt.Sprintf("%s value %s exceeds uint96 maximum value %s (contract limitation)", fieldName, value.String(), uint96MaxValue.String()))
+	}
+	return value
 }
 
 func DeployOPChain(env *Env, intent *state.Intent, st *state.State, chainID common.Hash) error {
@@ -89,12 +111,12 @@ func makeDCI(intent *state.Intent, thisIntent *state.ChainIntent, chainID common
 			DisputeClockExtension:   standard.DisputeClockExtension,
 			DisputeMaxClockDuration: standard.DisputeMaxClockDuration,
 			// RAT defaults
-			DeployRAT:                   standard.DeployRAT,
-			RATPerTestBondAmount:        mustHexBigFromHex(standard.RATPerTestBondAmount),
-			RATEvidenceSubmissionPeriod: standard.RATEvidenceSubmissionPeriod,
-			RATMinimumStakingBalance:    mustHexBigFromHex(standard.RATMinimumStakingBalance),
-			RATTriggerProbability:       standard.RATTriggerProbability,
-			RATManager:                  common.Address{}, // Default to zero address
+			DeployRAT:                standard.DeployRAT,
+			PerTestBondAmount:        mustBigIntWithUint96Limit(mustHexBigFromHex(standard.PerTestBondAmount), "PerTestBondAmount"),
+			EvidenceSubmissionPeriod: big.NewInt(int64(standard.EvidenceSubmissionPeriod)),
+			MinimumStakingBalance:    mustHexBigFromHex(standard.MinimumStakingBalance),
+			RatTriggerProbability:    big.NewInt(int64(standard.RatTriggerProbability)),
+			RatManager:               common.Address{}, // Default to zero address
 		},
 		intent.GlobalDeployOverrides,
 		thisIntent.DeployOverrides,
@@ -126,12 +148,12 @@ func makeDCI(intent *state.Intent, thisIntent *state.ChainIntent, chainID common
 		OperatorFeeScalar:            thisIntent.OperatorFeeScalar,
 		OperatorFeeConstant:          thisIntent.OperatorFeeConstant,
 		// RAT configuration - TODO: Add RAT parameters from intent
-		DeployRAT:                    proofParams.DeployRAT, // Default to false for now
-		RATPerTestBondAmount:         proofParams.RATPerTestBondAmount,
-		RATEvidenceSubmissionPeriod:  proofParams.RATEvidenceSubmissionPeriod,
-		RATMinimumStakingBalance:     proofParams.RATMinimumStakingBalance,
-		RATTriggerProbability:        proofParams.RATTriggerProbability,
-		RATManager:                   proofParams.RATManager,
+		DeployRAT:                proofParams.DeployRAT, // Default to false for now
+		PerTestBondAmount:        proofParams.PerTestBondAmount,
+		EvidenceSubmissionPeriod: proofParams.EvidenceSubmissionPeriod,
+		MinimumStakingBalance:    proofParams.MinimumStakingBalance,
+		RatTriggerProbability:    proofParams.RatTriggerProbability,
+		RatManager:               proofParams.RatManager,
 	}, nil
 }
 

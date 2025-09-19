@@ -42,12 +42,12 @@ type ChainProofParams struct {
 	DangerouslyAllowCustomDisputeParameters bool        `json:"dangerouslyAllowCustomDisputeParameters" toml:"dangerouslyAllowCustomDisputeParameters"`
 
 	// RAT configuration
-	DeployRAT                    bool          `json:"deployRAT" toml:"deployRAT"`
-	RATPerTestBondAmount         uint64        `json:"ratPerTestBondAmount" toml:"ratPerTestBondAmount"`
-	RATEvidenceSubmissionPeriod  *big.Int      `json:"ratEvidenceSubmissionPeriod" toml:"ratEvidenceSubmissionPeriod"`
-	RATMinimumStakingBalance     *big.Int      `json:"ratMinimumStakingBalance" toml:"ratMinimumStakingBalance"`
-	RATTriggerProbability        uint64        `json:"ratTriggerProbability" toml:"ratTriggerProbability"`
-	RATManager                   common.Address `json:"ratManager" toml:"ratManager"`
+	DeployRAT                bool           `json:"deployRAT" toml:"deployRAT"`
+	PerTestBondAmount        *big.Int       `json:"perTestBondAmount" toml:"perTestBondAmount"`
+	EvidenceSubmissionPeriod *big.Int       `json:"evidenceSubmissionPeriod" toml:"evidenceSubmissionPeriod"`
+	MinimumStakingBalance    *big.Int       `json:"minimumStakingBalance" toml:"minimumStakingBalance"`
+	RatTriggerProbability    *big.Int       `json:"ratTriggerProbability" toml:"ratTriggerProbability"`
+	RatManager               common.Address `json:"ratManager" toml:"ratManager"`
 }
 
 type AdditionalDisputeGame struct {
