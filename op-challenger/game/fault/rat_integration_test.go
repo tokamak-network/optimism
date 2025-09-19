@@ -271,8 +271,8 @@ func TestRATMultipleChallengers(t *testing.T) {
 	t.Log("=== RAT Multiple Challengers Test PASSED ===")
 }
 
-// TestRATTriggerProbability tests RAT trigger probability functionality
-func TestRATTriggerProbability(t *testing.T) {
+// TestRatTriggerProbability tests RAT trigger probability functionality
+func TestRatTriggerProbability(t *testing.T) {
 	// Create custom config with low probability
 	config := test.DefaultRATTestConfig()
 	config.RatTriggerProbability = big.NewInt(10000) // 10% of 100,000
@@ -339,7 +339,7 @@ func TestRATTriggerProbability(t *testing.T) {
 	// 5. Test 100% probability
 	t.Log("Step 5: Testing 100% probability")
 
-	err = env.SetRATTriggerProbability(big.NewInt(100000)) // 100%
+	err = env.SetRatTriggerProbability(big.NewInt(100000)) // 100%
 	require.NoError(t, err)
 
 	// Test a few games with 100% probability
@@ -386,7 +386,7 @@ func TestRATTriggerProbability(t *testing.T) {
 	// 6. Test 0% probability
 	t.Log("Step 6: Testing 0% probability")
 
-	err = env.SetRATTriggerProbability(big.NewInt(0)) // 0%
+	err = env.SetRatTriggerProbability(big.NewInt(0)) // 0%
 	require.NoError(t, err)
 
 	noneTriggeredCount := 0
