@@ -149,9 +149,9 @@ interface IOPContractsManager {
         Duration disputeMaxClockDuration;
         // RAT configuration parameters.
         bool deployRAT;
-        uint256 ratPerTestBondAmount;
-        uint256 ratEvidenceSubmissionPeriod;
-        uint256 ratMinimumStakingBalance;
+        uint256 perTestBondAmount;
+        uint256 evidenceSubmissionPeriod;
+        uint256 minimumStakingBalance;
         uint256 ratTriggerProbability;
         address ratManager;
     }
