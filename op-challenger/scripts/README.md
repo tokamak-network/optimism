@@ -31,6 +31,10 @@ This installs Docker, Go, Kurtosis, and all required tools automatically.
 cd /optimism/packages/contracts-bedrock
 forge build --force
 
+cd op-deployer && tar -cvzf ./pkg/deployer/artifacts/forge-artifacts/artifacts.tgz -C                              │
+│   ../packages/contracts-bedrock/forge-artifacts --exclude="*.t.sol" .
+
+
 cd /optimism/op-challenger/scripts
 ./build-contract-artifacts.sh
 ./build-binaries-for-challenger.sh --force
