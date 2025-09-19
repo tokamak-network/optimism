@@ -116,7 +116,8 @@ contract Deploy is Deployer {
             SystemConfig: artifacts.getAddress("SystemConfigProxy"),
             L1ERC721Bridge: artifacts.getAddress("L1ERC721BridgeProxy"),
             ProtocolVersions: artifacts.getAddress("ProtocolVersionsProxy"),
-            SuperchainConfig: artifacts.getAddress("SuperchainConfigProxy")
+            SuperchainConfig: artifacts.getAddress("SuperchainConfigProxy"),
+            RAT: artifacts.getAddress("RATProxy")
         });
     }
 
@@ -357,6 +358,11 @@ contract Deploy is Deployer {
         artifacts.save("PermissionedDisputeGame", address(deployOutput.permissionedDisputeGame));
         artifacts.save("OptimismPortalProxy", address(deployOutput.optimismPortalProxy));
         artifacts.save("OptimismPortal2Proxy", address(deployOutput.optimismPortalProxy));
+
+        // Save RAT proxy if deployed
+        if (cfg.deployRAT()) {
+            artifacts.save("RATProxy", address(deployOutput.ratProxy));
+        }
 
         // Check if the permissionless game implementation is already set
         IDisputeGameFactory factory = IDisputeGameFactory(artifacts.mustGetAddress("DisputeGameFactoryProxy"));

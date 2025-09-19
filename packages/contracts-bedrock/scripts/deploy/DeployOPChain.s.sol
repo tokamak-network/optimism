@@ -298,6 +298,8 @@ contract DeployOPChainOutput is BaseDeployIO {
 
     function set(bytes4 _sel, address _addr) public virtual {
         require(_addr != address(0), "DeployOPChainOutput: cannot set zero address");
+        console.log("DeployOPChainOutput.set() called with selector:", uint32(_sel));
+        console.log("DeployOPChainOutput ratProxy.selector:", uint32(this.ratProxy.selector));
         // forgefmt: disable-start
         if (_sel == this.opChainProxyAdmin.selector) _opChainProxyAdmin = IProxyAdmin(_addr) ;
         else if (_sel == this.addressManager.selector) _addressManager = IAddressManager(_addr) ;
@@ -315,7 +317,10 @@ contract DeployOPChainOutput is BaseDeployIO {
         else if (_sel == this.delayedWETHPermissionedGameProxy.selector) _delayedWETHPermissionedGameProxy = IDelayedWETH(payable(_addr)) ;
         else if (_sel == this.delayedWETHPermissionlessGameProxy.selector) _delayedWETHPermissionlessGameProxy = IDelayedWETH(payable(_addr)) ;
         else if (_sel == this.ratProxy.selector) _ratProxy = IRAT(_addr) ;
-        else revert("DeployOPChainOutput: unknown selector");
+        else {
+            console.log("DeployOPChainOutput: Unknown selector received:", uint32(_sel));
+            revert("DeployOPChainOutput: unknown selector");
+        }
         // forgefmt: disable-end
     }
 
@@ -406,8 +411,11 @@ contract DeployOPChainOutput is BaseDeployIO {
     }
 
     function ratProxy() public returns (IRAT) {
-        DeployUtils.assertValidContractAddress(address(_ratProxy));
-        DeployUtils.assertERC1967ImplementationSet(address(_ratProxy));
+        // Only assert if RAT is actually deployed (non-zero address)
+        if (address(_ratProxy) != address(0)) {
+            DeployUtils.assertValidContractAddress(address(_ratProxy));
+            DeployUtils.assertERC1967ImplementationSet(address(_ratProxy));
+        }
         return _ratProxy;
     }
 }
@@ -475,21 +483,34 @@ contract DeployOPChain is Script {
             vm.label(address(deployOutput.ratProxy), "ratProxy");
         }
 
+        console.log("DeployOPChain: Setting opChainProxyAdmin");
         _doo.set(_doo.opChainProxyAdmin.selector, address(deployOutput.opChainProxyAdmin));
+        console.log("DeployOPChain: Setting addressManager");
         _doo.set(_doo.addressManager.selector, address(deployOutput.addressManager));
+        console.log("DeployOPChain: Setting l1ERC721BridgeProxy");
         _doo.set(_doo.l1ERC721BridgeProxy.selector, address(deployOutput.l1ERC721BridgeProxy));
+        console.log("DeployOPChain: Setting systemConfigProxy");
         _doo.set(_doo.systemConfigProxy.selector, address(deployOutput.systemConfigProxy));
+        console.log("DeployOPChain: Setting optimismMintableERC20FactoryProxy");
         _doo.set(
             _doo.optimismMintableERC20FactoryProxy.selector, address(deployOutput.optimismMintableERC20FactoryProxy)
         );
+        console.log("DeployOPChain: Setting l1StandardBridgeProxy");
         _doo.set(_doo.l1StandardBridgeProxy.selector, address(deployOutput.l1StandardBridgeProxy));
+        console.log("DeployOPChain: Setting l1CrossDomainMessengerProxy");
         _doo.set(_doo.l1CrossDomainMessengerProxy.selector, address(deployOutput.l1CrossDomainMessengerProxy));
+        console.log("DeployOPChain: Setting optimismPortalProxy");
         _doo.set(_doo.optimismPortalProxy.selector, address(deployOutput.optimismPortalProxy));
+        console.log("DeployOPChain: Setting ethLockboxProxy");
         _doo.set(_doo.ethLockboxProxy.selector, address(deployOutput.ethLockboxProxy));
+        console.log("DeployOPChain: Setting disputeGameFactoryProxy");
         _doo.set(_doo.disputeGameFactoryProxy.selector, address(deployOutput.disputeGameFactoryProxy));
+        console.log("DeployOPChain: Setting anchorStateRegistryProxy");
         _doo.set(_doo.anchorStateRegistryProxy.selector, address(deployOutput.anchorStateRegistryProxy));
         // _doo.set(_doo.faultDisputeGame.selector, address(deployOutput.faultDisputeGame));
+        console.log("DeployOPChain: Setting permissionedDisputeGame");
         _doo.set(_doo.permissionedDisputeGame.selector, address(deployOutput.permissionedDisputeGame));
+        console.log("DeployOPChain: Setting delayedWETHPermissionedGameProxy");
         _doo.set(_doo.delayedWETHPermissionedGameProxy.selector, address(deployOutput.delayedWETHPermissionedGameProxy));
         // TODO: Eventually switch from Permissioned to Permissionless.
         // _doo.set(
@@ -498,12 +519,17 @@ contract DeployOPChain is Script {
         // );
 
         // Set RAT if deployed
+        console.log("DeployOPChain: Checking RAT deployment");
+        console.log("DeployOPChain: _doi.deployRAT() =", _doi.deployRAT());
+        console.log("DeployOPChain: deployOutput.ratProxy =", address(deployOutput.ratProxy));
         if (_doi.deployRAT() && address(deployOutput.ratProxy) != address(0)) {
+            console.log("DeployOPChain: Setting RAT proxy");
+            console.log("DeployOPChain: _doo.ratProxy.selector =", uint32(_doo.ratProxy.selector));
             _doo.set(_doo.ratProxy.selector, address(deployOutput.ratProxy));
+            console.log("DeployOPChain: RAT proxy set successfully");
 
-            // Set RAT address in DisputeGameFactory
-            DisputeGameFactory dgf = DisputeGameFactory(address(deployOutput.disputeGameFactoryProxy));
-            dgf.setRAT(address(deployOutput.ratProxy));
+        } else {
+            console.log("DeployOPChain: RAT not deployed or address is zero");
         }
 
         checkOutput(_doi, _doo);
@@ -560,7 +586,8 @@ contract DeployOPChain is Script {
             SystemConfig: address(_doo.systemConfigProxy()),
             L1ERC721Bridge: address(_doo.l1ERC721BridgeProxy()),
             ProtocolVersions: address(0),
-            SuperchainConfig: address(0)
+            SuperchainConfig: address(0),
+            RAT: address(_doo.ratProxy())
         });
 
         ChainAssertions.checkAnchorStateRegistryProxy(_doo.anchorStateRegistryProxy(), true);
