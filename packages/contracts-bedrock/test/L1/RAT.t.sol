@@ -25,7 +25,9 @@ contract RAT_TestInit is CommonTest {
 
     event ChallengerStaked(address indexed challenger, uint256 amount);
     event AttentionTriggered(GameId indexed gameId, address indexed challenger);
-    event CorrectEvidenceSubmitted(GameId indexed gameId, address indexed challenger, bytes32 proofLV, bytes32 proofRV, uint256 restoredAmount);
+    event CorrectEvidenceSubmitted(
+        GameId indexed gameId, address indexed challenger, bytes32 proofLV, bytes32 proofRV, uint256 restoredAmount
+    );
     event BondRefunded(GameId indexed gameId, address indexed challenger, uint256 refundedAmount);
 
     function setUp() public virtual override {
@@ -66,7 +68,6 @@ contract RAT_TestInit is CommonTest {
 /// @title RAT_Initialize_Test
 /// @notice Tests initialization of the RAT contract
 contract RAT_Initialize_Test is RAT_TestInit {
-
     /// @notice Tests successful initialization
     function test_initialize_succeeds() public view {
         assertEq(address(rat.disputeGameFactory()), mockDisputeGameFactory);
@@ -104,7 +105,7 @@ contract RAT_Staking_Test is RAT_TestInit {
         emit ChallengerStaked(CHALLENGER_1, stakeAmount);
 
         vm.prank(CHALLENGER_1);
-        rat.stake{value: stakeAmount}();
+        rat.stake{ value: stakeAmount }();
 
         RAT.ChallengerInfo memory info = rat.getChallengerInfo(CHALLENGER_1);
         // id field removed
@@ -124,7 +125,7 @@ contract RAT_Staking_Test is RAT_TestInit {
 
         vm.prank(CHALLENGER_1);
         uint256 gasStart = gasleft();
-        rat.stake{value: stakeAmount}();
+        rat.stake{ value: stakeAmount }();
         uint256 gasUsed = gasStart - gasleft();
         emit log_named_uint("RAT stake() gas used", gasUsed);
 
@@ -152,10 +153,10 @@ contract RAT_TriggerAttentionTest_Test is RAT_TestInit {
         vm.deal(CHALLENGER_2, 10 ether);
 
         vm.prank(CHALLENGER_1);
-        rat.stake{value: 2.5 ether}(); // Must be >= perTestBondAmount (1 ether)
+        rat.stake{ value: 2.5 ether }(); // Must be >= perTestBondAmount (1 ether)
 
         vm.prank(CHALLENGER_2);
-        rat.stake{value: 3.0 ether}(); // Must be >= perTestBondAmount (1 ether)
+        rat.stake{ value: 3.0 ether }(); // Must be >= perTestBondAmount (1 ether)
     }
 
     /// @notice Tests successful attention trigger
@@ -163,13 +164,19 @@ contract RAT_TriggerAttentionTest_Test is RAT_TestInit {
         GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
         bytes32 stateRoot = keccak256("test_state_root");
         bytes32 blockHash = blockhash(block.number - 1);
-        (, , address gameAddress) = LibGameId.unpack(gameId);
+        (,, address gameAddress) = LibGameId.unpack(gameId);
 
         vm.prank(mockDisputeGameFactory);
         rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
 
         // Check that attention test was created
-        (bytes32 attentionStateRoot, uint256 attentionBondAmount, address attentionChallengerAddress, , bool attentionEvidenceSubmitted) = rat.attentionTests(gameAddress);
+        (
+            bytes32 attentionStateRoot,
+            uint256 attentionBondAmount,
+            address attentionChallengerAddress,
+            ,
+            bool attentionEvidenceSubmitted
+        ) = rat.attentionTests(gameAddress);
 
         assertEq(attentionStateRoot, stateRoot);
         assertTrue(attentionChallengerAddress == CHALLENGER_1 || attentionChallengerAddress == CHALLENGER_2);
@@ -190,7 +197,17 @@ contract RAT_TriggerAttentionTest_Test is RAT_TestInit {
         vm.prank(address(1));
         emptyRatProxy.upgradeToAndCall(
             address(ratImpl2),
-            abi.encodeCall(RAT.initialize, (IDisputeGameFactory(mockDisputeGameFactory), SLASH_BOND_AMOUNT, EVIDENCE_SUBMISSION_PERIOD, MINIMUM_STAKE_AMOUNT, 100000, address(1)))
+            abi.encodeCall(
+                RAT.initialize,
+                (
+                    IDisputeGameFactory(mockDisputeGameFactory),
+                    SLASH_BOND_AMOUNT,
+                    EVIDENCE_SUBMISSION_PERIOD,
+                    MINIMUM_STAKE_AMOUNT,
+                    100000,
+                    address(1)
+                )
+            )
         );
 
         GameId gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
@@ -198,7 +215,7 @@ contract RAT_TriggerAttentionTest_Test is RAT_TestInit {
         bytes32 blockHash = blockhash(block.number - 1);
 
         // Function should return early without reverting when no valid challengers
-        (, , address gameAddress) = LibGameId.unpack(gameId);
+        (,, address gameAddress) = LibGameId.unpack(gameId);
         vm.prank(mockDisputeGameFactory);
         emptyRat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
 
@@ -213,7 +230,7 @@ contract RAT_TriggerAttentionTest_Test is RAT_TestInit {
 
         vm.expectRevert(RAT.NotDisputeGameFactory.selector);
 
-        (, , address gameAddress) = LibGameId.unpack(gameId);
+        (,, address gameAddress) = LibGameId.unpack(gameId);
         vm.prank(CHALLENGER_1); // Not the factory
         rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
     }
@@ -238,7 +255,7 @@ contract RAT_Evidence_Test is RAT_TestInit {
 
         // Stake challenger with sufficient amount
         vm.prank(CHALLENGER_1);
-        rat.stake{value: 2.5 ether}();
+        rat.stake{ value: 2.5 ether }();
 
         // Setup test data
         proofLV = keccak256("left_value");
@@ -246,7 +263,7 @@ contract RAT_Evidence_Test is RAT_TestInit {
         stateRoot = keccak256(abi.encodePacked(proofLV, proofRV));
 
         gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
-        (, , gameAddress) = LibGameId.unpack(gameId);
+        (,, gameAddress) = LibGameId.unpack(gameId);
     }
 
     /// @notice Tests successful correct evidence submission
@@ -256,13 +273,14 @@ contract RAT_Evidence_Test is RAT_TestInit {
         rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
 
         // Get selected challenger and game address
-        (bytes32 attentionStateRoot, uint256 bondAmount, address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+        (bytes32 attentionStateRoot, uint256 bondAmount, address selectedChallenger,,) = rat.attentionTests(gameAddress);
 
         vm.prank(selectedChallenger);
         rat.submitCorrectEvidence(gameAddress, proofLV, proofRV);
 
         // Verify evidence was submitted
-        (bytes32 verifyStateRoot, uint256 verifyBondAmount, address challenger, , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (bytes32 verifyStateRoot, uint256 verifyBondAmount, address challenger,, bool evidenceSubmitted) =
+            rat.attentionTests(gameAddress);
         assertTrue(evidenceSubmitted);
     }
 
@@ -271,7 +289,7 @@ contract RAT_Evidence_Test is RAT_TestInit {
         vm.prank(mockDisputeGameFactory);
         rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
 
-        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+        (,, address selectedChallenger,,) = rat.attentionTests(gameAddress);
 
         bytes32 wrongProofLV = keccak256("wrong_left");
         bytes32 wrongProofRV = keccak256("wrong_right");
@@ -310,7 +328,7 @@ contract RAT_Evidence_Test is RAT_TestInit {
         vm.prank(mockDisputeGameFactory);
         rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
 
-        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+        (,, address selectedChallenger,,) = rat.attentionTests(gameAddress);
 
         // Submit evidence first time
         vm.prank(selectedChallenger);
@@ -328,7 +346,7 @@ contract RAT_Evidence_Test is RAT_TestInit {
         vm.prank(mockDisputeGameFactory);
         rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
 
-        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+        (,, address selectedChallenger,,) = rat.attentionTests(gameAddress);
 
         // Move forward beyond the submission period
         vm.roll(block.number + EVIDENCE_SUBMISSION_PERIOD + 1);
@@ -355,21 +373,21 @@ contract RAT_ResolveClaim_Test is RAT_TestInit {
         // Fund and stake challenger
         vm.deal(CHALLENGER_1, 10 ether);
         vm.prank(CHALLENGER_1);
-        rat.stake{value: 2.5 ether}();
+        rat.stake{ value: 2.5 ether }();
 
         // Setup test data
         gameId = LibGameId.pack(GameTypes.CANNON, Timestamp.wrap(uint64(block.timestamp)), mockFaultDisputeGame);
         stateRoot = keccak256("test_state_root");
 
         // Trigger attention test
-        (, , gameAddress) = LibGameId.unpack(gameId);
+        (,, gameAddress) = LibGameId.unpack(gameId);
         vm.prank(mockDisputeGameFactory);
         rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
     }
 
     /// @notice Tests successful claim resolution
     function test_resolveClaim_succeeds() public {
-        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+        (,, address selectedChallenger,,) = rat.attentionTests(gameAddress);
 
         // Call from game contract
         vm.prank(gameAddress);
@@ -380,7 +398,7 @@ contract RAT_ResolveClaim_Test is RAT_TestInit {
         rat.resolveClaim(selectedChallenger);
 
         // Verify evidence was marked as submitted
-        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (,,,, bool evidenceSubmitted) = rat.attentionTests(gameAddress);
         assertTrue(evidenceSubmitted);
 
         // Verify challenger's balance was restored
@@ -390,7 +408,7 @@ contract RAT_ResolveClaim_Test is RAT_TestInit {
 
     /// @notice Tests resolve claim for wrong claimant is ignored
     function test_resolveClaim_wrongClaimant_ignored() public {
-        (, , address challengerBefore, , ) = rat.attentionTests(gameAddress);
+        (,, address challengerBefore,,) = rat.attentionTests(gameAddress);
         address wrongClaimant = address(0x9999);
 
         // Get challenger balance before
@@ -401,7 +419,7 @@ contract RAT_ResolveClaim_Test is RAT_TestInit {
         rat.resolveClaim(wrongClaimant);
 
         // Verify nothing changed
-        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (,,,, bool evidenceSubmitted) = rat.attentionTests(gameAddress);
         assertFalse(evidenceSubmitted);
 
         // Verify challenger balance unchanged

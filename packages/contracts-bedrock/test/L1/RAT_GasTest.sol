@@ -71,7 +71,7 @@ contract RAT_GasTest is CommonTest {
 
         vm.prank(challenger);
         uint256 gasStart = gasleft();
-        rat.stake{value: stakeAmount}();
+        rat.stake{ value: stakeAmount }();
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT stake() gas used", gasUsed);
@@ -90,7 +90,7 @@ contract RAT_GasTest is CommonTest {
 
         vm.prank(challenger);
         uint256 gasStart = gasleft();
-        rat.stake{value: stakeAmount}();
+        rat.stake{ value: stakeAmount }();
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT stake() valid challenger gas used", gasUsed);
@@ -106,7 +106,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}(); // Make challenger valid
+        rat.stake{ value: 2 ether }(); // Make challenger valid
 
         // Set probability to 100% to ensure trigger
         vm.prank(address(1)); // proxy admin owner
@@ -125,7 +125,7 @@ contract RAT_GasTest is CommonTest {
         emit log_named_uint("RAT triggerAttentionTest() gas used", gasUsed);
 
         // Verify attention test was created
-        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
+        (bytes32 storedStateRoot,,,,) = rat.attentionTests(gameAddress);
         assertEq(storedStateRoot, stateRoot);
     }
 
@@ -146,7 +146,7 @@ contract RAT_GasTest is CommonTest {
         emit log_named_uint("RAT triggerAttentionTest() no valid challengers gas used", gasUsed);
 
         // Verify no attention test was created (should be ignored)
-        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
+        (bytes32 storedStateRoot,,,,) = rat.attentionTests(gameAddress);
         assertEq(storedStateRoot, bytes32(0)); // Should be empty
     }
 
@@ -156,7 +156,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         // Set probability to 100% to ensure trigger
         vm.prank(address(1)); // proxy admin owner
@@ -207,11 +207,15 @@ contract RAT_GasTest is CommonTest {
         // emit log_named_uint("Staking amount after", infoAfter.stakingAmount);
 
         // Verify evidence was submitted
-        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (,,,, bool evidenceSubmitted) = rat.attentionTests(gameAddress);
         assertTrue(evidenceSubmitted);
 
         // Verify bond was refunded to staking amount (not as ETH)
-        assertEq(infoAfter.stakingAmount, infoBefore.stakingAmount + SLASH_BOND_AMOUNT, "Bond should be added to staking amount");
+        assertEq(
+            infoAfter.stakingAmount,
+            infoBefore.stakingAmount + SLASH_BOND_AMOUNT,
+            "Bond should be added to staking amount"
+        );
         assertEq(balanceAfter, balanceBefore, "Balance should remain unchanged (bond refunded to staking)");
     }
 
@@ -221,7 +225,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         // Set probability to 100% to ensure trigger
         vm.prank(address(1)); // proxy admin owner
@@ -242,7 +246,7 @@ contract RAT_GasTest is CommonTest {
         emit log_named_uint("RAT resolveClaim() gas used", gasUsed);
 
         // Verify claim was resolved
-        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (,,,, bool evidenceSubmitted) = rat.attentionTests(gameAddress);
         assertTrue(evidenceSubmitted);
     }
 
@@ -252,7 +256,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         address gameAddress = address(0x5678);
         bytes32 stateRoot = keccak256("test_state_root");
@@ -270,7 +274,7 @@ contract RAT_GasTest is CommonTest {
         emit log_named_uint("RAT resolveClaim() wrong claimant gas used", gasUsed);
 
         // Verify nothing changed (should be ignored)
-        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (,,,, bool evidenceSubmitted) = rat.attentionTests(gameAddress);
         assertFalse(evidenceSubmitted);
     }
 
@@ -280,7 +284,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         // Set probability to 100% to ensure trigger
         vm.prank(address(1)); // proxy admin owner
@@ -314,7 +318,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         // Set probability to 100% to ensure trigger
         vm.prank(address(1)); // proxy admin owner
@@ -346,7 +350,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         // Test submitCorrectEvidence for non-existent game
         address nonExistentGame = address(0x8888);
@@ -369,7 +373,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         // Test getChallengerInfo - view functions don't consume gas in the same way
         RAT.ChallengerInfo memory info = rat.getChallengerInfo(challenger);
@@ -387,7 +391,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         // Test getValidChallengerCount - view functions don't consume gas in the same way
         uint256 count = rat.getValidChallengerCount();
@@ -404,7 +408,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         // Set probability to 0 (never trigger)
         vm.prank(address(1)); // proxy admin owner
@@ -423,7 +427,7 @@ contract RAT_GasTest is CommonTest {
         emit log_named_uint("RAT triggerAttentionTest() probability=0 gas used", gasUsed);
 
         // Verify no attention test was created (probability check failed)
-        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
+        (bytes32 storedStateRoot,,,,) = rat.attentionTests(gameAddress);
         assertEq(storedStateRoot, bytes32(0)); // Should be empty
     }
 
@@ -433,7 +437,7 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         // Set probability to MAX_PROBABILITY (always trigger)
         vm.prank(address(1)); // proxy admin owner
@@ -452,7 +456,7 @@ contract RAT_GasTest is CommonTest {
         emit log_named_uint("RAT triggerAttentionTest() probability=MAX gas used", gasUsed);
 
         // Verify attention test was created (probability check passed)
-        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
+        (bytes32 storedStateRoot,,,,) = rat.attentionTests(gameAddress);
         assertEq(storedStateRoot, stateRoot);
     }
 
@@ -480,13 +484,13 @@ contract RAT_GasTest is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2 ether}();
+        rat.stake{ value: 2 ether }();
 
         address gameAddress = address(0x5678);
         bytes32 stateRoot = keccak256("test_state_root");
         bytes32 blockHash = blockhash(block.number - 1);
 
-        for (uint i = 0; i < probabilities.length; i++) {
+        for (uint256 i = 0; i < probabilities.length; i++) {
             // Set probability
             vm.prank(address(1)); // proxy admin owner
             rat.setRatTriggerProbability(probabilities[i]);
@@ -498,7 +502,11 @@ contract RAT_GasTest is CommonTest {
             uint256 gasUsed = gasStart - gasleft();
 
             emit log_named_uint(
-                string(abi.encodePacked("RAT triggerAttentionTest() probability=", _toString(probabilities[i]), " gas used")),
+                string(
+                    abi.encodePacked(
+                        "RAT triggerAttentionTest() probability=", _toString(probabilities[i]), " gas used"
+                    )
+                ),
                 gasUsed
             );
 

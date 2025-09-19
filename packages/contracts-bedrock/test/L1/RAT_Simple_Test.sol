@@ -46,7 +46,7 @@ contract RAT_Simple_Test is CommonTest {
             abi.encodeCall(
                 RAT.initialize,
                 (
-                    disputeGameFactory,  // Use actual disputeGameFactory
+                    disputeGameFactory, // Use actual disputeGameFactory
                     SLASH_BOND_AMOUNT,
                     EVIDENCE_SUBMISSION_PERIOD,
                     MINIMUM_STAKE_AMOUNT,
@@ -83,7 +83,7 @@ contract RAT_Simple_Test is CommonTest {
 
         vm.prank(challenger);
         uint256 gasStart = gasleft();
-        rat.stake{value: stakeAmount}();
+        rat.stake{ value: stakeAmount }();
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT stake() gas used", gasUsed);
@@ -100,7 +100,7 @@ contract RAT_Simple_Test is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2.5 ether}(); // Make challenger valid
+        rat.stake{ value: 2.5 ether }(); // Make challenger valid
 
         // Test triggerAttentionTest with 100% probability
         address gameAddress = address(0x5678);
@@ -115,11 +115,11 @@ contract RAT_Simple_Test is CommonTest {
         emit log_named_uint("RAT triggerAttentionTest() gas used (100% probability)", gasUsed);
 
         // Verify attention test was created
-        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
+        (bytes32 storedStateRoot,,,,) = rat.attentionTests(gameAddress);
         assertEq(storedStateRoot, stateRoot, "Attention test should be created");
 
         // Verify challenger was selected
-        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+        (,, address selectedChallenger,,) = rat.attentionTests(gameAddress);
         assertTrue(selectedChallenger != address(0), "Challenger should be selected");
         emit log_named_address("Selected challenger", selectedChallenger);
     }
@@ -134,7 +134,7 @@ contract RAT_Simple_Test is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2.5 ether}();
+        rat.stake{ value: 2.5 ether }();
 
         // Test triggerAttentionTest with 1% probability
         address gameAddress = address(0x5678);
@@ -149,7 +149,7 @@ contract RAT_Simple_Test is CommonTest {
         emit log_named_uint("RAT triggerAttentionTest() gas used (1% probability)", gasUsed);
 
         // Verify attention test was NOT created (RAT should not trigger)
-        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
+        (bytes32 storedStateRoot,,,,) = rat.attentionTests(gameAddress);
         assertEq(storedStateRoot, bytes32(0), "Attention test should NOT be created with low probability");
 
         emit log_string("RAT did not trigger with 1% probability - early return");
@@ -165,7 +165,7 @@ contract RAT_Simple_Test is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2.5 ether}();
+        rat.stake{ value: 2.5 ether }();
 
         // Test triggerAttentionTest with 0% probability
         address gameAddress = address(0x5678);
@@ -180,7 +180,7 @@ contract RAT_Simple_Test is CommonTest {
         emit log_named_uint("RAT triggerAttentionTest() gas used (0% probability)", gasUsed);
 
         // Verify attention test was NOT created (RAT should not trigger)
-        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
+        (bytes32 storedStateRoot,,,,) = rat.attentionTests(gameAddress);
         assertEq(storedStateRoot, bytes32(0), "Attention test should NOT be created with 0% probability");
 
         emit log_string("RAT did not trigger with 0% probability - early return");
@@ -192,7 +192,7 @@ contract RAT_Simple_Test is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2.5 ether}();
+        rat.stake{ value: 2.5 ether }();
 
         // Create proof values first
         bytes32 proofLV = keccak256("left_value");
@@ -208,7 +208,7 @@ contract RAT_Simple_Test is CommonTest {
         rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
 
         // Get selected challenger
-        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+        (,, address selectedChallenger,,) = rat.attentionTests(gameAddress);
         require(selectedChallenger != address(0), "No challenger selected");
 
         // Verify the proof matches (for debugging)
@@ -226,7 +226,7 @@ contract RAT_Simple_Test is CommonTest {
         emit log_named_uint("RAT submitCorrectEvidence() gas used", gasUsed);
 
         // Verify evidence was submitted
-        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (,,,, bool evidenceSubmitted) = rat.attentionTests(gameAddress);
         assertTrue(evidenceSubmitted, "Evidence should be submitted");
     }
 
@@ -236,7 +236,7 @@ contract RAT_Simple_Test is CommonTest {
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: 2.5 ether}();
+        rat.stake{ value: 2.5 ether }();
 
         // Trigger attention test first
         address gameAddress = address(0x5678);
@@ -247,7 +247,7 @@ contract RAT_Simple_Test is CommonTest {
         rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
 
         // Get selected challenger
-        (, , address selectedChallenger, , ) = rat.attentionTests(gameAddress);
+        (,, address selectedChallenger,,) = rat.attentionTests(gameAddress);
         require(selectedChallenger != address(0), "No challenger selected");
 
         // Test resolveClaim
@@ -259,7 +259,7 @@ contract RAT_Simple_Test is CommonTest {
         emit log_named_uint("RAT resolveClaim() gas used", gasUsed);
 
         // Verify claim was resolved
-        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (,,,, bool evidenceSubmitted) = rat.attentionTests(gameAddress);
         assertTrue(evidenceSubmitted, "Evidence should be submitted");
     }
 

@@ -9,7 +9,6 @@ import { GameTypes } from "src/dispute/lib/Types.sol";
  * @dev Test our fix for conditional game deployment based on disputeGameType
  */
 contract OPContractsManagerFixTest is Test {
-
     function test_GameTypeConditionalLogic() public {
         // Test our conditional logic works correctly
 

@@ -599,7 +599,7 @@ contract OPContractsManager_TestInit is Test {
                 )
             }),
             ratImpl: address(0) // RAT implementation not used in tests
-        });
+         });
 
         vm.etch(address(superchainConfigProxy), hex"01");
         vm.etch(address(protocolVersionsProxy), hex"01");
@@ -749,9 +749,9 @@ contract OPContractsManager_TestInit is Test {
                 disputeMaxClockDuration: Duration.wrap(302400),
                 // RAT configuration parameters (default values for tests)
                 deployRAT: false,
-                ratPerTestBondAmount: 0,
-                ratEvidenceSubmissionPeriod: 0,
-                ratMinimumStakingBalance: 0,
+                perTestBondAmount: 0,
+                evidenceSubmissionPeriod: 0,
+                minimumStakingBalance: 0,
                 ratTriggerProbability: 0,
                 ratManager: address(0)
             })
@@ -1953,9 +1953,9 @@ contract OPContractsManager_Deploy_Test is DeployOPChain_TestBase {
             disputeMaxClockDuration: _doi.disputeMaxClockDuration(),
             // RAT configuration parameters (default values for tests)
             deployRAT: false,
-            ratPerTestBondAmount: 0,
-            ratEvidenceSubmissionPeriod: 0,
-            ratMinimumStakingBalance: 0,
+            perTestBondAmount: 0,
+            evidenceSubmissionPeriod: 0,
+            minimumStakingBalance: 0,
             ratTriggerProbability: 0,
             ratManager: address(0)
         });
