@@ -83,3 +83,9 @@ kurtosis-devnet/prestate.bin.gz
 
 op-challenger/scripts/contract-artifacts/
 
+
+# RAT generated files
+rat_abi.json
+DeployOPChain.s.sol/
+bin/
+tmp/
