@@ -28,6 +28,7 @@ type Implementations struct {
 	OptimismMintableERC20FactoryImpl common.Address `json:"OptimismMintableERC20FactoryImpl"`
 	DisputeGameFactoryImpl           common.Address `json:"DisputeGameFactoryImpl"`
 	AnchorStateRegistryImpl          common.Address `json:"AnchorStateRegistryImpl"`
+	RATImpl                          common.Address `json:"RATImpl"`
 	SuperchainConfigImpl             common.Address `json:"SuperchainConfigImpl"`
 	ProtocolVersionsImpl             common.Address `json:"ProtocolVersionsImpl"`
 }
@@ -61,6 +62,7 @@ type L2OpchainDeployment struct {
 	PermissionedDisputeGame            common.Address `json:"PermissionedDisputeGame"`
 	DelayedWETHPermissionedGameProxy   common.Address `json:"DelayedWETHPermissionedGameProxy"`
 	DelayedWETHPermissionlessGameProxy common.Address `json:"DelayedWETHPermissionlessGameProxy"`
+	RATProxy                           common.Address `json:"RATProxy"`
 }
 
 type L2Deployment struct {

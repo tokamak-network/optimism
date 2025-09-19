@@ -852,6 +852,14 @@ type FaultProofDeployConfig struct {
 	// RespectedGameType is the dispute game type that the OptimismPortal
 	// contract will respect for finalizing withdrawals.
 	RespectedGameType uint32 `json:"respectedGameType"`
+
+	// RAT (Risk Assessment Tool) configuration
+	DeployRAT                bool           `json:"deployRAT"`
+	PerTestBondAmount        *hexutil.Big   `json:"perTestBondAmount"`
+	EvidenceSubmissionPeriod uint64         `json:"evidenceSubmissionPeriod"`
+	MinimumStakingBalance    *hexutil.Big   `json:"minimumStakingBalance"`
+	RatTriggerProbability    *hexutil.Big   `json:"ratTriggerProbability"`
+	RatManager               common.Address `json:"ratManager"`
 }
 
 func (d *FaultProofDeployConfig) Check(log log.Logger) error {
@@ -1166,6 +1174,8 @@ type L1Deployments struct {
 	ProtocolVersionsProxy             common.Address `json:"ProtocolVersionsProxy"`
 	DataAvailabilityChallenge         common.Address `json:"DataAvailabilityChallenge"`
 	DataAvailabilityChallengeProxy    common.Address `json:"DataAvailabilityChallengeProxy"`
+	RAT                               common.Address `json:"RAT"`
+	RATProxy                          common.Address `json:"RATProxy"`
 }
 
 func CreateL1DeploymentsFromContracts(contracts *addresses.L1Contracts) *L1Deployments {
@@ -1193,6 +1203,8 @@ func CreateL1DeploymentsFromContracts(contracts *addresses.L1Contracts) *L1Deplo
 		ProtocolVersionsProxy:             contracts.ProtocolVersionsProxy,
 		DataAvailabilityChallenge:         contracts.AltDAChallengeImpl,
 		DataAvailabilityChallengeProxy:    contracts.AltDAChallengeProxy,
+		RAT:                               contracts.RATImpl,
+		RATProxy:                          contracts.RATProxy,
 	}
 }
 
@@ -1230,6 +1242,10 @@ func (d *L1Deployments) Check(deployConfig *DeployConfig) error {
 		if !deployConfig.UseAltDA &&
 			(name == "DataAvailabilityChallenge" ||
 				name == "DataAvailabilityChallengeProxy") {
+			continue
+		}
+		// Skip RAT proxy check for now - RAT deployment is optional
+		if name == "RATProxy" {
 			continue
 		}
 

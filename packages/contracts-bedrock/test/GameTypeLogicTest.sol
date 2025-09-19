@@ -8,12 +8,11 @@ import { GameTypes } from "../src/dispute/lib/Types.sol";
  * @dev Simple test contract to verify our conditional game deployment logic
  */
 contract GameTypeLogicTest {
-    
     enum DeploymentType {
         FaultDisputeGame,
         PermissionedDisputeGame
     }
-    
+
     function testConditionalLogic(uint32 disputeGameType) external pure returns (DeploymentType) {
         // This replicates the exact logic from our OPContractsManager fix
         if (disputeGameType == GameTypes.CANNON.raw()) {
@@ -22,7 +21,7 @@ contract GameTypeLogicTest {
             return DeploymentType.PermissionedDisputeGame;
         }
     }
-    
+
     function getGameTypes() external pure returns (uint32 cannon, uint32 permissioned) {
         cannon = GameTypes.CANNON.raw();
         permissioned = GameTypes.PERMISSIONED_CANNON.raw();

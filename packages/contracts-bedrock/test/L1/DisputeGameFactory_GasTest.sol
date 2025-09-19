@@ -84,13 +84,13 @@ contract DisputeGameFactory_GasTest is CommonTest {
         // Stake challenger
         vm.deal(challenger, 10 ether);
         vm.prank(challenger);
-        rat.stake{value: MINIMUM_STAKE_AMOUNT}();
+        rat.stake{ value: MINIMUM_STAKE_AMOUNT }();
 
         // Deal ETH to proposer
         vm.deal(proposer, 10 ether);
     }
 
-        function test_create_game_without_rat_gas_measurement() public {
+    function test_create_game_without_rat_gas_measurement() public {
         // Create game without RAT (different game type)
         GameType gameType = GameType.wrap(1); // Non-CANNON game type
         Claim rootClaim = Claim.wrap(bytes32(uint256(0x123)));
@@ -107,13 +107,13 @@ contract DisputeGameFactory_GasTest is CommonTest {
 
         uint256 gasBefore = gasleft();
         vm.prank(proposer);
-        disputeGameFactory.create{value: bond}(gameType, rootClaim, extraData);
+        disputeGameFactory.create{ value: bond }(gameType, rootClaim, extraData);
         uint256 gasUsed = gasBefore - gasleft();
 
         emit log_named_uint("create() without RAT", gasUsed);
     }
 
-        function test_create_game_with_rat_not_triggered_gas_measurement() public {
+    function test_create_game_with_rat_not_triggered_gas_measurement() public {
         // Create CANNON game but RAT not triggered (no valid challengers)
         GameType gameType = GameTypes.CANNON;
         Claim rootClaim = Claim.wrap(bytes32(uint256(0x123)));
@@ -134,13 +134,13 @@ contract DisputeGameFactory_GasTest is CommonTest {
 
         uint256 gasBefore = gasleft();
         vm.prank(proposer);
-        disputeGameFactory.create{value: bond}(gameType, rootClaim, extraData);
+        disputeGameFactory.create{ value: bond }(gameType, rootClaim, extraData);
         uint256 gasUsed = gasBefore - gasleft();
 
         emit log_named_uint("create() with RAT not triggered", gasUsed);
     }
 
-        function test_create_game_with_rat_triggered_gas_measurement() public {
+    function test_create_game_with_rat_triggered_gas_measurement() public {
         // Create CANNON game with RAT triggered (valid challengers exist)
         GameType gameType = GameTypes.CANNON;
         Claim rootClaim = Claim.wrap(bytes32(uint256(0x123)));
@@ -157,13 +157,13 @@ contract DisputeGameFactory_GasTest is CommonTest {
 
         uint256 gasBefore = gasleft();
         vm.prank(proposer);
-        disputeGameFactory.create{value: bond}(gameType, rootClaim, extraData);
+        disputeGameFactory.create{ value: bond }(gameType, rootClaim, extraData);
         uint256 gasUsed = gasBefore - gasleft();
 
         emit log_named_uint("create() with RAT triggered", gasUsed);
     }
 
-        function test_create_game_with_rat_triggered_multiple_challengers_gas_measurement() public {
+    function test_create_game_with_rat_triggered_multiple_challengers_gas_measurement() public {
         // Create CANNON game with multiple valid challengers
         GameType gameType = GameTypes.CANNON;
         Claim rootClaim = Claim.wrap(bytes32(uint256(0x123)));
@@ -186,14 +186,14 @@ contract DisputeGameFactory_GasTest is CommonTest {
         vm.deal(challenger3, 10 ether);
 
         vm.prank(challenger2);
-        rat.stake{value: MINIMUM_STAKE_AMOUNT}();
+        rat.stake{ value: MINIMUM_STAKE_AMOUNT }();
 
         vm.prank(challenger3);
-        rat.stake{value: MINIMUM_STAKE_AMOUNT}();
+        rat.stake{ value: MINIMUM_STAKE_AMOUNT }();
 
         uint256 gasBefore = gasleft();
         vm.prank(proposer);
-        disputeGameFactory.create{value: bond}(gameType, rootClaim, extraData);
+        disputeGameFactory.create{ value: bond }(gameType, rootClaim, extraData);
         uint256 gasUsed = gasBefore - gasleft();
 
         emit log_named_uint("create() with RAT triggered (multiple challengers)", gasUsed);
