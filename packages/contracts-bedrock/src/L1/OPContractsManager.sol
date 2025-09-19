@@ -1168,9 +1168,7 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
         if (_input.disputeGameType.raw() == GameTypes.CANNON.raw()) {
             // Register FaultDisputeGame for CANNON (GameType 0)
             setDGFImplementation(
-                output.disputeGameFactoryProxy,
-                _input.disputeGameType,
-                IDisputeGame(address(output.faultDisputeGame))
+                output.disputeGameFactoryProxy, _input.disputeGameType, IDisputeGame(address(output.faultDisputeGame))
             );
         } else {
             // Register PermissionedDisputeGame for PERMISSIONED_CANNON (GameType 1) or others
@@ -1193,17 +1191,18 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
 
         // Deploy RAT if requested
         if (_input.deployRAT) {
-            output.ratProxy = IRAT(
-                deployProxy(_input.l2ChainId, output.opChainProxyAdmin, _input.saltMixer, "RAT")
-            );
+            // console.log("OPContractsManager: Starting RAT deployment...");
+            // console.log("OPContractsManager: implementation.ratImpl =", implementation.ratImpl);
+
+            output.ratProxy = IRAT(deployProxy(_input.l2ChainId, output.opChainProxyAdmin, _input.saltMixer, "RAT"));
+            // console.log("OPContractsManager: RAT proxy deployed at:", address(output.ratProxy));
 
             data = encodeRATInitializer(_input, output);
-            upgradeToAndCall(
-                output.opChainProxyAdmin,
-                address(output.ratProxy),
-                implementation.ratImpl,
-                data
-            );
+            // console.log("OPContractsManager: RAT initializer data encoded, length:", data.length);
+
+            // console.log("OPContractsManager: About to call upgradeToAndCall for RAT");
+            upgradeToAndCall(output.opChainProxyAdmin, address(output.ratProxy), implementation.ratImpl, data);
+            // console.log("OPContractsManager: RAT deployment completed successfully");
         }
 
         // -------- Finalize Deployment --------
@@ -1394,12 +1393,7 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
         Proposal memory startingAnchorRoot = abi.decode(_input.startingAnchorRoot, (Proposal));
         return abi.encodeCall(
             IAnchorStateRegistry.initialize,
-            (
-                _output.systemConfigProxy,
-                _output.disputeGameFactoryProxy,
-                startingAnchorRoot,
-                _input.disputeGameType
-            )
+            (_output.systemConfigProxy, _output.disputeGameFactoryProxy, startingAnchorRoot, _input.disputeGameType)
         );
     }
 
@@ -1421,15 +1415,19 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
         virtual
         returns (bytes memory)
     {
+        // console.log("OPContractsManager: About to encode RAT.initialize call");
+        // console.log("OPContractsManager: _input.perTestBondAmount =", _input.perTestBondAmount);
+        // console.log("OPContractsManager: _input.evidenceSubmissionPeriod =", _input.evidenceSubmissionPeriod);
+        // console.log("OPContractsManager: _input.minimumStakingBalance =", _input.minimumStakingBalance);
         return abi.encodeCall(
             IRAT.initialize,
             (
                 address(_output.disputeGameFactoryProxy), // _disputeGameFactory
-                _input.ratPerTestBondAmount,              // _perTestBondAmount
-                _input.ratEvidenceSubmissionPeriod,       // _evidenceSubmissionPeriod
-                _input.ratMinimumStakingBalance,          // _minimumStakingBalance
-                _input.ratTriggerProbability,             // _ratTriggerProbability
-                _input.ratManager                         // _manager
+                _input.perTestBondAmount, // _perTestBondAmount
+                _input.evidenceSubmissionPeriod, // _evidenceSubmissionPeriod
+                _input.minimumStakingBalance, // _minimumStakingBalance
+                _input.ratTriggerProbability, // _ratTriggerProbability
+                _input.ratManager // _manager
             )
         );
     }
@@ -1751,9 +1749,9 @@ contract OPContractsManager is ISemver {
         Duration disputeMaxClockDuration;
         // RAT configuration parameters.
         bool deployRAT;
-        uint256 ratPerTestBondAmount;
-        uint256 ratEvidenceSubmissionPeriod;
-        uint256 ratMinimumStakingBalance;
+        uint256 perTestBondAmount;
+        uint256 evidenceSubmissionPeriod;
+        uint256 minimumStakingBalance;
         uint256 ratTriggerProbability;
         address ratManager;
     }
@@ -1983,6 +1981,9 @@ contract OPContractsManager is ISemver {
     /// @param _input The deploy input parameters for the deployment.
     /// @return The deploy output values of the deployment.
     function deploy(DeployInput calldata _input) external virtual returns (DeployOutput memory) {
+        // console.log("OPContractsManager.deploy() called with deployRAT:", _input.deployRAT);
+        // console.log("OPContractsManager.deploy() ratTriggerProbability:", _input.ratTriggerProbability);
+        // console.log("OPContractsManager.deploy() perTestBondAmount:", _input.perTestBondAmount);
         return opcmDeployer.deploy(_input, superchainConfig, msg.sender);
     }
 
