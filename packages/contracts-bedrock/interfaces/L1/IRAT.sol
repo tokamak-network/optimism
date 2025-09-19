@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { GameId } from "src/dispute/lib/Types.sol";
 import { IProxyAdminOwnedBase } from "interfaces/L1/IProxyAdminOwnedBase.sol";
 import { IReinitializableBase } from "interfaces/universal/IReinitializableBase.sol";
+import { IDisputeGameFactory } from "interfaces/dispute/IDisputeGameFactory.sol";
 
 /// @title IRAT
 /// @notice Interface for the Randomized Attention Test contract
@@ -103,7 +104,7 @@ interface IRAT is IProxyAdminOwnedBase, IReinitializableBase {
     /// @param _ratTriggerProbability The probability of triggering RAT
     /// @param _manager The manager address
     function initialize(
-        address _disputeGameFactory,
+        IDisputeGameFactory _disputeGameFactory,
         uint256 _perTestBondAmount,
         uint256 _evidenceSubmissionPeriod,
         uint256 _minimumStakingBalance,

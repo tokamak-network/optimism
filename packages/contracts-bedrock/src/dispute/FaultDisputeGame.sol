@@ -329,14 +329,16 @@ contract FaultDisputeGame is Clone, ISemver {
         // in the factory, but are not used by the game, which would allow for multiple dispute games for the same
         // output proposal to be created.
         //
-        // Expected length: 122 bytes
+        // Expected length: 122 bytes (without RAT) or 154 bytes (with RAT address)
         // - 4 bytes selector
         // - 20 bytes creator address
         // - 32 bytes root claim
         // - 32 bytes l1 head
         // - 32 bytes extraData
         // - 2 bytes CWIA length
-        if (msg.data.length != 122) revert BadExtraData();
+        // - 32 bytes RAT address (optional, when _rat != address(0)) - Not included in CWIA.
+        uint256 expectedLength = (_rat != address(0)) ? 154 : 122;
+        if (msg.data.length != expectedLength) revert BadExtraData();
 
         // Do not allow the game to be initialized if the root claim corresponds to a block at or before the
         // configured starting block number.
@@ -370,7 +372,7 @@ contract FaultDisputeGame is Clone, ISemver {
             GameType.unwrap(ANCHOR_STATE_REGISTRY.respectedGameType()) == GameType.unwrap(GAME_TYPE);
 
         // Set RAT contract address
-        if(_rat != address(0)) rat = _rat;
+        if (_rat != address(0)) rat = _rat;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -925,7 +927,11 @@ contract FaultDisputeGame is Clone, ISemver {
     /// @return rootClaim_ The root claim of the DisputeGame.
     /// @return extraData_ Any extra data supplied to the dispute game contract by the creator.
     /// @return ratAddress_ The address of the RAT contract.
-    function gameDataWithRat() external view returns (GameType gameType_, Claim rootClaim_, bytes memory extraData_, address ratAddress_) {
+    function gameDataWithRat()
+        external
+        view
+        returns (GameType gameType_, Claim rootClaim_, bytes memory extraData_, address ratAddress_)
+    {
         gameType_ = gameType();
         rootClaim_ = rootClaim();
         extraData_ = extraData();
@@ -936,7 +942,7 @@ contract FaultDisputeGame is Clone, ISemver {
     /// @param claimant Address receiving the bond
     function resolveClaimRat(address claimant) internal {
         if (rat != address(0)) {
-            try IRAT(rat).resolveClaim(claimant) {} catch {}
+            try IRAT(rat).resolveClaim(claimant) { } catch { }
         }
     }
 
