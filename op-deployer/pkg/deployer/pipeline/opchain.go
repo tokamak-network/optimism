@@ -112,10 +112,10 @@ func makeDCI(intent *state.Intent, thisIntent *state.ChainIntent, chainID common
 			DisputeMaxClockDuration: standard.DisputeMaxClockDuration,
 			// RAT defaults
 			DeployRAT:                standard.DeployRAT,
-			PerTestBondAmount:        mustBigIntWithUint96Limit(mustHexBigFromHex(standard.PerTestBondAmount), "PerTestBondAmount"),
-			EvidenceSubmissionPeriod: big.NewInt(int64(standard.EvidenceSubmissionPeriod)),
-			MinimumStakingBalance:    mustHexBigFromHex(standard.MinimumStakingBalance),
-			RatTriggerProbability:    big.NewInt(int64(standard.RatTriggerProbability)),
+			PerTestBondAmount:        standard.PerTestBondAmount,
+			EvidenceSubmissionPeriod: standard.EvidenceSubmissionPeriod,
+			MinimumStakingBalance:    standard.MinimumStakingBalance,
+			RatTriggerProbability:    standard.RatTriggerProbability,
 			RatManager:               common.Address{}, // Default to zero address
 		},
 		intent.GlobalDeployOverrides,
@@ -149,10 +149,10 @@ func makeDCI(intent *state.Intent, thisIntent *state.ChainIntent, chainID common
 		OperatorFeeConstant:          thisIntent.OperatorFeeConstant,
 		// RAT configuration - TODO: Add RAT parameters from intent
 		DeployRAT:                proofParams.DeployRAT, // Default to false for now
-		PerTestBondAmount:        proofParams.PerTestBondAmount,
-		EvidenceSubmissionPeriod: proofParams.EvidenceSubmissionPeriod,
-		MinimumStakingBalance:    proofParams.MinimumStakingBalance,
-		RatTriggerProbability:    proofParams.RatTriggerProbability,
+		PerTestBondAmount:        mustBigIntWithUint96Limit(mustHexBigFromHex(proofParams.PerTestBondAmount), "PerTestBondAmount"),
+		EvidenceSubmissionPeriod: big.NewInt(int64(proofParams.EvidenceSubmissionPeriod)),
+		MinimumStakingBalance:    mustHexBigFromHex(proofParams.MinimumStakingBalance),
+		RatTriggerProbability:    mustHexBigFromHex(proofParams.RatTriggerProbability),
 		RatManager:               proofParams.RatManager,
 	}, nil
 }

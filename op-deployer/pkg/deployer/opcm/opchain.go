@@ -78,7 +78,7 @@ type DeployOPChainOutput struct {
 	PermissionedDisputeGame            common.Address
 	DelayedWETHPermissionedGameProxy   common.Address
 	DelayedWETHPermissionlessGameProxy common.Address
-	RATProxy                           common.Address
+	RATProxy                           common.Address `evm:"ratProxy"`
 }
 
 func (output *DeployOPChainOutput) CheckOutput(input common.Address) error {

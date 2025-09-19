@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -43,10 +42,10 @@ type ChainProofParams struct {
 
 	// RAT configuration
 	DeployRAT                bool           `json:"deployRAT" toml:"deployRAT"`
-	PerTestBondAmount        *big.Int       `json:"perTestBondAmount" toml:"perTestBondAmount"`
-	EvidenceSubmissionPeriod *big.Int       `json:"evidenceSubmissionPeriod" toml:"evidenceSubmissionPeriod"`
-	MinimumStakingBalance    *big.Int       `json:"minimumStakingBalance" toml:"minimumStakingBalance"`
-	RatTriggerProbability    *big.Int       `json:"ratTriggerProbability" toml:"ratTriggerProbability"`
+	PerTestBondAmount        string         `json:"perTestBondAmount" toml:"perTestBondAmount"`
+	EvidenceSubmissionPeriod uint64         `json:"evidenceSubmissionPeriod" toml:"evidenceSubmissionPeriod"`
+	MinimumStakingBalance    string         `json:"minimumStakingBalance" toml:"minimumStakingBalance"`
+	RatTriggerProbability    string         `json:"ratTriggerProbability" toml:"ratTriggerProbability"`
 	RatManager               common.Address `json:"ratManager" toml:"ratManager"`
 }
 

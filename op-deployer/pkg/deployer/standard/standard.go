@@ -38,9 +38,9 @@ const (
 	// RAT defaults
 	DeployRAT                bool   = false
 	PerTestBondAmount        string = "10000000000000000"   // 0.01 ETH (safe within uint96 range)
-	EvidenceSubmissionPeriod uint64 = 3600                  // 1 hours
+	EvidenceSubmissionPeriod uint64 = 3600                 // 1 hours
 	MinimumStakingBalance    string = "1000000000000000000" // 1 ETH
-	RatTriggerProbability    uint64 = 10000                 // 10% (10000/100000)
+	RatTriggerProbability    string = "10000"              // 10% (10000/100000)
 
 	ContractsV160Tag        = "op-contracts/v1.6.0"
 	ContractsV180Tag        = "op-contracts/v1.8.0-rc.4"
