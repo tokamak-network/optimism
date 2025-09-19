@@ -307,3 +307,20 @@ ok  	github.com/ethereum-optimism/optimism/op-challenger/game/fault	~0.5s
 - **RAT Interface**: `packages/contracts-bedrock/interfaces/L1/IRAT.sol`
 - **기존 Go Bindings**: `op-challenger/game/fault/contracts/rat.go`
 - **Test Helpers**: `op-challenger/game/fault/test/rat_helpers.go`
+
+---
+
+**문서 버전**: 2.1
+**최종 업데이트**: 2024-09-19
+**작성자**: RAT Testing Team
+**상태**: ✅ 4개 핵심 시나리오 구현완료 (4개 테스트), 🚧 추가 고급 시나리오 구현 대기중
+
+**구현 현황**:
+- ✅ RAT 기본 통합 테스트 (Proxy 패턴, 실제 계약 검증)
+- ✅ 다중 Challenger 테스트 (랜덤 선택, 경제적 격리)
+- ✅ 확률적 트리거 테스트 (경제적 제약 검증)
+- ✅ 잘못된 증거 제출 테스트 (암호학적 검증)
+- 🚧 실제 Challenge 성공 시나리오 (High Priority)
+- 🚧 경제적 Edge Cases 테스트
+- 🚧 시간 기반 테스트
+- 🚧 악의적 행동 테스트

@@ -23,8 +23,8 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
     struct AttentionInfo {
         bytes32 stateRoot;          // 상태 루트
-        uint96 bondAmount;          // 보증금 금액
-        address challengerAddress;  // challenger 주소
+        uint96 bondAmount;          // 보증금 금액 (uint96로 address와 패킹)
+        address challengerAddress;  // challenger 주소 (uint96와 패킹)
         uint64 l1BlockNumber;       // L1 블록 번호
         bool evidenceSubmitted;     // 증거 제출 여부
     }
@@ -65,9 +65,9 @@ overrides:
   deployer:
     # RAT (Refund Address Tracker) configuration
     deployRAT: true
-    ratPerTestBondAmount: 100000000000000          # 0.0001 ETH in wei
-    ratEvidenceSubmissionPeriod: 600                # 10 minutes in seconds
-    ratMinimumStakingBalance: 1000000000000000000    # 1 ETH in wei
+    perTestBondAmount: 100000000000000          # 0.0001 ETH in wei
+    evidenceSubmissionPeriod: 600                # 10 minutes in seconds
+    minimumStakingBalance: 1000000000000000000    # 1 ETH in wei
     ratTriggerProbability: 100000                   # 100% (100000/100000)
     ratManager: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"  # First prefunded account
 
@@ -76,9 +76,9 @@ optimism_package:
     overrides:
       # RAT configuration (중복 설정)
       deployRAT: true
-      ratPerTestBondAmount: 100000000000000
-      ratEvidenceSubmissionPeriod: 600
-      ratMinimumStakingBalance: 1000000000000000000
+      perTestBondAmount: 100000000000000
+      evidenceSubmissionPeriod: 600
+      minimumStakingBalance: 1000000000000000000
       ratTriggerProbability: 100000
       ratManager: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 ```
@@ -117,9 +117,9 @@ struct DeployOPChainInput {
     // ... 기타 필드들
     // RAT configuration parameters
     bool deployRAT;
-    uint256 ratPerTestBondAmount;
-    uint256 ratEvidenceSubmissionPeriod;
-    uint256 ratMinimumStakingBalance;
+    uint256 perTestBondAmount;
+    uint256 evidenceSubmissionPeriod;
+    uint256 minimumStakingBalance;
     uint256 ratTriggerProbability;
     address ratManager;
 }
@@ -155,9 +155,9 @@ function encodeRATInitializer(
         IRAT.initialize,
         (
             address(_output.disputeGameFactoryProxy), // _disputeGameFactory
-            _input.ratPerTestBondAmount,              // _perTestBondAmount
-            _input.ratEvidenceSubmissionPeriod,       // _evidenceSubmissionPeriod
-            _input.ratMinimumStakingBalance,          // _minimumStakingBalance
+            _input.perTestBondAmount,              // _perTestBondAmount
+            _input.evidenceSubmissionPeriod,       // _evidenceSubmissionPeriod
+            _input.minimumStakingBalance,          // _minimumStakingBalance
             _input.ratTriggerProbability,             // _ratTriggerProbability
             _input.ratManager                         // _manager
         )
@@ -173,9 +173,9 @@ type ChainIntent struct {
     // ... 기타 필드들
     // RAT configuration
     DeployRAT                    bool          `json:"deployRAT" toml:"deployRAT"`
-    RATPerTestBondAmount         uint64        `json:"ratPerTestBondAmount" toml:"ratPerTestBondAmount"`
-    RATEvidenceSubmissionPeriod  *big.Int      `json:"ratEvidenceSubmissionPeriod" toml:"ratEvidenceSubmissionPeriod"`
-    RATMinimumStakingBalance     *big.Int      `json:"ratMinimumStakingBalance" toml:"ratMinimumStakingBalance"`
+    RATPerTestBondAmount         uint64        `json:"perTestBondAmount" toml:"perTestBondAmount"`
+    RATEvidenceSubmissionPeriod  *big.Int      `json:"evidenceSubmissionPeriod" toml:"evidenceSubmissionPeriod"`
+    RATMinimumStakingBalance     *big.Int      `json:"minimumStakingBalance" toml:"minimumStakingBalance"`
     RATTriggerProbability        uint64        `json:"ratTriggerProbability" toml:"ratTriggerProbability"`
     RATManager                   common.Address `json:"ratManager" toml:"ratManager"`
 }
@@ -254,7 +254,7 @@ type OpChainFaultProofsContracts struct {
 | `deployRAT` | bool | false | RAT 배포 여부 |
 | `ratPerTestBondAmount` | uint64 | 0.01 ETH | 테스트당 보증금 |
 | `ratEvidenceSubmissionPeriod` | uint64 | 3600초 | 증거 제출 기간 |
-| `ratMinimumStakingBalance` | uint64 | 1 ETH | 최소 스테이킹 잔액 |
+| `minimumStakingBalance` | uint64 | 1 ETH | 최소 스테이킹 잔액 |
 | `ratTriggerProbability` | uint64 | 10000 | 트리거 확률 (10000/100000 = 10%) |
 | `ratManager` | address | zero address | RAT 관리자 주소 |
 
@@ -262,7 +262,7 @@ type OpChainFaultProofsContracts struct {
 
 #### Solidity vs Go 타입 매핑
 - **Solidity `uint96`** ↔ **Go `uint64`**: `ratPerTestBondAmount`
-- **Solidity `uint64`** ↔ **Go `uint64`**: `ratEvidenceSubmissionPeriod`, `ratMinimumStakingBalance`, `ratTriggerProbability`
+- **Solidity `uint64`** ↔ **Go `uint64`**: `evidenceSubmissionPeriod`, `minimumStakingBalance`, `ratTriggerProbability`
 - **Solidity `address`** ↔ **Go `common.Address`**: `ratManager`
 
 #### 타입 변환 처리
