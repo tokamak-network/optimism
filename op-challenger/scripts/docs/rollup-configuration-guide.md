@@ -97,7 +97,7 @@ proposer_params:
 ### 테스트용 (균형)
 ```yaml
 proposer_params:
-  game_type: 0              # CANNON  
+  game_type: 0              # CANNON
   proposal_interval: 30m    # 30분
 ```
 - ✅ 완전한 검증
@@ -157,7 +157,7 @@ grep -A 5 "proposer_params" /optimism/kurtosis-devnet/simple.yaml
 - [Challenger Parameters](./challenger-parameters.md) - 챌린저 설정 옵션
 - [Game Type Configuration](./game-type-configuration.md) - 설정 불일치 해결
 
-### 외부 문서  
+### 외부 문서
 - [OP Stack Proposals Spec](https://specs.optimism.io/protocol/proposals.html) - 프로토콜 명세
 - [Proposer Configuration](https://docs.optimism.io/operators/chain-operators/configuration/proposer) - 공식 설정 가이드
 - [Optimism Package](https://github.com/ethpandaops/optimism-package) - Kurtosis 패키지 소스
