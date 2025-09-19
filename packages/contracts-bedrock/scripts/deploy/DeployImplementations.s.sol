@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
+// Force recompile for RAT impl
 
 import { Script } from "forge-std/Script.sol";
 
@@ -75,7 +76,7 @@ contract DeployImplementations is Script {
         IOptimismMintableERC20Factory optimismMintableERC20FactoryImpl;
         IDisputeGameFactory disputeGameFactoryImpl;
         IAnchorStateRegistry anchorStateRegistryImpl;
-        IRAT ratImpl;
+        IRAT ratImpl; // RAT implementation contract
         ISuperchainConfig superchainConfigImpl;
         IProtocolVersions protocolVersionsImpl;
     }

@@ -435,9 +435,9 @@ contract Deploy is Deployer {
             disputeMaxClockDuration: Duration.wrap(uint64(cfg.faultGameMaxClockDuration())),
             // RAT configuration from deploy config
             deployRAT: cfg.deployRAT(),
-            ratPerTestBondAmount: cfg.ratPerTestBondAmount(),
-            ratEvidenceSubmissionPeriod: cfg.ratEvidenceSubmissionPeriod(),
-            ratMinimumStakingBalance: cfg.ratMinimumStakingBalance(),
+            perTestBondAmount: cfg.perTestBondAmount(),
+            evidenceSubmissionPeriod: cfg.evidenceSubmissionPeriod(),
+            minimumStakingBalance: cfg.minimumStakingBalance(),
             ratTriggerProbability: cfg.ratTriggerProbability(),
             ratManager: cfg.ratManager()
         });

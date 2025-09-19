@@ -2,6 +2,7 @@
 pragma solidity 0.8.15;
 
 import { Script } from "forge-std/Script.sol";
+import { console2 as console } from "forge-std/console2.sol";
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -18,6 +19,7 @@ import { IOPContractsManager } from "interfaces/L1/IOPContractsManager.sol";
 import { IAddressManager } from "interfaces/legacy/IAddressManager.sol";
 import { IDelayedWETH } from "interfaces/dispute/IDelayedWETH.sol";
 import { IDisputeGameFactory } from "interfaces/dispute/IDisputeGameFactory.sol";
+import { DisputeGameFactory } from "src/dispute/DisputeGameFactory.sol";
 import { IAnchorStateRegistry } from "interfaces/dispute/IAnchorStateRegistry.sol";
 import { IFaultDisputeGame } from "interfaces/dispute/IFaultDisputeGame.sol";
 import { IPermissionedDisputeGame } from "interfaces/dispute/IPermissionedDisputeGame.sol";
@@ -62,9 +64,9 @@ contract DeployOPChainInput is BaseDeployIO {
 
     // RAT configuration
     bool internal _deployRAT;
-    uint256 internal _ratPerTestBondAmount;
-    uint256 internal _ratEvidenceSubmissionPeriod;
-    uint256 internal _ratMinimumStakingBalance;
+    uint256 internal _perTestBondAmount;
+    uint256 internal _evidenceSubmissionPeriod;
+    uint256 internal _minimumStakingBalance;
     uint256 internal _ratTriggerProbability;
     address internal _ratManager;
 
@@ -103,14 +105,14 @@ contract DeployOPChainInput is BaseDeployIO {
             _disputeMaxClockDuration = Duration.wrap(SafeCast.toUint64(_value));
         } else if (_sel == this.operatorFeeScalar.selector) {
             _operatorFeeScalar = SafeCast.toUint32(_value);
-        }         else if (_sel == this.operatorFeeConstant.selector) {
+        } else if (_sel == this.operatorFeeConstant.selector) {
             _operatorFeeConstant = SafeCast.toUint64(_value);
-        } else if (_sel == this.ratPerTestBondAmount.selector) {
-            _ratPerTestBondAmount = _value;
-        } else if (_sel == this.ratEvidenceSubmissionPeriod.selector) {
-            _ratEvidenceSubmissionPeriod = _value;
-        } else if (_sel == this.ratMinimumStakingBalance.selector) {
-            _ratMinimumStakingBalance = _value;
+        } else if (_sel == this.perTestBondAmount.selector) {
+            _perTestBondAmount = _value;
+        } else if (_sel == this.evidenceSubmissionPeriod.selector) {
+            _evidenceSubmissionPeriod = _value;
+        } else if (_sel == this.minimumStakingBalance.selector) {
+            _minimumStakingBalance = _value;
         } else if (_sel == this.ratTriggerProbability.selector) {
             _ratTriggerProbability = _value;
         } else {
@@ -251,19 +253,23 @@ contract DeployOPChainInput is BaseDeployIO {
         return _deployRAT;
     }
 
-    function ratPerTestBondAmount() public view returns (uint256) {
-        return _ratPerTestBondAmount;
+    function perTestBondAmount() public view returns (uint256) {
+        // console.log("DeployOPChainInput.perTestBondAmount() called, returning:", _perTestBondAmount);
+        return _perTestBondAmount;
     }
 
-    function ratEvidenceSubmissionPeriod() public view returns (uint256) {
-        return _ratEvidenceSubmissionPeriod;
+    function evidenceSubmissionPeriod() public view returns (uint256) {
+        console.log("DeployOPChainInput.evidenceSubmissionPeriod() called, returning:", _evidenceSubmissionPeriod);
+        return _evidenceSubmissionPeriod;
     }
 
-    function ratMinimumStakingBalance() public view returns (uint256) {
-        return _ratMinimumStakingBalance;
+    function minimumStakingBalance() public view returns (uint256) {
+        console.log("DeployOPChainInput.minimumStakingBalance() called, returning:", _minimumStakingBalance);
+        return _minimumStakingBalance;
     }
 
     function ratTriggerProbability() public view returns (uint256) {
+        console.log("DeployOPChainInput.ratTriggerProbability() called, returning:", _ratTriggerProbability);
         return _ratTriggerProbability;
     }
 
@@ -435,15 +441,17 @@ contract DeployOPChain is Script {
             disputeClockExtension: _doi.disputeClockExtension(),
             disputeMaxClockDuration: _doi.disputeMaxClockDuration(),
             deployRAT: _doi.deployRAT(),
-            ratPerTestBondAmount: _doi.ratPerTestBondAmount(),
-            ratEvidenceSubmissionPeriod: _doi.ratEvidenceSubmissionPeriod(),
-            ratMinimumStakingBalance: _doi.ratMinimumStakingBalance(),
+            perTestBondAmount: _doi.perTestBondAmount(),
+            evidenceSubmissionPeriod: _doi.evidenceSubmissionPeriod(),
+            minimumStakingBalance: _doi.minimumStakingBalance(),
             ratTriggerProbability: _doi.ratTriggerProbability(),
             ratManager: _doi.ratManager()
         });
 
+        console.log("DeployOPChain: About to call opcm.deploy()");
         vm.broadcast(msg.sender);
         IOPContractsManager.DeployOutput memory deployOutput = opcm.deploy(deployInput);
+        console.log("DeployOPChain: opcm.deploy() completed successfully");
 
         vm.label(address(deployOutput.opChainProxyAdmin), "opChainProxyAdmin");
         vm.label(address(deployOutput.addressManager), "addressManager");
@@ -466,7 +474,6 @@ contract DeployOPChain is Script {
         if (_doi.deployRAT() && address(deployOutput.ratProxy) != address(0)) {
             vm.label(address(deployOutput.ratProxy), "ratProxy");
         }
-
 
         _doo.set(_doo.opChainProxyAdmin.selector, address(deployOutput.opChainProxyAdmin));
         _doo.set(_doo.addressManager.selector, address(deployOutput.addressManager));
@@ -493,8 +500,11 @@ contract DeployOPChain is Script {
         // Set RAT if deployed
         if (_doi.deployRAT() && address(deployOutput.ratProxy) != address(0)) {
             _doo.set(_doo.ratProxy.selector, address(deployOutput.ratProxy));
-        }
 
+            // Set RAT address in DisputeGameFactory
+            DisputeGameFactory dgf = DisputeGameFactory(address(deployOutput.disputeGameFactoryProxy));
+            dgf.setRAT(address(deployOutput.ratProxy));
+        }
 
         checkOutput(_doi, _doo);
     }
@@ -597,12 +607,16 @@ contract DeployOPChain is Script {
 
         // Validate RAT if deployed
         if (_doi.deployRAT() && address(_doo.ratProxy()) != address(0)) {
+            console.log("RAT validation: deployRAT =", _doi.deployRAT());
+            console.log("RAT validation: ratProxy address =", address(_doo.ratProxy()));
+            console.log("RAT validation: about to call assertInitialized");
             DeployUtils.assertInitialized({
                 _contractAddress: address(_doo.ratProxy()),
                 _isProxy: true,
                 _slot: 0,
                 _offset: 0
             });
+            console.log("RAT validation: assertInitialized completed");
         }
     }
 
@@ -689,5 +703,4 @@ contract DeployOPChain is Script {
         doi_ = DeployOPChainInput(DeployUtils.toIOAddress(msg.sender, "optimism.DeployOPChainInput"));
         doo_ = DeployOPChainOutput(DeployUtils.toIOAddress(msg.sender, "optimism.DeployOPChainOutput"));
     }
-
 }

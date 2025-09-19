@@ -80,9 +80,9 @@ contract DeployConfig is Script {
 
     // RAT configuration
     bool public deployRAT;
-    uint256 public ratPerTestBondAmount;
-    uint256 public ratEvidenceSubmissionPeriod;
-    uint256 public ratMinimumStakingBalance;
+    uint256 public perTestBondAmount;
+    uint256 public evidenceSubmissionPeriod;
+    uint256 public minimumStakingBalance;
     uint256 public ratTriggerProbability;
     address public ratManager;
 
@@ -161,9 +161,9 @@ contract DeployConfig is Script {
 
         // RAT configuration with default values
         deployRAT = _readOr(_json, "$.deployRAT", false);
-        ratPerTestBondAmount = _readOr(_json, "$.ratPerTestBondAmount", 0.01 ether); // 0.01 ETH in wei
-        ratEvidenceSubmissionPeriod = _readOr(_json, "$.ratEvidenceSubmissionPeriod", 1 days); // 1 day in seconds
-        ratMinimumStakingBalance = _readOr(_json, "$.ratMinimumStakingBalance", 1 ether); // 1 ETH in wei
+        perTestBondAmount = _readOr(_json, "$.perTestBondAmount", 0.01 ether); // 0.01 ETH in wei
+        evidenceSubmissionPeriod = _readOr(_json, "$.evidenceSubmissionPeriod", 1 days); // 1 day in seconds
+        minimumStakingBalance = _readOr(_json, "$.minimumStakingBalance", 1 ether); // 1 ETH in wei
         ratTriggerProbability = _readOr(_json, "$.ratTriggerProbability", 10000); // 10% (10000/100000)
         ratManager = _readOr(_json, "$.ratManager", address(0));
     }
