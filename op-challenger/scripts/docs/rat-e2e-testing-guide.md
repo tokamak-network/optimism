@@ -1,223 +1,257 @@
 # RAT E2E Testing Guide
 
-This guide provides comprehensive instructions for running RAT (Randomized Attention Test) E2E tests in the Optimism system.
-
 ## Overview
 
-RAT E2E tests validate the complete dispute game mechanism and state root correction system by running full blockchain deployments with real geth nodes, challenging processes, and system integration.
-
-**⚠️ Note**: E2E tests take 5-10 minutes each due to full blockchain deployment requirements.
+This guide provides instructions on how to run RAT (Resource Allocation Table) E2E tests and effectively monitor logs.
 
 ## Prerequisites
 
-- Optimism development environment set up
-- Go 1.21+ installed
-- Docker available for blockchain deployments
+Before running RAT E2E tests, ensure you have:
 
-## Test Cache Management
-
-Go caches test results when code hasn't changed. To see actual execution time instead of `(cached)`:
-
-```bash
-# Clear test cache before running tests
-go clean -testcache
-```
-
-## Available E2E Tests
-
-### Core RAT E2E Tests
-
-```bash
-# From project root
-go clean -testcache
-
-# Individual test scenarios
-go test -v ./op-e2e/faultproofs -run "TestRATSuccessScenarioE2E"        # Success scenario
-go test -v ./op-e2e/faultproofs -run "TestRATFailureScenarioE2E"        # Failure scenario
-go test -v ./op-e2e/faultproofs -run "TestRATSimpleE2E"                 # Simple verification
-go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E"     # 🆕 Complete victory scenario
-go test -v ./op-e2e/faultproofs -run "TestRATUnitTests"                 # RAT unit tests (fast)
-go test -v ./op-e2e/faultproofs -run "TestRATMockWorkflow"              # RAT mock workflow test (fast)
-
-# All RAT E2E tests
-go test -v ./op-e2e/faultproofs -run "TestRAT.*"
-```
-
-### 🆕 TestRATDisputeGameVictoryE2E: Complete Victory Scenario
-
-**Status**: ✅ Production-Ready (8 phases implemented)
-**Location**: `op-e2e/faultproofs/rat_e2e_test.go:437`
-**Execution Time**: ~5-10 minutes
-
-**Full Scenario**: Invalid Proposer State Root → RAT Triggers → Challenger Selection → Dispute Game Victory → Bond Recovery → Withdrawal Rejection
-
-#### 8-Phase Complete Victory Workflow
-
-**Phase 1: System Deployment Verification**
-- Verifies RAT contract is properly deployed and configured
-- Validates integration between RAT, DisputeGameFactory, and OptimismPortal
-- Confirms all system components are operational and ready
-
-**Phase 2: Challenger Qualification Setup**
-- Stakes 5 ETH to RAT contract for challenger qualification
-- Ensures sufficient balance for both game participation and RAT bond requirements
-- Records initial challenger state and validates eligibility
-
-**Phase 3: Shallow Invalid State Root Creation**
-- Creates obviously invalid root claim (`0x01`) for guaranteed output-level resolution
-- Uses TestOutputCannonGame proven success pattern to avoid VM execution issues
-- Starts dispute game at Block 4 with invalid claim, triggering RAT attention mechanism
-
-**Phase 4: RAT Attention Test Activation & Verification**
-- RAT automatically detects invalid root and triggers attention test
-- Confirms RAT selected correct challenger (`require.Equal`)
-- Verifies exact bond amount was deducted from challenger stake
-- Validates 3 core RAT functions: detection, selection, and bond management
-
-**Phase 5: RAT Core Functionality Summary Confirmation**
-- Confirms the 3 core RAT functions completed successfully in Phase 4
-- Summary verification step ensuring attention test mechanism worked correctly
-- No new verification, just confirms previous phase completions
-
-**Phase 6: Challenge Period Management**
-- Advances time through 20-minute challenge period (fast dispute game setting)
-- Uses time travel mechanism to skip wait period for test efficiency
-- Transitions game to resolution-ready state
-
-**Phase 7: Actual Dispute Game Resolution**
-- Resolves dispute game to `CHALLENGER_WINS` status through proper mechanism
-- Shallow invalid root claim automatically loses, challenger wins
-- FaultDisputeGame resolution automatically triggers RAT.ResolveClaim() callback
-
-**Phase 7.5: Withdrawal Rejection Verification**
-- Tests OptimismPortal withdrawal rejection for CHALLENGER_WINS games
-- Verifies that invalid state root based withdrawals are blocked by the system
-- Confirms the core security mechanism: preventing fraudulent withdrawals
-
-**Phase 8: Bond Recovery & System Readiness**
-- Verifies automatic RAT bond restoration through game resolution callback
-- Confirms challenger remains valid for future disputes and system readiness
-- Tests system preparedness for next dispute cycle
-
-#### Key Features
-
-- **Shallow Resolution**: Uses `common.Hash{0x01}` to avoid VM execution complexity
-- **Real Game Resolution**: Proper FaultDisputeGame resolution (not simulation)
-- **Automatic Callbacks**: Game resolution triggers RAT.ResolveClaim() automatically
-- **Security Validation**: Withdrawal rejection from CHALLENGER_WINS games
-
-```bash
-# Run complete victory scenario (5-10 minutes)
-go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E"
-```
-
-## Important Configuration for Challenger Testing
-
-### AllowInvalidPrestate Setting
-
-When testing dispute games with invalid root claims (like in `TestRATDisputeGameVictoryE2E`), the challenger needs to be configured to participate in games even when the prestate doesn't match expected values.
-
-**Default Behavior**:
-- `AllowInvalidPrestate = false`: Challenger refuses to participate if prestate validation fails
-- Game remains stuck with no challenger activity
-
-**Required for RAT Testing**:
-- `AllowInvalidPrestate = true`: Challenger participates despite prestate mismatches
-- Enables testing with intentionally invalid root claims
-
-**In Code** (automatically set in E2E helper):
-```go
-// op-e2e/e2eutils/challenger/helper.go:185
-cfg.AllowInvalidPrestate = true
-```
-
-**For Manual Challenger Setup**:
-```bash
-# Command line flag
---unsafe-allow-invalid-prestate
-```
-
-**For Kurtosis Devnet (simple.yaml)**:
-```yaml
-challengers:
-  challenger:
-    enabled: true
-    image: {{ localDockerImage "op-challenger" }}
-    participants: "*"
-    cannon_prestates_url: {{ localPrestate.URL }}
-    cannon_trace_types: ["cannon"]
-    extra_params: ["--unsafe-allow-invalid-prestate"]
-```
-
-**💡 When to Use**:
-- ✅ **Testing scenarios** with invalid root claims
-- ✅ **Development environments** with mismatched prestates
-- ❌ **Production environments** (security risk)
-
-### Prestate Validation Process
-
-1. **Challenger starts** → `ValidatePrestate()` called
-2. **Validation fails** → Error: "absolute prestate does not match"
-3. **With AllowInvalidPrestate=false** → Challenger exits
-4. **With AllowInvalidPrestate=true** → Warning logged, challenger continues
-
-## Test Output Interpretation
-
-### Successful Test Output Example
-
-```
-=== RUN   TestRATDisputeGameVictoryE2E
-Phase 1: Verifying full system deployment
-Phase 2: Setting up challenger qualification
-Phase 3: Creating shallow invalid state root
-Phase 4: Waiting for RAT to trigger attention test
-Phase 5: RAT core functionality summary confirmation
-Phase 6: Waiting for challenge period to elapse
-Phase 7: Resolving dispute game to CHALLENGER_WINS
-Phase 7.5: Testing withdrawal rejection for invalid state root
-Phase 8: Verifying system is ready for next dispute cycle
-=== RAT-DisputeGame Complete Victory Scenario PASSED ===
---- PASS: TestRATDisputeGameVictoryE2E (XXXs)
-```
-
-### Common Issues and Solutions
-
-**1. Test Timeout**
-- **Symptom**: Test runs for 5+ minutes and times out
-- **Cause**: System startup delays or network issues
-- **Solution**: Retry test, check Docker resources
-
-**2. VM Execution Errors**
-- **Symptom**: "signal: killed" errors during dispute resolution
-- **Cause**: Complex execution trace generation
-- **Solution**: Tests use shallow resolution (`0x01` hash) to avoid this
-
-**3. Prestate Validation Failures**
-- **Symptom**: Challenger exits early with prestate errors
-- **Cause**: `AllowInvalidPrestate` not set
-- **Solution**: Verify E2E helper sets the flag correctly
+- **Optimism development environment** properly set up
+- **Go 1.21+** installed
+- **Docker** available for blockchain deployments
+- Sufficient system resources (memory: 8GB+, disk space: 10GB+)
 
 ## Performance Tips
 
-1. **Docker Resources**: Ensure sufficient CPU/memory for multiple blockchain nodes
-2. **Test Isolation**: Run tests individually for clearer output
-3. **Cache Management**: Use `go clean -testcache` for accurate timing
-4. **Parallel Execution**: Avoid running multiple E2E tests simultaneously
+- **Clear test cache**: Run `go clean -testcache` before testing
+- **Ensure sufficient Docker resources**: Increase Docker memory allocation to 8GB+
+- **Run tests individually**: Avoid running multiple E2E tests simultaneously
+- **Avoid parallel execution**: E2E tests should not run in parallel due to resource conflicts
 
-## Related Documentation
+## Key Configuration
 
-- [RAT Testing Implementation Plan](./rat-testing-implementation-plan.md) - Complete test coverage and progress tracking
-- [Main README](../README.md) - Full development setup guide
-- [Code Implementation](../../op-e2e/faultproofs/rat_e2e_test.go) - Source code
+### AllowInvalidPrestate Setting
+This crucial configuration affects challenger behavior:
+
+- **When `true`**: Allows challenger to participate despite prestate mismatches (recommended for testing)
+- **When `false`**: Challenger exits if prestate validation fails
+
+The RAT E2E tests automatically configure this setting appropriately for each test scenario.
+
+## Complete RAT Test Execution
+
+### Available Test Categories ✅
+
+#### Phase 1: Go Integration Tests (SimulatedBackend) - Run from project root
+```bash
+# Individual integration tests
+go test -v ./op-challenger/game/fault -run "TestRATChallengerIntegration"
+go test -v ./op-challenger/game/fault -run "TestRATMultipleChallengers"
+go test -v ./op-challenger/game/fault -run "TestRATIncorrectEvidenceSubmission"
+
+# All integration tests
+go test -v ./op-challenger/game/fault -run "TestRAT.*"
+# Expected result: 3/3 tests PASS (~10 seconds total)
+```
+
+#### Phase 2: E2E Tests (Full System) - Run from project root
+```bash
+# ⚠️ Note: E2E tests take 5-10 minutes (build complete blockchain system)
+
+# Individual E2E scenario tests
+go test -v ./op-e2e/faultproofs -run "TestRATSuccessScenarioE2E"        # Success scenario
+go test -v ./op-e2e/faultproofs -run "TestRATFailureScenarioE2E"        # Failure scenario
+go test -v ./op-e2e/faultproofs -run "TestRATSimpleE2E"                 # Simple verification
+go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E"     # ✅ Complete success! (~6-10 minutes)
+
+# Unit and mock tests (faster)
+go test -v ./op-e2e/faultproofs -run "TestRATUnitTests"                 # RAT unit tests
+go test -v ./op-e2e/faultproofs -run "TestRATMockWorkflow"              # RAT mock workflow
+
+# Stress testing
+go test -v ./op-e2e/faultproofs -run "TestRATStressTest"                # Stress test
+
+# All E2E tests (run in background, time-consuming)
+go test -v ./op-e2e/faultproofs -run "TestRAT.*"
+```
+
+## Detailed: TestRATDisputeGameVictoryE2E Execution Guide
+
+### Basic Execution (Screen Output Only)
+
+```bash
+cd /optimism
+go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E"
+```
+
+### Recommended Method: Simultaneous Output to Screen and File using tee
+
+```bash
+cd /optimism
+
+# Run with 10-minute timeout and save logs to file
+timeout 600s go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E" -timeout 10m | tee rat_test_log.txt
+```
+
+### Logs with Timestamps
+
+For more detailed log analysis, you can include timestamps:
+
+```bash
+cd /optimism
+
+# Save logs with timestamps
+timeout 1200s go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E" -timeout 20m | \
+  while IFS= read -r line; do echo "$(date '+%Y-%m-%d %H:%M:%S') $line"; done | \
+  tee rat_test_log_with_timestamp.txt
+```
+
+## Timeout Configuration
+
+RAT E2E tests require sufficient time as they simulate complex blockchain environments:
+
+- **Recommended Timeout**: 10 minutes (600 seconds) - for stable test completion
+- **Command**: `timeout 600s` (system level) + `-timeout 10m` (Go test level)
+
+## Test Phase-by-Phase Log Analysis
+
+RAT E2E tests consist of the following phases:
+
+### Phase 1: System Deployment Verification
+- RAT contract deployment and verification
+- Address and code length verification
+
+### Phase 2: Challenger Setup
+- Setting up challenger with sufficient stake
+
+### Phase 3: Invalid State Root Generation
+- Creating shallow invalid state root that ensures output-level resolution
+
+### Phase 4: Waiting for RAT Attention Test Trigger
+- Waiting for RAT's attention mechanism activation
+
+### Phase 5: RAT Attention Mechanism Testing
+- Testing RAT attention mechanism without full challenger execution
+
+### Phase 6: Challenge Period Wait
+- Waiting for challenge period to elapse until game resolution is possible
+
+### Phase 7: Dispute Game Resolution
+- **Active Resolution Required**: Game does not resolve automatically
+- **Resolution Order**:
+  1. `game.ResolveClaim(ctx, 0)` - Resolve root claim first
+  2. `game.Resolve(ctx)` - Resolve entire game
+- Final state: CHALLENGER_WINS
+
+## Log File Locations
+
+### Generated Log Files
+
+1. **Main Test Log**: `rat_test_log.txt` (created with above command)
+2. **Temporary Test Directory**: `/var/folders/.../TestRATDisputeGameVictoryE2E*/`
+   - Separate directory created for each subtest
+   - Contains blockchain state and database files
+   - Binary files, not suitable for text log analysis
+
+### Log File Monitoring
+
+Real-time log monitoring:
+
+```bash
+# Monitor running test logs in real-time
+tail -f rat_test_log.txt
+
+# Filter and view specific phases only
+grep "Phase [0-9]:" rat_test_log.txt
+
+# Check for errors or failure messages
+grep -E "(ERROR|FAIL|failed)" rat_test_log.txt
+
+# Check test completion status
+grep -E "(PASS|FAIL|Complete Victory)" rat_test_log.txt
+
+# View phase progress summary
+grep -E "(Phase [0-9]|Complete Victory|PASS.*TestRATDisputeGameVictoryE2E)" rat_test_log.txt
+
+# Track test phase progress (actual log pattern)
+grep -E "(Phase [0-9]|Complete Victory Scenario)" rat_test_log.txt
+```
+
+## Test Phase Progress Tracking
+
+You can monitor test progress using these actual log patterns from the code:
+
+```bash
+# Expected phase-by-phase progress pattern:
+=== RUN TestRATDisputeGameVictoryE2E
+=== RAT-DisputeGame Complete Victory Scenario E2E ===
+Phase 1: Verifying full system deployment
+Phase 2: Setting up challenger with sufficient stake
+Phase 3: Creating shallow invalid state root to guarantee output-level resolution
+Phase 4: Waiting for RAT to trigger attention test
+Phase 5: Testing RAT attention mechanism without full challenger execution
+Phase 6: Waiting for challenge period to elapse...
+Phase 7: Resolving dispute game to CHALLENGER_WINS...
+Phase 7.5: Testing withdrawal rejection for invalid state root
+Phase 8: Verifying system is ready for next dispute cycle
+=== RAT-DisputeGame Complete Victory Scenario PASSED ===
+
+# Quick phase tracking command:
+grep -E "(Phase [0-9])" rat_test_log.txt
+
+# Check completion status:
+grep "Complete Victory Scenario PASSED" rat_test_log.txt
+```
+
+## Subtest Description
+
+### mt-cannon vs mt-cannon-next
+
+RAT E2E tests run two subtests in parallel:
+
+- **mt-cannon**: Current CANNON fault proof system
+- **mt-cannon-next**: Next-generation CANNON fault proof system
+
+Both systems are verified to ensure RAT functionality works correctly.
 
 ## Troubleshooting
 
-If tests fail consistently:
+### When Timeout Occurs
 
-1. **Check Prerequisites**: Ensure development environment is properly set up
-2. **Verify Docker**: Confirm Docker daemon is running and has sufficient resources
-3. **Clean State**: Run `go clean -testcache` and retry
-4. **Check Logs**: Review test output for specific error messages
-5. **Resource Constraints**: Close other resource-intensive applications
+1. **Increase Timeout Duration**: Extend from 20 to 30 minutes
+   ```bash
+   timeout 1800s go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E" -timeout 30m | tee rat_test_log.txt
+   ```
 
-For implementation details and code-level documentation, see the [RAT Testing Implementation Plan](./rat-testing-implementation-plan.md).
+2. **When Stuck at Specific Phase**: Check the last completed phase in logs
+   ```bash
+   grep "Phase [0-9]:" rat_test_log.txt | tail -5
+   ```
+
+3. **Resource Shortage**: Check and increase Docker memory allocation
+
+### Log Analysis Tips
+
+```bash
+# Check test execution time
+grep -E "=== (RUN|CONT)" rat_test_log.txt
+
+# Extract only success/failure messages
+grep -E "(✅|❌|ERROR|SUCCESS)" rat_test_log.txt
+
+# Analyze time spent per phase (from timestamped logs)
+grep "Phase [0-9]:" rat_test_log_with_timestamp.txt
+```
+
+## Additional Command Options
+
+### Run Specific Subtests Only
+
+```bash
+# Test mt-cannon only
+go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E/mt-cannon$" | tee rat_cannon_log.txt
+
+# Test mt-cannon-next only
+go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E/mt-cannon-next$" | tee rat_cannon_next_log.txt
+```
+
+### Include Detailed Debug Information
+
+```bash
+# Run with Go test detailed information
+go test -v -x ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E" | tee rat_debug_log.txt
+```
+
+This guide enables you to effectively run and monitor RAT E2E tests.
