@@ -375,11 +375,11 @@ game.LogGameData(ctx)
 t.Log("✅ Dispute game resolved with CHALLENGER_WINS status")
 ```
 - **목적**: 게임을 실제로 `CHALLENGER_WINS` 상태로 해결
-- **🔧 수정사항**: **자동 해결되지 않음** - 능동적으로 해결해야 함
-- **해결 순서**:
+- **🔧 핵심 수정사항**: **게임이 자동으로 해결되지 않음** - 반드시 능동적 해결 필요
+- **필수 해결 순서**:
   1. `game.ResolveClaim(ctx, 0)` - Root claim (인덱스 0) 먼저 해결
   2. `game.Resolve(ctx)` - 전체 게임 해결
-- **자동 호출**: FaultDisputeGame 해결과 함께 RAT.ResolveClaim() 자동 호출
+- **자동 연동**: FaultDisputeGame 해결과 함께 RAT.ResolveClaim() 자동 호출되어 bond 복원
 
 **Phase 7.5**: OptimismPortal Withdrawal 거부 검증 (rat_e2e_test.go:652)
 ```go
@@ -394,9 +394,9 @@ if gameStatus == 1 { // CHALLENGER_WINS - only test rejection if game actually s
 - **검증 내용**: `CHALLENGER_WINS` 게임 기반 withdrawal이 OptimismPortal에서 거부되는지 확인
 - **보안 효과**: 잘못된 state root를 사용한 악의적 출금 시도를 차단
 
-**Phase 8**: 자동 RAT Bond 복원 확인 (rat_e2e_test.go:573)
+**Phase 8**: 시스템 준비성 검증 (rat_e2e_test.go:573)
 ```go
-t.Log("Phase 8: Verifying automatic RAT bond restoration effects")
+t.Log("Phase 8: Verifying system is ready for next dispute cycle")
 
 // Record challenger state after automatic resolution
 preResolutionInfo := ratHelper.GetChallengerInfo(ctx, challengerAddr)
@@ -410,8 +410,14 @@ finalChallengerInfo := ratHelper.GetChallengerInfo(ctx, challengerAddr)
 t.Logf("Final challenger state: stake=%s, valid=%t",
     finalChallengerInfo.StakingAmount.String(), finalChallengerInfo.IsValid)
 
-// Phase 8.5: Verify game status = CHALLENGER_WINS (key verification)
-t.Log("Phase 8.5: Verifying dispute game status shows CHALLENGER_WINS")
+// Test readiness by creating another invalid proposal
+nextInvalidRoot := common.Hash{0xca, 0xfe, 0xba, 0xbe}
+nextGame := disputeGameFactory.StartOutputCannonGame(ctx, "sequencer", 4, nextInvalidRoot)
+nextAttentionTest := ratHelper.WaitForAttentionTest(ctx, nextGame.Addr, 15*time.Second)
+if nextAttentionTest != nil {
+    t.Logf("✅ System ready: next RAT triggered for game %s", nextGame.Addr.Hex())
+}
+```
 disputeGameContract, err := bindings.NewFaultDisputeGame(gameAddr, l1Client)
 require.NoError(t, err, "Should create dispute game contract binding")
 
@@ -427,22 +433,9 @@ if gameStatus == 1 { // CHALLENGER_WINS
     testWithdrawalRejection(t, ctx, sys, game.Addr, challengerAddr)
 }
 
-// Final Phase: Verify system readiness for next dispute cycle
-t.Log("Phase 8: Verifying system is ready for next dispute cycle")
-require.True(t, finalChallengerInfo.IsValid,
-    "Victorious challenger should remain in valid challenger pool")
-
-// Test readiness by creating another invalid proposal
-nextInvalidRoot := common.Hash{0xca, 0xfe, 0xba, 0xbe}
-nextGame := disputeGameFactory.StartOutputCannonGame(ctx, "sequencer", 4, nextInvalidRoot)
-nextAttentionTest := ratHelper.WaitForAttentionTest(ctx, nextGame.Addr, 15*time.Second)
-if nextAttentionTest != nil {
-    t.Logf("✅ System ready: next RAT triggered for game %s", nextGame.Addr.Hex())
-}
-```
-- **검증 항목**: 자동 bond 복원, challenger 상태 유지, evidence 처리 상태 확인
-- **보안 검증**: `testWithdrawalRejection()` - CHALLENGER_WINS 게임 거부 검증
-- **시스템 준비**: 다음 dispute에 대한 RAT 재트리거 가능성 확인
+- **검증 항목**: 자동 bond 복원, challenger 상태 유지, 다음 dispute cycle 준비 확인
+- **보안 검증**: Phase 7.5에서 `testWithdrawalRejection()` - CHALLENGER_WINS 게임 기반 withdrawal 거부 확인
+- **시스템 준비**: 추가 invalid proposal 생성으로 RAT 재트리거 가능성 검증
 
 **핵심 검증 포인트 (2024-09-22 완전 성공)** ✅:
 - ✅ **🆕 VM Execution 이슈 해결**: Shallow Resolution 방식으로 "signal: killed" 완전 해결
@@ -997,12 +990,11 @@ go test -v ./op-challenger/game/fault -run "TestRAT.*"
 
 ---
 
-**마지막 업데이트**: 2025-09-19
 **프로젝트 상태**:
 - ✅ Phase 1 (Go 통합 테스트) 100% 완료 (4/4 테스트 PASS)
 - ✅ Phase 2 (E2E 테스트) 100% 완료 (핵심 이슈 해결, 두 시나리오 구현)
 
-## 🎯 최신 업데이트 (2025-09-19) - E2E 완전 해결
+## 🎯 최신 업데이트 - E2E 완전 해결
 
 ### ✅ 완료된 주요 작업 (E2E 완전 해결)
 
@@ -1040,7 +1032,7 @@ go test -v ./op-challenger/game/fault -run "TestRAT.*"
 3. **확장성**: 향후 추가 RAT 기능에 대응할 수 있는 구조
 4. **🆕 완전한 State Root Correction**: OptimismPortal withdrawal 거부 메커니즘 검증 완료
 
-### 📊 최신 테스트 결과 요약 (2024-09-22) 🎉
+### 📊 최신 테스트 결과 요약   🎉
 
 #### ✅ Phase 1: SimulatedBackend 테스트 (3/3 PASS)
 ```
