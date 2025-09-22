@@ -559,7 +559,15 @@ func testRATDisputeGameVictoryE2E(t *testing.T, allocType config.AllocType) {
 	t.Log("Phase 7: Resolving dispute game to CHALLENGER_WINS...")
 
 	// The game should resolve as CHALLENGER_WINS because the invalid root claim (0x01) cannot be defended
-	// This will automatically trigger RAT.ResolveClaim() as part of the game resolution process
+	// We need to actively resolve the game, it doesn't happen automatically
+	// First resolve the root claim (index 0), then resolve the entire game
+	t.Log("Resolving root claim first...")
+	game.ResolveClaim(ctx, 0)
+
+	t.Log("Actively resolving dispute game...")
+	game.Resolve(ctx)
+
+	// Wait for the game to reach CHALLENGER_WINS status
 	game.WaitForGameStatus(ctx, types.GameStatusChallengerWon)
 	game.LogGameData(ctx)
 
