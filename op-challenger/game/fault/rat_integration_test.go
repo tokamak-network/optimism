@@ -342,6 +342,12 @@ func TestRatTriggerProbability(t *testing.T) {
 	err = env.SetRatTriggerProbability(big.NewInt(100000)) // 100%
 	require.NoError(t, err)
 
+	// Re-stake to ensure sufficient balance for 100% test
+	additionalStake := new(big.Int)
+	additionalStake.SetString("5000000000000000000", 10) // 5 ETH
+	err = env.StakeToRAT(additionalStake)
+	require.NoError(t, err)
+
 	// Test a few games with 100% probability
 	allTriggeredCount := 0
 	testGames := 5
