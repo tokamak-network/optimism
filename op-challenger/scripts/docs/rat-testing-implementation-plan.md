@@ -227,7 +227,7 @@ optimism/
 - `TestRATSimpleE2E()` ✅ RAT 배포 및 기본 기능 검증
 
 ##### C. 완전한 Dispute Game 승리 시나리오 (`rat_e2e_test.go`)
-- `TestRATDisputeGameVictoryE2E()` ✅ **완전 성공 (2024-09-22)**: Shallow Resolution 방식으로 VM execution 이슈 해결
+- `TestRATDisputeGameVictoryE2E()` ✅ **완전 성공**: Shallow Resolution 방식으로 VM execution 이슈 해결
 
 ##### D. 단위 테스트 (`rat_unit_test.go`)
 - `TestRATUnitBasicFunctionality()` ✅ RAT 단독 기능 테스트
@@ -437,7 +437,7 @@ if gameStatus == 1 { // CHALLENGER_WINS
 - **보안 검증**: Phase 7.5에서 `testWithdrawalRejection()` - CHALLENGER_WINS 게임 기반 withdrawal 거부 확인
 - **시스템 준비**: 추가 invalid proposal 생성으로 RAT 재트리거 가능성 검증
 
-**핵심 검증 포인트 (2024-09-22 완전 성공)** ✅:
+**핵심 검증 포인트** ✅:
 - ✅ **🆕 VM Execution 이슈 해결**: Shallow Resolution 방식으로 "signal: killed" 완전 해결
 - ✅ **🆕 Shallow Resolution**: `common.Hash{0x01}` + block 4로 output root level에서만 해결
   - **원리**: 아주 명백하게 틀린 root claim을 사용하여 Optimism Fault Proof의 첫 번째 단계(Output Root Level)에서 바로 판정이 나도록 함
@@ -874,7 +874,7 @@ go test -v ./op-challenger/game/fault -run "TestRAT.*"
 
 ## 🐛 이슈 및 해결책
 
-### 🆕 최신 발견된 이슈 (2024-09-22)
+### 🆕 최신 발견된 이슈
 
 1. ❌ **Phase 7에서 dispute game이 자동으로 해결되지 않음**
    - **문제**: 문서에서 "자동으로 해결된다"고 했지만 실제로는 무한정 대기
@@ -901,17 +901,17 @@ go test -v ./op-challenger/game/fault -run "TestRAT.*"
    - **해결 방안**: 각 테스트 개별 실행 및 결과 확인
 
 ### 해결된 이슈
-1. ✅ **🆕 VM Execution 완전 해결 (2024-09-22)**
+1. ✅ **🆕 VM Execution 완전 해결**
    - **문제**: "signal: killed" 에러로 dispute game 테스트 실패, 무한 루프, VM execution timeout
    - **해결**: Shallow Resolution 방식 구현 - output root level에서만 해결하여 VM execution 회피
    - **기술적 해결책**: `common.Hash{0x01}` + block 4 패턴으로 TestOutputCannonGame 성공 패턴 적용
 
-2. ✅ **🆕 실제 Game Resolution 구현 (2024-09-22)**
+2. ✅ **🆕 실제 Game Resolution 구현**
    - **문제**: 이전에는 시뮬레이션으로 RAT.ResolveClaim() 수동 호출, 게임 상태가 IN_PROGRESS로 남아있음
    - **해결**: Challenge Period 대기 → 실제 FaultDisputeGame resolution → 자동 RAT 호출
    - **기술적 구현**: `sys.TimeTravelClock.AdvanceTime()` + `game.WaitForGameStatus(CHALLENGER_WINS)`
 
-3. ✅ **🆕 테스트 안정성 확보 (2024-09-22)**
+3. ✅ **🆕 테스트 안정성 확보**
    - **문제**: 테스트 실행 시 불안정한 결과, 간헐적 실패
    - **해결**: 9단계 워크플로우 모두 안정적으로 실행, 반복 테스트 시에도 일관된 성공
 
@@ -1068,7 +1068,7 @@ Phase 8: ✅ 시스템 다음 dispute 준비 상태 확인
 
 **🎯 완전 성공**: 모든 RAT 핵심 기능이 VM execution 이슈 없이 정상 동작 확인!
 
-### 🔧 최신 버그 수정 (2024-09-22)
+### 🔧 최신 버그 수정
 - ✅ `l1Client` 변수 재정의 오류 수정
 - ✅ `[32]byte` → `common.Hash` 타입 변환 수정
 - ✅ `GameAtIndex` 반환값 구조체 처리 수정
