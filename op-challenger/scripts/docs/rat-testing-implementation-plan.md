@@ -264,7 +264,7 @@ optimism/
    - 선택된 챌린저 주소 검증
 5. **Phase 5**: 챌린저가 dispute game에 참여 (시뮬레이션)
    - 실제 환경에서는: bisection, execution proof, fault proof 과정
-   - 테스트에서는: correct evidence 제출로 승리 시뮬레이션
+   - **테스트에서는**: 실제 dispute game 참여 없이 주석으로만 설명하고 바로 Phase 6으로 진행
 6. **Phase 6**: 챌린저 dispute game 승리 시뮬레이션
    - **실제로는**: `SubmitEvidence` 호출 없이 바로 `resolveClaim` 호출
    - **시뮬레이션**: FaultDisputeGame에서 챌린저가 승리했다고 가정
