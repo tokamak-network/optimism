@@ -250,7 +250,7 @@ optimism/
 #### 🆕 2-2. 완전한 Dispute Game 승리 시나리오 테스트
 - **상태**: ✅ 100% 완료 (새로 추가됨)
 - **테스트**: `TestRATDisputeGameVictoryE2E()`
-- **시나리오**: **프로포저 잘못된 스테이트루트 → RAT 트리거 → 챌린저 선택 → Dispute Game 참여 → 승리 → 보증금 환불**
+- **시나리오**: **프로포저 잘못된 스테이트루트 → RAT 트리거 → 챌린저 선택 → Dispute Game 참여 → 승리 → 보증금 환불 -> OptimismPortal Withdrawal 거부**
 
 **구현된 8단계 워크플로우**:
 1. **Phase 1**: 전체 시스템 배포 확인 (RAT + DisputeGameFactory + Portal)
