@@ -28,16 +28,16 @@ type RATTestEnvironment struct {
 	RatManager         common.Address
 
 	// Test accounts (exported for test access)
-	Deployer         *TestAccount
-	FactoryAccount   *TestAccount
-	ManagerAccount   *TestAccount
+	Deployer          *TestAccount
+	FactoryAccount    *TestAccount
+	ManagerAccount    *TestAccount
 	ChallengerAccount *TestAccount
 
 	// Test configuration
-	perTestBondAmount      *big.Int
+	perTestBondAmount        *big.Int
 	evidenceSubmissionPeriod *big.Int
-	minimumStakingBalance  *big.Int
-	ratTriggerProbability  *big.Int
+	minimumStakingBalance    *big.Int
+	ratTriggerProbability    *big.Int
 
 	// Game creation counter
 	gameCounter uint64
@@ -52,11 +52,11 @@ type TestAccount struct {
 
 // RATTestConfig holds configuration for RAT test environment
 type RATTestConfig struct {
-	PerTestBondAmount       *big.Int
+	PerTestBondAmount        *big.Int
 	EvidenceSubmissionPeriod *big.Int
-	MinimumStakingBalance   *big.Int
-	RatTriggerProbability   *big.Int
-	InitialBalance          *big.Int
+	MinimumStakingBalance    *big.Int
+	RatTriggerProbability    *big.Int
+	InitialBalance           *big.Int
 }
 
 // DefaultRATTestConfig returns default configuration for RAT tests
@@ -71,11 +71,11 @@ func DefaultRATTestConfig() *RATTestConfig {
 	twoEth.SetString("2000000000000000000", 10) // 2 ETH in wei
 
 	return &RATTestConfig{
-		PerTestBondAmount:       oneEth,
-		EvidenceSubmissionPeriod: big.NewInt(100),   // 100 blocks
-		MinimumStakingBalance:   twoEth,
-		RatTriggerProbability:   big.NewInt(100000), // 100% for testing
-		InitialBalance:          tenEth,
+		PerTestBondAmount:        oneEth,
+		EvidenceSubmissionPeriod: big.NewInt(100), // 100 blocks
+		MinimumStakingBalance:    twoEth,
+		RatTriggerProbability:    big.NewInt(100000), // 100% for testing
+		InitialBalance:           tenEth,
 	}
 }
 
@@ -94,27 +94,27 @@ func SetupRATTestEnvironmentWithConfig(t *testing.T, config *RATTestConfig) *RAT
 
 	// Create simulated backend
 	alloc := core.GenesisAlloc{
-		deployer.Address:        {Balance: config.InitialBalance},
-		factoryAccount.Address:  {Balance: config.InitialBalance},
-		managerAccount.Address:  {Balance: config.InitialBalance},
+		deployer.Address:          {Balance: config.InitialBalance},
+		factoryAccount.Address:    {Balance: config.InitialBalance},
+		managerAccount.Address:    {Balance: config.InitialBalance},
 		challengerAccount.Address: {Balance: config.InitialBalance},
 	}
 
 	backend := backends.NewSimulatedBackend(alloc, 15000000) // 15M gas limit
 
 	env := &RATTestEnvironment{
-		T:                      t,
-		Backend:               backend,
-		Deployer:             deployer,
-		FactoryAccount:       factoryAccount,
-		ManagerAccount:       managerAccount,
-		ChallengerAccount:    challengerAccount,
-		DisputeGameFactory:   factoryAccount.Address, // Mock DGF with factory account
-		RatManager:           managerAccount.Address,
-		perTestBondAmount:    config.PerTestBondAmount,
+		T:                        t,
+		Backend:                  backend,
+		Deployer:                 deployer,
+		FactoryAccount:           factoryAccount,
+		ManagerAccount:           managerAccount,
+		ChallengerAccount:        challengerAccount,
+		DisputeGameFactory:       factoryAccount.Address, // Mock DGF with factory account
+		RatManager:               managerAccount.Address,
+		perTestBondAmount:        config.PerTestBondAmount,
 		evidenceSubmissionPeriod: config.EvidenceSubmissionPeriod,
-		minimumStakingBalance: config.MinimumStakingBalance,
-		ratTriggerProbability: config.RatTriggerProbability,
+		minimumStakingBalance:    config.MinimumStakingBalance,
+		ratTriggerProbability:    config.RatTriggerProbability,
 	}
 
 	// Deploy RAT contract
@@ -141,13 +141,8 @@ func createTestAccount(t *testing.T) *TestAccount {
 
 // deployRAT deploys the RAT contract using proper Proxy pattern (like the Solidity tests)
 func (env *RATTestEnvironment) deployRAT() {
-	// 1. Deploy RAT implementation (constructor only, no initialization)
-	// Note: DeployRATContract function doesn't exist in new bindings
-	// For now, we'll use a dummy address - this needs proper contract deployment implementation
-	ratImplAddress := common.HexToAddress("0x1234567890123456789012345678901234567890")
-	tx1 := &types.Transaction{}
-	_ = tx1 // suppress unused variable warning
-	err := error(nil)
+	// 1. Deploy RAT implementation using bytecode
+	ratImplAddress, tx1, err := contracts.DeployRATContract(env.Deployer.Auth, env.Backend)
 	require.NoError(env.T, err)
 
 	env.Backend.Commit()
@@ -336,11 +331,11 @@ func (env *RATTestEnvironment) GetChallengerInfo(challengerAddr common.Address) 
 
 // GetAttentionTestInfo retrieves attention test information
 func (env *RATTestEnvironment) GetAttentionTestInfo(gameAddr common.Address) (struct {
-	StateRoot           [32]byte
-	BondAmount          *big.Int
-	ChallengerAddress   common.Address
-	L1BlockNumber       uint64
-	EvidenceSubmitted   bool
+	StateRoot         [32]byte
+	BondAmount        *big.Int
+	ChallengerAddress common.Address
+	L1BlockNumber     uint64
+	EvidenceSubmitted bool
 }, error) {
 	return env.RATContract.AttentionTests(&bind.CallOpts{}, gameAddr)
 }
