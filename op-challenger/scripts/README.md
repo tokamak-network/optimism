@@ -2,20 +2,17 @@
 
 ## Overview
 
-This guide helps you set up a local Optimism devnet environment for challenger testing and development. The setup includes:
+This guide helps you set up a local Optimism devnet environment for challenger testing and development. The complete workflow includes:
 
 - **Local L1/L2 blockchain networks** with fast 20-minute dispute games
 - **OP-Challenger service** for testing dispute game resolution
+- **RAT (Randomized Attention Test)** comprehensive testing framework
 - **Automated verification tools** for post-deployment testing
 - **Complete toolchain** for contract development and testing
+- **Continuous monitoring** for devnet management
 
-**🎯 Quick Start**: Follow Steps 1-5 to deploy a fully functional devnet (initial setup: ~30-40 minutes, subsequent deployments: ~15-20 minutes).
 
-**📚 Key Documentation**:
-- [Fast Dispute Game Setup](./docs/fast-dispute-game-setup.md) - 20-minute game configuration
-- [Post-Deployment Verification](./docs/post-deployment-verification-guide-en.md) - Automated testing
-- [Devnet Management](./docs/devnet-management.md) - Operations and monitoring
-- [Proposer State Root Challenge Tests](./docs/proposer-state-root-challenge-tests.md) - Test scenarios for dishonest proposer detection
+**🔄 Development Workflow**: Install → Configure → Compile → Test → Deploy → Verify → Monitor
 
 ---
 
@@ -102,6 +99,58 @@ vi simple.yaml  # or your preferred editor
 | **0** | CANNON | Complete fault proof | ✅ **recommended** |
 | **1** | PERMISSIONED | Fast development/testing | ✅ working |
 | **2** | ASTERISC | Asterisc VM | ⚠️ needs testing |
+
+## Step 3.5: 🧪 RAT Testing (Optional)
+
+**🔄 Development Workflow**: After compiling contracts, test them before deploying to devnet.
+
+### Overview
+
+RAT (Randomized Attention Test) provides comprehensive testing for dispute game mechanisms and state root correction. Run these tests to verify your contract changes before devnet deployment.
+
+### Quick Test Commands
+
+#### 🔧 Test Cache Management
+
+Go caches test results when code hasn't changed. To see actual execution time instead of `(cached)`:
+
+```bash
+# Clear test cache before running tests
+go clean -testcache
+```
+
+#### Phase 1: Unit Tests (SimulatedBackend)
+
+```bash
+# Clear cache first
+go clean -testcache
+```
+
+#### Phase 2: E2E Tests (Full System)
+
+**⚠️ Note**: E2E tests take 5-10 minutes each (full blockchain deployment)
+
+```bash
+# From project root
+go clean -testcache
+
+# Individual test scenarios
+go test -v ./op-e2e/faultproofs -run "TestRATSuccessScenarioE2E"        # Success scenario
+go test -v ./op-e2e/faultproofs -run "TestRATFailureScenarioE2E"        # Failure scenario
+go test -v ./op-e2e/faultproofs -run "TestRATSimpleE2E"                 # Simple verification
+go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E"     # 🆕 Complete victory scenario (with withdrawal rejection)
+go test -v ./op-e2e/faultproofs -run "TestRATUnitTests"                 # RAT unit tests (fast)
+go test -v ./op-e2e/faultproofs -run "TestRATMockWorkflow"              # RAT mock workflow test (fast)
+
+# All E2E tests
+go test -v ./op-e2e/faultproofs -run "TestRAT.*"
+```
+
+### Test Documentation
+
+**📋 Implementation Status**: [RAT Testing Implementation Plan](./docs/rat-testing-implementation-plan.md) - Complete test coverage and progress tracking
+
+---
 
 ## Step 4: Build Devnet Environment
 
@@ -212,62 +261,38 @@ L2 RPC: http://localhost:56781
 Rollup RPC: http://localhost:57029
 ```
 
-## Log Monitoring
+## Step 6: Monitoring and Management
 
-### L1 (Ethereum)
+### Real-time Log Monitoring
+
+#### L1 (Ethereum)
 - **EL**: `kurtosis service logs simple-devnet el-1-geth-teku`
 - **CL**: `kurtosis service logs simple-devnet cl-1-teku-geth`
 
-### L2 (OP Stack)
+#### L2 (OP Stack)
 - **EL**: `kurtosis service logs simple-devnet op-el-2151908-node0-op-geth`
 - **CL**: `kurtosis service logs simple-devnet op-cl-2151908-node0-op-node`
 - **Batcher**: `kurtosis service logs simple-devnet op-batcher-2151908-op-kurtosis`
 - **Proposer**: `kurtosis service logs simple-devnet op-proposer-2151908-op-kurtosis`
 
-### Other Services
+#### Other Services
 - **Challenger**: `kurtosis service logs simple-devnet op-challenger-challenger-2151908`
 - **Faucet**: `kurtosis service logs simple-devnet op-faucet`
 
-## Post-Deployment Verification
+### Comprehensive Management
 
-After deploying your devnet (using either `build-devnet.sh` or manual deployment), use the comprehensive automated verification process:
+**📖 [Devnet Management Guide](./docs/devnet-management.md)** - Complete operations and monitoring guide
 
-**🚀 Complete Verification**: [Post-Deployment Verification Guide](./docs/post-deployment-verification-guide-en.md)
+**What the management guide includes:**
+- ✅ Service status monitoring and health checks
+- ✅ Real-time log monitoring for all services (L1, L2, Challenger, etc.)
+- ✅ Standard and deep cleanup procedures
+- ✅ Advanced log filtering and analysis
+- ✅ Resource monitoring and metrics access
+- ✅ Quick reference commands for daily operations
 
-**Quick automated commands:**
-```bash
-cd /optimism/op-challenger/scripts
+**📊 [Deployment Log Monitoring](./docs/monitoring-deployment-logs.md)** - Detailed guide for monitoring deployment progress
 
-# Verify all contract configurations
-./verify-contract-settings.sh
-
-# Check all dispute games status
-./check-all-games.sh
-
-# Auto-resolve specific dispute game
-./auto-resolve-game.sh [GAME_ADDRESS]
-```
-
-The verification guide includes:
-- ✅ Service status verification
-- ✅ Contract configuration verification
-- ✅ Account funding verification
-- ✅ Dispute game creation and resolution testing
-- ✅ Complete end-to-end workflow validation
-
-### RAT Contract Verification
-
-If you deployed with RAT enabled (included in `simple.yaml`), verify RAT deployment:
-
-```bash
-# Check RAT deployment logs
-kurtosis enclave logs simple-devnet | grep -i rat
-
-# Verify RAT contract initialization
-cast call <RAT_PROXY_ADDRESS> "version()" --rpc-url http://localhost:53620
-cast call <RAT_PROXY_ADDRESS> "perTestBondAmount()" --rpc-url http://localhost:53620
-cast call <RAT_PROXY_ADDRESS> "manager()" --rpc-url http://localhost:53620
-```
 
 # 🛠️ System Tools Auto Installation
 
@@ -302,6 +327,15 @@ For comprehensive devnet management operations including monitoring, cleanup, an
 
 **📊 [Deployment Log Monitoring](./docs/monitoring-deployment-logs.md)** - Detailed guide for monitoring deployment progress
 
+# 📚 Key Documentation
+
+**📖 Essential Guides**:
+- [Fast Dispute Game Setup](./docs/fast-dispute-game-setup.md) - 20-minute game configuration
+- [Post-Deployment Verification](./docs/post-deployment-verification-guide-en.md) - Automated testing
+- [Devnet Management](./docs/devnet-management.md) - Operations and monitoring
+- [Proposer State Root Challenge Tests](./docs/proposer-state-root-challenge-tests.md) - Test scenarios for dishonest proposer detection
+- [State Root Correction Mechanism](./docs/state-root-correction-mechanism.md) - How invalid state roots are detected and corrected
+
 # 🔧 Troubleshooting
 
 For common deployment issues and solutions, see the comprehensive troubleshooting guide:
@@ -316,6 +350,7 @@ For common deployment issues and solutions, see the comprehensive troubleshootin
 - ✅ Kurtosis engine connection issues
 - ✅ Complete environment reset procedures
 
+
 ## 📖 Additional Documentation
 
 For comprehensive understanding of the fault proof system and testing:
@@ -326,5 +361,12 @@ For comprehensive understanding of the fault proof system and testing:
   - Go E2E tests for integration-level validation
   - Test patterns for creating dishonest state roots
   - Game resolution verification methods
+
+**🔒 Security & Mechanisms**:
+- [State Root Correction Mechanism](./docs/state-root-correction-mechanism.md) - Comprehensive guide to how Optimism's fault proof system detects and corrects invalid state roots
+  - Complete workflow from invalid proposal to correction
+  - RAT (Randomized Attention Test) integration
+  - OptimismPortal withdrawal validation
+  - Game status verification and bond mechanisms
 
 **🎉 Happy Challenging!**
