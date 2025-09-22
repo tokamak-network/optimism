@@ -98,42 +98,71 @@ timeout 1200s go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E
   tee rat_test_log_with_timestamp.txt
 ```
 
+
+### Test Phase-by-Phase Log Analysis
+
+RAT E2E tests consist of the following phases:
+
+#### Phase 1: System Deployment Verification
+- RAT contract deployment and verification
+- Address and code length verification
+
+#### Phase 2: Challenger Setup
+- Setting up challenger with sufficient stake
+
+#### Phase 3: Invalid State Root Generation
+- Creating shallow invalid state root that ensures output-level resolution
+
+#### Phase 4: Waiting for RAT Attention Test Trigger
+- Waiting for RAT's attention mechanism activation
+
+#### Phase 5: RAT Attention Mechanism Testing
+- Testing RAT attention mechanism without full challenger execution
+
+#### Phase 6: Challenge Period Wait
+- Waiting for challenge period to elapse until game resolution is possible
+
+#### Phase 7: Dispute Game Resolution
+- **Active Resolution Required**: Game does not resolve automatically
+- **Resolution Order**:
+  1. `game.ResolveClaim(ctx, 0)` - Resolve root claim first
+  2. `game.Resolve(ctx)` - Resolve entire game
+- Final state: CHALLENGER_WINS
+
+
+### Test Phase Progress Tracking
+
+You can monitor test progress using these actual log patterns from the code:
+
+```bash
+# Expected phase-by-phase progress pattern:
+=== RUN TestRATDisputeGameVictoryE2E
+=== RAT-DisputeGame Complete Victory Scenario E2E ===
+Phase 1: Verifying full system deployment
+Phase 2: Setting up challenger with sufficient stake
+Phase 3: Creating shallow invalid state root to guarantee output-level resolution
+Phase 4: Waiting for RAT to trigger attention test
+Phase 5: Testing RAT attention mechanism without full challenger execution
+Phase 6: Waiting for challenge period to elapse...
+Phase 7: Resolving dispute game to CHALLENGER_WINS...
+Phase 7.5: Testing withdrawal rejection for invalid state root
+Phase 8: Verifying system is ready for next dispute cycle
+=== RAT-DisputeGame Complete Victory Scenario PASSED ===
+
+# Quick phase tracking command:
+grep -E "(Phase [0-9])" rat_test_log.txt
+
+# Check completion status:
+grep "Complete Victory Scenario PASSED" rat_test_log.txt
+```
+
+
 ## Timeout Configuration
 
 RAT E2E tests require sufficient time as they simulate complex blockchain environments:
 
 - **Recommended Timeout**: 10 minutes (600 seconds) - for stable test completion
 - **Command**: `timeout 600s` (system level) + `-timeout 10m` (Go test level)
-
-## Test Phase-by-Phase Log Analysis
-
-RAT E2E tests consist of the following phases:
-
-### Phase 1: System Deployment Verification
-- RAT contract deployment and verification
-- Address and code length verification
-
-### Phase 2: Challenger Setup
-- Setting up challenger with sufficient stake
-
-### Phase 3: Invalid State Root Generation
-- Creating shallow invalid state root that ensures output-level resolution
-
-### Phase 4: Waiting for RAT Attention Test Trigger
-- Waiting for RAT's attention mechanism activation
-
-### Phase 5: RAT Attention Mechanism Testing
-- Testing RAT attention mechanism without full challenger execution
-
-### Phase 6: Challenge Period Wait
-- Waiting for challenge period to elapse until game resolution is possible
-
-### Phase 7: Dispute Game Resolution
-- **Active Resolution Required**: Game does not resolve automatically
-- **Resolution Order**:
-  1. `game.ResolveClaim(ctx, 0)` - Resolve root claim first
-  2. `game.Resolve(ctx)` - Resolve entire game
-- Final state: CHALLENGER_WINS
 
 ## Log File Locations
 
@@ -167,32 +196,6 @@ grep -E "(Phase [0-9]|Complete Victory|PASS.*TestRATDisputeGameVictoryE2E)" rat_
 
 # Track test phase progress (actual log pattern)
 grep -E "(Phase [0-9]|Complete Victory Scenario)" rat_test_log.txt
-```
-
-## Test Phase Progress Tracking
-
-You can monitor test progress using these actual log patterns from the code:
-
-```bash
-# Expected phase-by-phase progress pattern:
-=== RUN TestRATDisputeGameVictoryE2E
-=== RAT-DisputeGame Complete Victory Scenario E2E ===
-Phase 1: Verifying full system deployment
-Phase 2: Setting up challenger with sufficient stake
-Phase 3: Creating shallow invalid state root to guarantee output-level resolution
-Phase 4: Waiting for RAT to trigger attention test
-Phase 5: Testing RAT attention mechanism without full challenger execution
-Phase 6: Waiting for challenge period to elapse...
-Phase 7: Resolving dispute game to CHALLENGER_WINS...
-Phase 7.5: Testing withdrawal rejection for invalid state root
-Phase 8: Verifying system is ready for next dispute cycle
-=== RAT-DisputeGame Complete Victory Scenario PASSED ===
-
-# Quick phase tracking command:
-grep -E "(Phase [0-9])" rat_test_log.txt
-
-# Check completion status:
-grep "Complete Victory Scenario PASSED" rat_test_log.txt
 ```
 
 ## Subtest Description
