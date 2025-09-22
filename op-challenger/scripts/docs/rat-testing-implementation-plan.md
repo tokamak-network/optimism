@@ -360,14 +360,25 @@ t.Log("✅ Challenge period elapsed - game can now be resolved")
 t.Log("Phase 7: Resolving dispute game to CHALLENGER_WINS...")
 
 // The game should resolve as CHALLENGER_WINS because the invalid root claim (0x01) cannot be defended
-// This will automatically trigger RAT.ResolveClaim() as part of the game resolution process
+// We need to actively resolve the game, it doesn't happen automatically
+// First resolve the root claim (index 0), then resolve the entire game
+t.Log("Resolving root claim first...")
+game.ResolveClaim(ctx, 0)
+
+t.Log("Actively resolving dispute game...")
+game.Resolve(ctx)
+
+// Wait for the game to reach CHALLENGER_WINS status
 game.WaitForGameStatus(ctx, types.GameStatusChallengerWon)
 game.LogGameData(ctx)
 
 t.Log("✅ Dispute game resolved with CHALLENGER_WINS status")
 ```
 - **목적**: 게임을 실제로 `CHALLENGER_WINS` 상태로 해결
-- **효과**: Shallow invalid root claim이 자동으로 패배하여 challenger 승리
+- **🔧 수정사항**: **자동 해결되지 않음** - 능동적으로 해결해야 함
+- **해결 순서**:
+  1. `game.ResolveClaim(ctx, 0)` - Root claim (인덱스 0) 먼저 해결
+  2. `game.Resolve(ctx)` - 전체 게임 해결
 - **자동 호출**: FaultDisputeGame 해결과 함께 RAT.ResolveClaim() 자동 호출
 
 **Phase 7.5**: OptimismPortal Withdrawal 거부 검증 (rat_e2e_test.go:652)
@@ -869,6 +880,26 @@ go test -v ./op-challenger/game/fault -run "TestRAT.*"
    - [ ] 가스 사용량이 합리적 범위 내 확인 (향후 개선)
 
 ## 🐛 이슈 및 해결책
+
+### 🆕 최신 발견된 이슈 (2024-09-22)
+
+1. ❌ **Phase 7에서 dispute game이 자동으로 해결되지 않음**
+   - **문제**: 문서에서 "자동으로 해결된다"고 했지만 실제로는 무한정 대기
+   - **원인**: `game.WaitForGameStatus()`만 호출하고 실제 resolution 트랜잭션이 없음
+   - **해결**: `game.ResolveClaim(ctx, 0)` + `game.Resolve(ctx)` 추가
+   - **교훈**: **Dispute game은 자동으로 해결되지 않으며 능동적 해결이 필요함**
+
+2. ❌ **타임아웃 설정 부족**
+   - **문제**: 5분 타임아웃으로는 테스트 완료 불가능
+   - **원인**: Phase 7에서 실제 dispute game resolution이 시간 소요
+   - **해결**: 20분 타임아웃으로 증가 (1200초)
+   - **교훈**: **Fast dispute game도 실제 해결에는 충분한 시간 필요**
+
+3. ❌ **문서와 실제 구현 불일치**
+   - **문제**: 문서에서 "자동 해결"이라고 했지만 코드에는 해결 로직 없음
+   - **원인**: 문서 작성 시 가정과 실제 구현의 차이
+   - **해결**: 문서 업데이트 및 코드 보완
+   - **교훈**: **문서와 코드의 일관성 유지 중요**
 
 ### 발견된 이슈
 1. ⚠️ **Phase 1 테스트 실행 상태 미확인**
