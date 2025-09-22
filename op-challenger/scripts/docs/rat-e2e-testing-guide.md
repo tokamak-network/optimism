@@ -129,6 +129,14 @@ RAT E2E tests consist of the following phases:
   2. `game.Resolve(ctx)` - Resolve entire game
 - Final state: CHALLENGER_WINS
 
+#### Phase 7.5: OptimismPortal Withdrawal Rejection Testing
+- Testing withdrawal rejection for invalid state root
+- Verifies RAT security mechanism prevents malicious withdrawals
+
+#### Phase 8: System Readiness Verification
+- Verifying system is ready for next dispute cycle
+- Testing additional invalid proposal creation to confirm RAT re-trigger capability
+
 
 ### Test Phase Progress Tracking
 
