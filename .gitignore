@@ -89,3 +89,20 @@ rat_abi.json
 DeployOPChain.s.sol/
 bin/
 tmp/
+
+# Kurtosis devnet artifacts and generated files
+contract-artifacts/
+faultproofs.test
+kurtosis-devnet/.l1-artifacts-path
+kurtosis-devnet/.l2-artifacts-path
+kurtosis-devnet/l1-artifacts-minimal/
+kurtosis-devnet/l1-artifacts/
+kurtosis-devnet/l2-artifacts/
+kurtosis-devnet/simple-processed.yaml
+kurtosis-devnet/temp-kurtosis-artifacts/
+kurtosis-engine-logs--*/
+simple-devnet--*/
+
+# Script backup files
+op-challenger/scripts/README-v1.md.backup
+op-challenger/scripts/build-devnet copy.sh
