@@ -855,10 +855,10 @@ type FaultProofDeployConfig struct {
 
 	// RAT (Risk Assessment Tool) configuration
 	DeployRAT                bool           `json:"deployRAT"`
-	PerTestBondAmount        *hexutil.Big   `json:"perTestBondAmount"`
+	PerTestBondAmount        *big.Int       `json:"perTestBondAmount"`
 	EvidenceSubmissionPeriod uint64         `json:"evidenceSubmissionPeriod"`
-	MinimumStakingBalance    *hexutil.Big   `json:"minimumStakingBalance"`
-	RatTriggerProbability    *hexutil.Big   `json:"ratTriggerProbability"`
+	MinimumStakingBalance    *big.Int       `json:"minimumStakingBalance"`
+	RatTriggerProbability    *big.Int       `json:"ratTriggerProbability"`
 	RatManager               common.Address `json:"ratManager"`
 }
 

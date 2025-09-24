@@ -46,6 +46,7 @@ show_help() {
     echo "OPTIONS:"
     echo "  --game-type=TYPE    Set game type (0=CANNON, 1=PERMISSIONED, 2=ASTERISC)"
     echo "                      Default: 1 (PERMISSIONED)"
+    echo "  --verbose, -v       Show deployment logs in real-time"
     echo "  -h, --help          Show this help message"
     echo
     echo "EXAMPLES:"
@@ -95,7 +96,7 @@ KURTOSIS_DEVNET_DIR="$OPTIMISM_ROOT/kurtosis-devnet"
 # 경로 디버깅 (개발용)
 if [ "${DEBUG_PATHS:-}" = "1" ]; then
     echo "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
-    echo "DEBUG: OPTIMISM_ROOT=$OPTIMISM_ROOT"  
+    echo "DEBUG: OPTIMISM_ROOT=$OPTIMISM_ROOT"
     echo "DEBUG: KURTOSIS_DEVNET_DIR=$KURTOSIS_DEVNET_DIR"
 fi
 
@@ -139,6 +140,14 @@ init() {
         log_info "Cleaning up existing enclave: $ENCLAVE_NAME"
         kurtosis enclave rm --force "$ENCLAVE_NAME" > /dev/null 2>&1 || true
         sleep 2
+    fi
+
+    # Clean up orphaned Docker network (if exists)
+    NETWORK_NAME="kt-$ENCLAVE_NAME"
+    if docker network ls --format "table {{.Name}}" | grep -q "^$NETWORK_NAME$"; then
+        log_info "Cleaning up orphaned Docker network: $NETWORK_NAME"
+        docker network rm "$NETWORK_NAME" > /dev/null 2>&1 || true
+        sleep 1
     fi
 
     # Initialize build log
@@ -207,7 +216,7 @@ build_docker_images() {
 
     # Move to kurtosis-devnet directory (where just recipes are)
     cd "$KURTOSIS_DEVNET_DIR"
-    
+
     # Verify we're in the correct directory
     if [ ! -f "justfile" ]; then
         log_error "justfile not found in $KURTOSIS_DEVNET_DIR"
@@ -360,7 +369,32 @@ deploy_devnet() {
             fi
         fi
 
-        timeout 600 kurtosis run "$KURTOSIS_DEVNET_DIR/optimism-package-trampoline" --args-file "$KURTOSIS_DEVNET_DIR/simple.yaml" --enclave "$ENCLAVE_NAME" >> "$BUILD_LOG" 2>&1
+        # Use a safer approach: create artifacts inside the package directory
+        log_info "Preparing artifacts for package integration..."
+
+        # Copy artifacts to package directory so they're included automatically
+        if [ -f "$KURTOSIS_DEVNET_DIR/.l1-artifacts-path" ] && [ -f "$KURTOSIS_DEVNET_DIR/.l2-artifacts-path" ]; then
+            local l1_path=$(cat "$KURTOSIS_DEVNET_DIR/.l1-artifacts-path")
+            local l2_path=$(cat "$KURTOSIS_DEVNET_DIR/.l2-artifacts-path")
+
+            # Extract and copy artifacts to trampoline package
+            log_info "Integrating artifacts into package..."
+            cd "$KURTOSIS_DEVNET_DIR/optimism-package-trampoline"
+
+            # Create artifacts directory in package
+            mkdir -p artifacts/l1-artifacts artifacts/l2-artifacts
+
+            # Extract artifacts
+            tar -xf "$l1_path" -C artifacts/l1-artifacts/ 2>/dev/null || true
+            tar -xf "$l2_path" -C artifacts/l2-artifacts/ 2>/dev/null || true
+
+            cd "$KURTOSIS_DEVNET_DIR"
+            log_success "✅ Artifacts integrated into package"
+        fi
+
+        # Now run normally - artifacts are part of the package
+        log_info "Running deployment with integrated artifacts..."
+        timeout 1200 kurtosis run "$KURTOSIS_DEVNET_DIR/optimism-package-trampoline" --args-file "$KURTOSIS_DEVNET_DIR/simple-processed.yaml" --enclave "$ENCLAVE_NAME" 2>&1 | tee -a "$BUILD_LOG"
         exit_code=$?
 
         # Check for specific GRPC/UTF-8 errors that indicate communication issues
@@ -421,13 +455,159 @@ deploy_devnet() {
     fi
 }
 
+# Process template variables in YAML
+process_yaml_templates() {
+    local source_yaml="$1"
+    local target_yaml="$2"
+
+    log_info "Processing templates in $source_yaml..."
+
+    # Copy the source file first
+    cp "$source_yaml" "$target_yaml"
+
+    # Replace Docker image templates
+    sed -i '' 's/{{ localDockerImage "op-faucet" }}/op-faucet:devnet/g' "$target_yaml"
+    sed -i '' 's/{{ localDockerImage "op-node" }}/op-node:devnet/g' "$target_yaml"
+    sed -i '' 's/{{ localDockerImage "op-batcher" }}/op-batcher:devnet/g' "$target_yaml"
+    sed -i '' 's/{{ localDockerImage "op-proposer" }}/op-proposer:devnet/g' "$target_yaml"
+    sed -i '' 's/{{ localDockerImage "op-challenger" }}/op-challenger:devnet/g' "$target_yaml"
+    sed -i '' 's/{{ localDockerImage "op-deployer" }}/op-deployer:devnet/g' "$target_yaml"
+
+    # Replace other common templates with reasonable defaults
+    sed -i '' 's/{{ localPrestate.URL }}/file:\/\/\/op-program\/prestate.json/g' "$target_yaml"
+    # Use artifact:// locator as expected by Kurtosis (artifacts uploaded by prepare_contract_artifacts)
+    sed -i '' 's/{{ localContractArtifacts "l1" }}/artifact:\/\/l1-artifacts/g' "$target_yaml"
+    sed -i '' 's/{{ localContractArtifacts "l2" }}/artifact:\/\/l2-artifacts/g' "$target_yaml"
+    sed -i '' 's/{{ localPrestate.Hashes.prestate_mt64 }}/0x038512e02c4c3f7bdaec27d00edf55b7155e0905301e1a88083e4e0a6764d54c/g' "$target_yaml"
+
+    log_success "Template processing completed: $target_yaml"
+}
+
+# Prepare Contract Artifacts
+prepare_contract_artifacts() {
+    log_info "Preparing contract artifacts for deployment..."
+
+    local contracts_dir="$OPTIMISM_ROOT/packages/contracts-bedrock"
+    local forge_artifacts_dir="$contracts_dir/forge-artifacts"
+    local kurtosis_dir="$KURTOSIS_DEVNET_DIR"
+
+    # Check if forge-artifacts directory exists
+    if [ ! -d "$forge_artifacts_dir" ]; then
+        log_error "Forge artifacts directory not found: $forge_artifacts_dir"
+        log_info "Please build contracts first with:"
+        log_info "  cd $contracts_dir && forge build"
+        return 1
+    fi
+
+    # Create artifacts directories in kurtosis-devnet (for direct file:// mounting)
+    local l1_artifacts_dir="$kurtosis_dir/l1-artifacts"
+    local l2_artifacts_dir="$kurtosis_dir/l2-artifacts"
+
+    log_info "Creating artifact directories..."
+    rm -rf "$l1_artifacts_dir" "$l2_artifacts_dir"  # Clean up existing directories
+    mkdir -p "$l1_artifacts_dir"
+    mkdir -p "$l2_artifacts_dir"
+
+    # Copy all forge artifacts to both l1-artifacts and l2-artifacts
+    # (We copy to both because the op-deployer looks in both locations)
+    log_info "Copying forge artifacts..."
+
+    # Copy all .sol directories containing JSON artifacts
+    if cp -r "$forge_artifacts_dir"/* "$l1_artifacts_dir/" 2>/dev/null; then
+        log_success "✅ L1 artifacts copied successfully"
+    else
+        log_error "❌ Failed to copy L1 artifacts"
+        return 1
+    fi
+
+    if cp -r "$forge_artifacts_dir"/* "$l2_artifacts_dir/" 2>/dev/null; then
+        log_success "✅ L2 artifacts copied successfully"
+    else
+        log_error "❌ Failed to copy L2 artifacts"
+        return 1
+    fi
+
+    # Verify critical artifacts are present
+    local critical_artifacts=(
+        "DeployImplementations.s.sol/DeployImplementations.json"
+        "OptimismPortal2.sol/OptimismPortal2.json"
+        "DisputeGameFactory.sol/DisputeGameFactory.json"
+        "SystemConfig.sol/SystemConfig.json"
+    )
+
+    log_info "Verifying critical artifacts..."
+    local missing_artifacts=()
+
+    for artifact in "${critical_artifacts[@]}"; do
+        if [ ! -f "$l1_artifacts_dir/$artifact" ]; then
+            missing_artifacts+=("$artifact")
+        fi
+    done
+
+    if [ ${#missing_artifacts[@]} -eq 0 ]; then
+        log_success "✅ All critical artifacts verified"
+
+        # Show artifact statistics
+        local total_artifacts=$(find "$l1_artifacts_dir" -name "*.json" | wc -l | tr -d ' ')
+        log_info "Total artifacts copied: $total_artifacts JSON files"
+
+        # Create Kurtosis-compatible artifact structure for upload
+        log_info "Creating Kurtosis files artifacts..."
+
+        # Create tar archives for Kurtosis files artifact system
+        local temp_artifacts_dir="$kurtosis_dir/temp-kurtosis-artifacts"
+        rm -rf "$temp_artifacts_dir"
+        mkdir -p "$temp_artifacts_dir"
+
+        # Create l1-artifacts.tar.gz
+        cd "$l1_artifacts_dir"
+        tar -czf "$temp_artifacts_dir/l1-artifacts.tar.gz" . 2>/dev/null
+
+        # Create l2-artifacts.tar.gz
+        cd "$l2_artifacts_dir"
+        tar -czf "$temp_artifacts_dir/l2-artifacts.tar.gz" . 2>/dev/null
+
+        cd "$OPTIMISM_ROOT"  # Return to original directory
+
+        if [ -f "$temp_artifacts_dir/l1-artifacts.tar.gz" ] && [ -f "$temp_artifacts_dir/l2-artifacts.tar.gz" ]; then
+            log_success "✅ Kurtosis artifacts created successfully"
+            log_info "Artifacts ready for Kurtosis upload:"
+            log_info "  - l1-artifacts.tar.gz ($(du -h "$temp_artifacts_dir/l1-artifacts.tar.gz" | cut -f1))"
+            log_info "  - l2-artifacts.tar.gz ($(du -h "$temp_artifacts_dir/l2-artifacts.tar.gz" | cut -f1))"
+
+            # Store artifact paths for later upload (will be used by deploy_devnet function)
+            echo "$l1_artifacts_dir" > "$kurtosis_dir/.l1-artifacts-path"
+            echo "$l2_artifacts_dir" > "$kurtosis_dir/.l2-artifacts-path"
+        else
+            log_error "❌ Failed to create Kurtosis artifacts"
+            return 1
+        fi
+
+        return 0
+    else
+        log_error "❌ Missing critical artifacts:"
+        for missing in "${missing_artifacts[@]}"; do
+            log_error "  - $missing"
+        done
+        return 1
+    fi
+}
+
 # Create Devnet Configuration
 create_devnet_config() {
     log_info "Creating Devnet configuration files..."
 
-    # simple.yaml already includes correct op-challenger settings
-    # use as is without additional modifications
-    log_success "Devnet configuration completed (using default simple.yaml)"
+    # Process templates from original simple.yaml to create processed version
+    local source_yaml="$KURTOSIS_DEVNET_DIR/simple.yaml"
+    local processed_yaml="$KURTOSIS_DEVNET_DIR/simple-processed.yaml"
+
+    if [ -f "$source_yaml" ]; then
+        process_yaml_templates "$source_yaml" "$processed_yaml"
+        log_success "Devnet configuration completed (processed from simple.yaml)"
+    else
+        log_error "Source YAML not found: $source_yaml"
+        return 1
+    fi
 }
 
 # Verify Services Status (Clear and Accurate)
@@ -608,6 +788,7 @@ main() {
     init
     check_requirements
     build_docker_images
+    prepare_contract_artifacts
     deploy_devnet
     verify_services
     verify_rpc_connections
