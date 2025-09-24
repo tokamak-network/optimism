@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum-optimism/optimism/op-deployer/pkg/deployer/standard"
 
@@ -21,6 +22,42 @@ import (
 var (
 	l2GenesisBlockBaseFeePerGas = hexutil.Big(*(big.NewInt(1000000000)))
 )
+
+// convertStringToBigInt converts string to *big.Int, supporting both hex and decimal formats
+func convertStringToBigInt(value string) (*big.Int, error) {
+	if strings.HasPrefix(value, "0x") || strings.HasPrefix(value, "0X") {
+		num := hexutil.MustDecodeBig(value)
+		return num, nil
+	} else {
+		// Parse as decimal string
+		num, ok := new(big.Int).SetString(value, 10)
+		if !ok {
+			return nil, fmt.Errorf("invalid number format: %s", value)
+		}
+		return num, nil
+	}
+}
+
+// preprocessRAIOverrides preprocesses RAT overrides to convert string values to proper types
+func preprocessRATOverrides(overrides map[string]any) map[string]any {
+	if overrides == nil {
+		return overrides
+	}
+
+	ratStringFields := []string{"minimumStakingBalance", "perTestBondAmount", "ratTriggerProbability"}
+
+	for _, field := range ratStringFields {
+		if val, exists := overrides[field]; exists {
+			if strVal, ok := val.(string); ok {
+				if bigIntVal, err := convertStringToBigInt(strVal); err == nil {
+					overrides[field] = bigIntVal
+				}
+			}
+		}
+	}
+
+	return overrides
+}
 
 func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State, chainState *ChainState) (genesis.DeployConfig, error) {
 	upgradeSchedule := standard.DefaultHardforkScheduleForTag(standard.CurrentTag)
@@ -145,7 +182,8 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 	// Apply overrides after setting the main values.
 	var err error
 	if len(intent.GlobalDeployOverrides) > 0 {
-		cfg, err = jsonutil.MergeJSON(cfg, intent.GlobalDeployOverrides)
+		preprocessedGlobal := preprocessRATOverrides(intent.GlobalDeployOverrides)
+		cfg, err = jsonutil.MergeJSON(cfg, preprocessedGlobal)
 		if err != nil {
 			return genesis.DeployConfig{}, fmt.Errorf("error merging global L2 overrides: %w", err)
 
@@ -153,7 +191,8 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 	}
 
 	if len(chainIntent.DeployOverrides) > 0 {
-		cfg, err = jsonutil.MergeJSON(cfg, chainIntent.DeployOverrides)
+		preprocessedChain := preprocessRATOverrides(chainIntent.DeployOverrides)
+		cfg, err = jsonutil.MergeJSON(cfg, preprocessedChain)
 		if err != nil {
 			return genesis.DeployConfig{}, fmt.Errorf("error merging chain L2 overrides: %w", err)
 		}
