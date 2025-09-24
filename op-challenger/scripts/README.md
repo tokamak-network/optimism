@@ -23,14 +23,25 @@ cd /optimism/op-challenger/scripts
 ```
 This installs Docker, Go, Kurtosis, and all required tools automatically.
 
-## Step 2: Compile Contracts and Create Artifacts
+## Step 2: Pre-download Required Docker Images
+```bash
+# Use the automated script to pre-download all required images
+./pre-download-images.sh
+```
+
+The script will automatically download all essential images with retry logic and proper error handling:
+- `protolambda/eth2-val-tools:latest`
+- `consensys/teku:25.7.0`
+- `ethereum/client-go:latest`
+- `python:3.12-alpine`
+- `us-docker.pkg.dev/oplabs-tools-artifacts/images/proxyd:v4.14.5`
+
+⚠️ **Network Requirements**: These images are essential for deployment. Pre-downloading prevents timeout errors during the Kurtosis package execution phase.
+
+## Step 3: Compile Contracts and Create Artifacts
 ```bash
 cd /optimism/packages/contracts-bedrock
 forge build --force
-
-cd op-deployer && tar -cvzf ./pkg/deployer/artifacts/forge-artifacts/artifacts.tgz -C                              │
-│   ../packages/contracts-bedrock/forge-artifacts --exclude="*.t.sol" .
-
 
 cd /optimism/op-challenger/scripts
 ./build-contract-artifacts.sh
@@ -130,16 +141,6 @@ go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E"
 
 ## Step 4: Build Devnet Environment
 
-**💡 Tips**: To avoid memory issues and speed up deployment, perform these tasks first and clean Docker cache after each:
-
-```bash
-# Pre-download consensys/teku:25.7.0 image
-docker pull consensys/teku:25.7.0
-
-# Clean unused cache only (safe)
-docker builder prune
-```
-
 ### Using build-devnet.sh (Recommended)
 
 The `build-devnet.sh` script provides an automated way to build and deploy the devnet with comprehensive error handling and verification:
@@ -157,30 +158,7 @@ The `build-devnet.sh` script provides an automated way to build and deploy the d
 ./build-devnet.sh --help
 ```
 
-### build-devnet.sh Features
-
-The script automatically handles:
-
-1. **Docker Image Building**
-   - Builds all required services: op-node, op-batcher, op-proposer, op-faucet, op-challenger, op-deployer
-   - Handles Git commit information for reproducible builds
-   - Provides detailed build progress and error reporting
-
-2. **Devnet Deployment**
-   - Uses `simple.yaml` configuration (includes RAT settings)
-   - Deploys via `optimism-package-trampoline`
-   - Includes retry logic for GRPC communication issues
-   - 10-minute timeout with intelligent success detection
-
-3. **Service Verification**
-   - Verifies L1/L2 chain services are running
-   - Tests RPC connections (L1, L2, Rollup RPC)
-   - Provides connection information and management commands
-
-4. **Error Recovery**
-   - Automatic cleanup of failed deployments
-   - Detailed logging to `/tmp/devnet-build.log`
-   - Pre-deployment safety checks
+**📖 [build-devnet.sh Process Documentation](./docs/build-devnet-process.md)** - Detailed execution steps and technical specifications
 
 ### Alternative: Manual Deployment
 

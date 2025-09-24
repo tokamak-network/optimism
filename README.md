@@ -113,6 +113,25 @@ forge test --match-test test_submitCorrectEvidence_gas_measurement -vv
 forge test --match-test test_resolveClaim_gas_measurement -vv
 ```
 
+## Deployment Monitoring
+
+### Monitoring op-deployer-apply logs
+
+To monitor deployment progress in real-time:
+
+```bash
+# Find the op-deployer-apply container
+docker ps | grep op-deployer-apply
+
+# Monitor the log file inside the container
+docker exec <container_id> tail -f /tmp/kurtosis-task.log
+
+# Or check container logs directly
+docker logs -f <container_id>
+```
+
+When deployment tasks start, you can see detailed progress in `/tmp/kurtosis-task.log`.
+
 ## Expected result
 
 - All tests pass.
