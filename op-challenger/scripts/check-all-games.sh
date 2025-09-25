@@ -18,10 +18,55 @@ echo ""
 if [[ -z "$L1_RPC" ]]; then
     echo "📥 환경 파일 다운로드..."
     rm -rf $TEMP_DIR
-    kurtosis files download $ENCLAVE_NAME devnet-descriptor-0 $TEMP_DIR
+
+    # Method 1: Try devnet-descriptor-0 (legacy format)
+    if kurtosis files download $ENCLAVE_NAME devnet-descriptor-0 $TEMP_DIR 2>/dev/null; then
+        if [ -f "$TEMP_DIR/env.json" ]; then
+            echo "✅ Found env.json from devnet-descriptor-0"
+        fi
+    fi
+
+    # Method 2: If not found, try op-deployer-configs (new format)
+    if [ ! -f "$TEMP_DIR/env.json" ]; then
+        echo "📥 대안으로 op-deployer-configs에서 시도 중..."
+        rm -rf $TEMP_DIR
+        mkdir -p $TEMP_DIR
+
+        if kurtosis files download $ENCLAVE_NAME op-deployer-configs $TEMP_DIR/configs 2>/dev/null; then
+            if [ -f "$TEMP_DIR/configs/state.json" ]; then
+                echo "✅ state.json에서 env.json 형식으로 변환 중..."
+
+                # Get L1 RPC port from Kurtosis
+                L1_RPC_PORT=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "el-1-geth" -A5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
+
+                # Create env.json in expected format
+                cat > $TEMP_DIR/env.json << EOF
+{
+  "l1": {
+    "nodes": [
+      {
+        "services": {
+          "el": {
+            "endpoints": {
+              "rpc": {
+                "port": "$L1_RPC_PORT"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+EOF
+                echo "✅ op-deployer-configs에서 env.json 생성 완료"
+            fi
+        fi
+    fi
 
     if [ ! -f "$TEMP_DIR/env.json" ]; then
-        echo "❌ 오류: env.json 파일을 찾을 수 없습니다!"
+        echo "❌ 오류: env.json 파일을 찾거나 생성할 수 없습니다!"
+        echo "   시도한 방법: devnet-descriptor-0 및 op-deployer-configs"
         exit 1
     fi
 
@@ -35,6 +80,14 @@ echo ""
 
 # Get DisputeGameFactory address
 DISPUTE_GAME_FACTORY=$(jq -r '.l2[0].l1_addresses.DisputeGameFactoryProxy' $TEMP_DIR/env.json 2>/dev/null || echo "")
+
+# If not found in env.json, try to get from configs directly
+if [[ -z "$DISPUTE_GAME_FACTORY" ]] || [[ "$DISPUTE_GAME_FACTORY" == "null" ]]; then
+    if [ -f "$TEMP_DIR/configs/state.json" ]; then
+        DISPUTE_GAME_FACTORY=$(jq -r '.opChainDeployments[0].DisputeGameFactoryProxy' $TEMP_DIR/configs/state.json 2>/dev/null || echo "")
+        echo "🔍 DisputeGameFactory 주소를 configs에서 직접 추출했습니다"
+    fi
+fi
 
 if [[ -z "$DISPUTE_GAME_FACTORY" ]] || [[ "$DISPUTE_GAME_FACTORY" == "null" ]]; then
     echo "❌ 오류: DisputeGameFactory 주소를 찾을 수 없습니다!"

@@ -12,13 +12,96 @@ TEMP_DIR="/tmp/devnet-desc"
 echo "🚀 Contract Configuration Verification Started (Enclave: $ENCLAVE_NAME)"
 echo "=================================================="
 
-# Download environment file
+# Download environment file - try multiple sources
 echo "📥 Downloading environment file..."
 rm -rf $TEMP_DIR
-kurtosis files download $ENCLAVE_NAME devnet-descriptor-0 $TEMP_DIR
+
+# Method 1: Try devnet-descriptor-0 (legacy format)
+if kurtosis files download $ENCLAVE_NAME devnet-descriptor-0 $TEMP_DIR 2>/dev/null; then
+    if [ -f "$TEMP_DIR/env.json" ]; then
+        echo "✅ Found env.json from devnet-descriptor-0"
+        ENV_SOURCE="devnet-descriptor"
+    fi
+fi
+
+# Method 2: If not found, try op-deployer-configs (new format)
+if [ ! -f "$TEMP_DIR/env.json" ]; then
+    echo "📥 Trying alternative: op-deployer-configs..."
+    rm -rf $TEMP_DIR
+    mkdir -p $TEMP_DIR
+
+    if kurtosis files download $ENCLAVE_NAME op-deployer-configs $TEMP_DIR/configs 2>/dev/null; then
+        # Create env.json from op-deployer configs
+        if [ -f "$TEMP_DIR/configs/state.json" ]; then
+            echo "✅ Found state.json from op-deployer-configs, converting to env.json format..."
+
+            # Get service info from Kurtosis
+            L1_RPC_PORT=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "el-1-geth" -A5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
+            L2_RPC_PORT=$(kurtosis enclave inspect $ENCLAVE_NAME | grep "op-el.*op-geth" -A5 | grep "rpc: 8545/tcp" | sed 's/.*127.0.0.1:\([0-9]*\).*/\1/')
+
+            # Extract addresses from state.json
+            OPTIMISM_PORTAL=$(jq -r '.opChainDeployments[0].OptimismPortalProxy' $TEMP_DIR/configs/state.json)
+            DISPUTE_GAME_FACTORY=$(jq -r '.opChainDeployments[0].DisputeGameFactoryProxy' $TEMP_DIR/configs/state.json)
+            OPCM_ADDRESS=$(jq -r '.superchainDeployments.OPContractsManagerImpl // empty' $TEMP_DIR/configs/state.json)
+
+            # Create env.json in expected format
+            cat > $TEMP_DIR/env.json << EOF
+{
+  "l1": {
+    "nodes": [
+      {
+        "services": {
+          "el": {
+            "endpoints": {
+              "rpc": {
+                "port": "$L1_RPC_PORT"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "addresses": {
+      "OpcmImpl": "$OPCM_ADDRESS"
+    }
+  },
+  "l2": [
+    {
+      "nodes": [
+        {
+          "services": {
+            "el": {
+              "endpoints": {
+                "rpc": {
+                  "port": "$L2_RPC_PORT"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "l1_addresses": {
+        "OptimismPortalProxy": "$OPTIMISM_PORTAL",
+        "DisputeGameFactoryProxy": "$DISPUTE_GAME_FACTORY"
+      }
+    }
+  ]
+}
+EOF
+            ENV_SOURCE="op-deployer-configs"
+            echo "✅ Created env.json from op-deployer-configs"
+        fi
+    fi
+fi
 
 if [ ! -f "$TEMP_DIR/env.json" ]; then
-    echo "❌ Error: env.json file not found!"
+    echo "❌ Error: Could not find or create env.json file!"
+    echo "   Tried: devnet-descriptor-0 and op-deployer-configs"
+
+    # Show available files for debugging
+    echo ""
+    echo "🔍 Available files in enclave:"
+    kurtosis enclave inspect $ENCLAVE_NAME | grep -A 20 "Files Artifacts" || echo "Could not list files"
     exit 1
 fi
 

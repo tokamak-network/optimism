@@ -77,6 +77,30 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 ./verify-contract-settings.sh
 ```
 
+**⚠️ Kurtosis 버전 호환성 문제**
+
+만약 다음과 같은 오류가 발생하면:
+```
+ERRO[2025-09-25T12:25:10+09:00] The engine server API version that the CLI expects, '1.8', doesn't match the running engine server API version, '1.11'
+```
+
+**해결 방법:**
+```bash
+# 방법 1: 최신 kurtosis 사용 (권장)
+export PATH="/usr/local/bin:$PATH"
+./verify-contract-settings.sh
+
+# 방법 2: mise로 최신 버전 설치
+mise install kurtosis@1.11.1
+mise use kurtosis@1.11.1
+
+# 방법 3: 절대 경로로 실행
+/usr/local/bin/kurtosis version  # 버전 확인 후
+# 스크립트 내에서 절대 경로 사용
+```
+
+**💡 원인**: `mise`가 설치한 구버전 kurtosis(1.8.1)와 실행 중인 엔진(1.11.1) 간의 버전 불일치
+
 **검증 항목:**
 - ✅ L1 RPC 연결 상태
 - ✅ 컨트랙트 주소 추출 및 확인
@@ -183,6 +207,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - [컨트랙트 설정 상세 검증 가이드](contract-verification-detailed.md) - 컨트랙트 설정 상세 검증 방법
 - [Fast Dispute Game Setup Guide](fast-dispute-game-setup.md) - 20분 dispute game 설정 가이드
 - [Auto-Resolve Script Guide](auto-resolve-script-guide.md) - 자동 resolve 스크립트 사용법
+- **[Output Root vs State Root 상세 설명](output-root-vs-state-root-explanation.md)** - 프로포저 제출값과 L2 상태 루트 차이점 설명
 
 ---
 

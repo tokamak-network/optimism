@@ -397,6 +397,7 @@ type ProposalSource interface {
 - [proposals.md](https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/proposals.md)
 - [withdrawals](https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/withdrawals.md)
 - [fault-proof/stage-one/bridge-integration.md](https://github.com/ethereum-optimism/specs/blob/main/specs/fault-proof/stage-one/bridge-integration.md)
+- **[Output Root vs State Root 상세 설명](output-root-vs-state-root-explanation.md)**: Output Root와 State Root의 개념적 차이점 설명
 
 ## 🧪 테스트
 

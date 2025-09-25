@@ -173,6 +173,7 @@ rootClaim := output.Root  // Output Root 또는 Super Root
 - **게임 타입 0**: 단일 L2 체인의 Output Root
   - **구성**: `Keccak256(version + stateRoot + messagePasserStorageRoot)`
   - **검증 대상**: 특정 L2 블록의 상태 루트
+  - **⚠️ 중요**: Output Root ≠ State Root ([상세 설명](output-root-vs-state-root-explanation.md))
 - **게임 타입 4,5**: 여러 L2 체인의 Super Root
   - **구성**: `Keccak256(timestamp + [chainID1, outputRoot1] + [chainID2, outputRoot2] + ...)`
   - **검증 대상**: 여러 L2 체인의 통합 상태

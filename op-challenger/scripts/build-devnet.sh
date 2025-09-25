@@ -373,23 +373,62 @@ deploy_devnet() {
         log_info "Preparing artifacts for package integration..."
 
         # Copy artifacts to package directory so they're included automatically
-        if [ -f "$KURTOSIS_DEVNET_DIR/.l1-artifacts-path" ] && [ -f "$KURTOSIS_DEVNET_DIR/.l2-artifacts-path" ]; then
-            local l1_path=$(cat "$KURTOSIS_DEVNET_DIR/.l1-artifacts-path")
-            local l2_path=$(cat "$KURTOSIS_DEVNET_DIR/.l2-artifacts-path")
+        if [ -f "$KURTOSIS_DEVNET_DIR/.l1-artifacts-tar-path" ] && [ -f "$KURTOSIS_DEVNET_DIR/.l2-artifacts-tar-path" ]; then
+            local l1_tar_path=$(cat "$KURTOSIS_DEVNET_DIR/.l1-artifacts-tar-path")
+            local l2_tar_path=$(cat "$KURTOSIS_DEVNET_DIR/.l2-artifacts-tar-path")
 
-            # Extract and copy artifacts to trampoline package
+            # Extract and copy artifacts to trampoline package with verification
             log_info "Integrating artifacts into package..."
             cd "$KURTOSIS_DEVNET_DIR/optimism-package-trampoline"
 
             # Create artifacts directory in package
             mkdir -p artifacts/l1-artifacts artifacts/l2-artifacts
 
-            # Extract artifacts
-            tar -xf "$l1_path" -C artifacts/l1-artifacts/ 2>/dev/null || true
-            tar -xf "$l2_path" -C artifacts/l2-artifacts/ 2>/dev/null || true
+            # Extract L1 artifacts with error checking
+            log_info "Extracting L1 artifacts from: $l1_tar_path"
+            if [ -f "$l1_tar_path" ]; then
+                if tar -xf "$l1_tar_path" -C artifacts/l1-artifacts/; then
+                    local l1_count=$(find artifacts/l1-artifacts -name "*.json" -type f | wc -l)
+                    log_info "✅ L1 artifacts extracted: $l1_count JSON files"
+                else
+                    log_error "❌ Failed to extract L1 artifacts from $l1_tar_path"
+                    exit 1
+                fi
+            else
+                log_error "❌ L1 tar file not found: $l1_tar_path"
+                exit 1
+            fi
+
+            # Extract L2 artifacts with error checking
+            log_info "Extracting L2 artifacts from: $l2_tar_path"
+            if [ -f "$l2_tar_path" ]; then
+                if tar -xf "$l2_tar_path" -C artifacts/l2-artifacts/; then
+                    local l2_count=$(find artifacts/l2-artifacts -name "*.json" -type f | wc -l)
+                    log_info "✅ L2 artifacts extracted: $l2_count JSON files"
+                else
+                    log_error "❌ Failed to extract L2 artifacts from $l2_tar_path"
+                    exit 1
+                fi
+            else
+                log_error "❌ L2 tar file not found: $l2_tar_path"
+                exit 1
+            fi
+
+            # Verify critical artifacts exist
+            local critical_files=("DeployImplementations.s.sol/DeployImplementations.json" "OptimismPortal2.sol/OptimismPortal2.json" "DisputeGameFactory.sol/DisputeGameFactory.json")
+            for critical_file in "${critical_files[@]}"; do
+                if [ -f "artifacts/l1-artifacts/$critical_file" ] || [ -f "artifacts/l2-artifacts/$critical_file" ]; then
+                    log_info "✅ Critical artifact found: $critical_file"
+                else
+                    log_warning "⚠️  Critical artifact missing: $critical_file"
+                fi
+            done
 
             cd "$KURTOSIS_DEVNET_DIR"
-            log_success "✅ Artifacts integrated into package"
+            log_success "✅ Artifacts integrated and verified in package"
+        else
+            log_error "❌ Artifact tar paths not found. Ensure prepare_artifacts was successful."
+            exit 1
         fi
 
         # Now run normally - artifacts are part of the package
@@ -575,7 +614,10 @@ prepare_contract_artifacts() {
             log_info "  - l1-artifacts.tar.gz ($(du -h "$temp_artifacts_dir/l1-artifacts.tar.gz" | cut -f1))"
             log_info "  - l2-artifacts.tar.gz ($(du -h "$temp_artifacts_dir/l2-artifacts.tar.gz" | cut -f1))"
 
-            # Store artifact paths for later upload (will be used by deploy_devnet function)
+            # Store artifact tar file paths for later upload (will be used by deploy_devnet function)
+            echo "$temp_artifacts_dir/l1-artifacts.tar.gz" > "$kurtosis_dir/.l1-artifacts-tar-path"
+            echo "$temp_artifacts_dir/l2-artifacts.tar.gz" > "$kurtosis_dir/.l2-artifacts-tar-path"
+            # Keep original paths for backward compatibility
             echo "$l1_artifacts_dir" > "$kurtosis_dir/.l1-artifacts-path"
             echo "$l2_artifacts_dir" > "$kurtosis_dir/.l2-artifacts-path"
         else
