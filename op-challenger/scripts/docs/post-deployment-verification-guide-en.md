@@ -11,7 +11,6 @@ This guide explains the automated verification process to be performed after Opt
 ## Automated Verification Sequence
 
 ### Step 1: Deploy New Devnet
-You may have already deployed DevNet using the command below.
 
 ```bash
 # Deploy devnet in clean environment
@@ -78,6 +77,30 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 ./verify-contract-settings.sh
 ```
 
+**⚠️ Kurtosis Version Compatibility Issues**
+
+If you encounter the following error:
+```
+ERRO[2025-09-25T12:25:10+09:00] The engine server API version that the CLI expects, '1.8', doesn't match the running engine server API version, '1.11'
+```
+
+**Solution:**
+```bash
+# Method 1: Use latest kurtosis (recommended)
+export PATH="/usr/local/bin:$PATH"
+./verify-contract-settings.sh
+
+# Method 2: Install latest version with mise
+mise install kurtosis@1.11.1
+mise use kurtosis@1.11.1
+
+# Method 3: Execute with absolute path
+/usr/local/bin/kurtosis version  # Check version first
+# Use absolute path in script
+```
+
+**💡 Cause**: Version mismatch between old kurtosis(1.8.1) installed by `mise` and running engine(1.11.1)
+
 **Verification items:**
 - ✅ L1 RPC connection status
 - ✅ Contract address extraction and verification
@@ -88,7 +111,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 
 **💡 For detailed manual verification**: See [Contract Verification Detailed Guide](contract-verification-detailed.md).
 
-**⚠️ Important: L1 Account Funding Configuration**
+**⚠️ Important: Pre-deployment Configuration Check**
 
 For testing, verify the following configurations are properly set:
 
@@ -183,6 +206,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - [Contract Configuration Detailed Verification Guide](contract-verification-detailed.md) - Detailed contract configuration verification methods
 - [Fast Dispute Game Setup Guide](fast-dispute-game-setup.md) - 20-minute dispute game configuration guide
 - [Auto-Resolve Script Guide](auto-resolve-script-guide.md) - Auto-resolve script usage guide
+- **[Output Root vs State Root Detailed Explanation](output-root-vs-state-root-explanation.md)** - Explanation of differences between proposer submission values and L2 state root
 
 ---
 
