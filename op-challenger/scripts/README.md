@@ -12,9 +12,22 @@ This guide helps you set up a local Optimism devnet environment for challenger t
 - **Continuous monitoring** for devnet management
 
 
-**🔄 Development Workflow**: Install → Configure → Compile → Test → Deploy → Verify → Monitor
+**🔄 Development Workflow**: Clone → Install → Configure → Compile → Test → Deploy → Verify → Monitor
 
 ---
+
+## Step 0: Clone Repository and Checkout Branch
+
+```bash
+# Clone the Optimism repository
+git clone https://github.com/tokamak-network/optimism.git
+cd optimism
+
+# Checkout the feature branch for local development
+git checkout feature/local-setup-rat
+```
+
+**💡 Note**: This guide assumes you're working with the `feature/local-setup-rat` branch which contains the latest local development setup improvements.
 
 ## Step 1: Install System Tools
 ```bash
