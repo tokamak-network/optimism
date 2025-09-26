@@ -83,15 +83,17 @@ func (n *nodeAPI) OutputAtBlock(ctx context.Context, number hexutil.Uint64) (*et
 **파일**: `op-service/eth/output.go`
 ```go
 func OutputRoot(output Output) Bytes32 {
-    marshaled := output.Marshal()  // [version(32) + stateRoot(32) + messagePasserStorageRoot(32)]
+    marshaled := output.Marshal()  // [version(32) + stateRoot(32) + messagePasserStorageRoot(32) + blockHash(32)]
     return Bytes32(crypto.Keccak256Hash(marshaled))  // Keccak256 해시
 }
 
-func (o OutputV0) Marshal() []byte {
-    var buf [96]byte
-    copy(buf[0:32], o.Version().Bytes())              // Version (32바이트)
-    copy(buf[32:64], o.StateRoot[:])                  // StateRoot (32바이트)
-    copy(buf[64:96], o.MessagePasserStorageRoot[:])   // MessagePasserStorageRoot (32바이트)
+func (o *OutputV0) Marshal() []byte {
+    var buf [128]byte
+    version := o.Version()
+    copy(buf[:32], version[:])                    // Version (32바이트)
+    copy(buf[32:], o.StateRoot[:])                // StateRoot (32바이트)
+    copy(buf[64:], o.MessagePasserStorageRoot[:]) // MessagePasserStorageRoot (32바이트)
+    copy(buf[96:], o.BlockHash[:])                // BlockHash (32바이트)
     return buf[:]
 }
 ```
