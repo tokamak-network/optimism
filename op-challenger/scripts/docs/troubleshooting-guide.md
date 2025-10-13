@@ -74,7 +74,129 @@ chmod +x quick-diagnosis.sh
 
 ## Common Issues & Solutions
 
-### 1. Installation Issues
+### 1. Cold Starting State Issues
+
+#### Problem: All New Games Fail Prestate Validation with 0xdead... Error
+
+**Symptoms**:
+```
+ERROR Failed to validate prestate
+  contract_root=0xdead0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  provider_root=0x03a1a13511403f206bb2414e3bf974f8b4608ad8f7b37ee6642f6598dbe06195
+  error="output root absolute prestate does not match"
+```
+
+**Diagnosis**:
+```bash
+# Check if in Cold Starting state
+ANCHOR_STATE_REGISTRY="0x..."
+ANCHOR_ROOT=$(cast call $ANCHOR_STATE_REGISTRY \
+  "getAnchorRoot()(bytes32,uint256)" \
+  --rpc-url $L1_RPC | head -1)
+
+if [[ "$ANCHOR_ROOT" == "0xdead"* ]]; then
+    echo "❌ System is in Cold Starting state"
+    echo "💡 anchorGame not set yet"
+else
+    echo "✅ Anchor root is valid: $ANCHOR_ROOT"
+fi
+
+# Check anchorGame status
+ANCHOR_GAME=$(cast call $ANCHOR_STATE_REGISTRY \
+  "anchorGame()(address)" \
+  --rpc-url $L1_RPC)
+
+if [ "$ANCHOR_GAME" == "0x0000000000000000000000000000000000000000" ]; then
+    echo "❌ anchorGame = address(0)"
+    echo "💡 Need to resolve first valid game and call closeGame()"
+fi
+```
+
+**Root Cause**:
+- AnchorStateRegistry initialized with placeholder value (0xdead...)
+- No valid game has been resolved and finalized yet
+- `closeGame()` was never called to update anchorGame
+
+**Solution** (Complete Process):
+```bash
+# Step 1: Find or create first valid game
+DISPUTE_GAME_FACTORY="0x..."
+GAME_COUNT=$(cast call $DISPUTE_GAME_FACTORY "gameCount()(uint256)" --rpc-url $L1_RPC)
+echo "Total games: $GAME_COUNT"
+
+# Get latest game
+if [ "$GAME_COUNT" -gt "0" ]; then
+    LATEST_INDEX=$((GAME_COUNT - 1))
+    GAME_INFO=$(cast call $DISPUTE_GAME_FACTORY \
+      "gameAtIndex(uint256)(uint32,uint64,address)" $LATEST_INDEX \
+      --rpc-url $L1_RPC)
+    GAME_ADDRESS=$(echo "$GAME_INFO" | tail -1)
+    echo "Latest game: $GAME_ADDRESS"
+fi
+
+# Step 2: Check if game is resolved
+GAME_STATUS=$(cast call $GAME_ADDRESS "status()(uint8)" --rpc-url $L1_RPC)
+case $GAME_STATUS in
+    0) echo "🟡 IN_PROGRESS - need to resolve" ;;
+    1) echo "🔴 CHALLENGER_WINS - invalid game" ;;
+    2) echo "🟢 DEFENDER_WINS - ready to close" ;;
+esac
+
+# Step 3: Resolve if needed
+if [ "$GAME_STATUS" == "0" ]; then
+    echo "Resolving game..."
+    cast send $GAME_ADDRESS "resolve()" --rpc-url $L1_RPC --private-key $KEY
+fi
+
+# Step 4: Wait for finality delay
+DELAY=$(cast call $ANCHOR_STATE_REGISTRY \
+  "disputeGameFinalityDelaySeconds()(uint256)" \
+  --rpc-url $L1_RPC)
+echo "⏳ Waiting $DELAY seconds for finality..."
+sleep $DELAY
+
+# Step 5: 🔥 CRITICAL: Call closeGame()
+echo "🎯 Calling closeGame() to update anchorGame..."
+cast send $GAME_ADDRESS "closeGame()" \
+  --rpc-url $L1_RPC \
+  --private-key $KEY
+
+# Step 6: Verify fix
+ANCHOR_GAME_AFTER=$(cast call $ANCHOR_STATE_REGISTRY \
+  "anchorGame()(address)" \
+  --rpc-url $L1_RPC)
+
+if [ "$ANCHOR_GAME_AFTER" != "0x0000000000000000000000000000000000000000" ]; then
+    echo "✅ Cold Starting state resolved!"
+    echo "✅ anchorGame updated to: $ANCHOR_GAME_AFTER"
+    echo "✅ All new games will now use valid starting root"
+else
+    echo "❌ anchorGame still not set"
+    echo "💡 Check if game meets requirements:"
+    echo "   - Must be DEFENDER_WINS"
+    echo "   - Must pass finality delay"
+    echo "   - Must be proper game (not blacklisted)"
+fi
+```
+
+**Prevention**:
+```bash
+# Always call closeGame() after resolving first game
+# Add to deployment scripts:
+echo "Resolving first game and updating anchorGame..."
+cast send $FIRST_GAME "resolve()" --rpc-url $L1_RPC --private-key $KEY
+sleep $FINALITY_DELAY
+cast send $FIRST_GAME "closeGame()" --rpc-url $L1_RPC --private-key $KEY
+```
+
+**See Also**:
+- [anchor-state-fix.md](./anchor-state-fix.md) - Detailed fix guide
+- [anchor-game-update-guide.md](./anchor-game-update-guide.md) - Complete update process
+- [challenger-prestate-validation.md](./challenger-prestate-validation.md) - Validation details
+
+---
+
+### 2. Installation Issues
 
 #### Docker Desktop Not Running
 **Problem**: Commands fail with Docker daemon errors

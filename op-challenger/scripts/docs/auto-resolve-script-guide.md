@@ -1,12 +1,14 @@
 # Auto-Resolve Script Guide
 
-**Last Updated**: September 16, 2025
-**Version**: 1.0
-**Target**: Optimism Devnet Developers
 
 ## Overview
 
-The `auto-resolve-game.sh` script provides automated resolution of dispute games after their duration expires. This eliminates the manual step of calling `resolve()` and enables hands-free testing of complete dispute game lifecycles.
+The `auto-resolve-game.sh` script provides **complete automated resolution** of dispute games, including:
+- ✅ Step 1: `resolveClaim(0,0)` - Resolve root claim
+- ✅ Step 2: `resolve()` - Resolve entire game
+- ✅ Step 3: `closeGame()` - Update anchorGame (🔥 NEW!)
+
+This eliminates the manual steps and **automatically resolves Cold Starting state** by updating anchorGame after finality delay.
 
 ## Location
 
@@ -78,21 +80,36 @@ GAME_ADDRESS=$(kurtosis service logs simple-devnet op-challenger-challenger-2151
 - Exits early if game is already resolved
 - Prevents double-resolution attempts
 
+### ✅ Complete Resolution Process (3 Steps)
+1. **resolveClaim(0,0)** - Resolves root claim
+2. **resolve()** - Resolves entire game
+3. **closeGame()** - Updates anchorGame (🔥 NEW!)
+
+### 🔥 NEW: Automatic anchorGame Update
+- Detects AnchorStateRegistry automatically
+- Waits for finality delay (e.g., 7 days production, 30-60s devnet)
+- Calls `closeGame()` to update anchorGame
+- Verifies Cold Starting state resolution
+- Confirms anchor root changed from 0xdead...
+
 ### ✅ Background Execution
 - Runs resolution in background process
 - Provides process PID for monitoring
 - Non-blocking operation - continue other work
-- **Process automatically terminates** after resolution completes
+- **Process automatically terminates** after all steps complete
 
 ### ✅ Transaction Management
-- Sends `resolve()` transaction at precise timing
+- Sends all transactions with proper error handling
 - Confirms transaction success/failure
-- Reports final game status after resolution
+- Reports final game status and anchorGame status
+- Shows detailed verification results
 
 ### ✅ Error Handling
 - Validates all input parameters
 - Handles RPC connection errors
+- Gracefully handles missing AnchorStateRegistry
 - Provides clear error messages and usage help
+- Falls back to manual instructions if needed
 
 ## Script Output
 
@@ -120,12 +137,46 @@ GAME_ADDRESS=$(kurtosis service logs simple-devnet op-challenger-challenger-2151
 
 ### Resolution Execution
 ```
-🎯 Executing resolve() at Mon Sep 16 18:48:09 KST 2025...
+🎯 Step 1: Resolving root claim (index 0)...
+✅ resolveClaim successful: 0x1234...
+⏳ Waiting 2 seconds before resolve()...
+
+🎯 Step 2: Resolving entire game...
 ✅ Resolve transaction sent!
 📄 Transaction hash: 0xabcd1234...
 ⏳ Waiting for transaction confirmation...
+
+🎯 Resolution Results:
+====================
 🟢 Final Status: DEFENDER_WINS
-🎉 Auto-resolve completed!
+⏰ Resolution completed at: Mon Sep 16 18:48:09 KST 2025
+🕐 Total duration: 1200 seconds (20m 0s)
+
+📊 Game Details:
+   🌳 Total claims: 1
+   🎯 Root claim: 0xabc...
+   📦 L2 block: 100
+
+✅ Step 2 completed: Game resolved!
+
+🔥 Step 3: Preparing to call closeGame()...
+=========================================
+✅ AnchorStateRegistry found: 0xdef...
+⏳ Finality delay: 60 seconds (1 minutes)
+⏰ Waiting for finality delay...
+✅ Game is finalized, calling closeGame()...
+✅ closeGame() successful!
+📄 Transaction: 0x5678...
+
+🎉 SUCCESS: anchorGame updated!
+   New anchorGame: 0xb153c997...
+   ✅ This game is now the anchor!
+   ✅ Anchor root is valid: 0x03a1a13511403f20...
+
+🎊 Cold Starting state resolved!
+🎊 All new games will now use valid starting root
+
+🎉 Auto-resolve completed successfully!
 ```
 
 ## Game Status Codes
@@ -303,6 +354,56 @@ cast call --rpc-url $L1_RPC $GAME_ADDRESS "status() returns (uint8)"
 cast call --rpc-url $L1_RPC $GAME_ADDRESS "createdAt() returns (uint64)"
 cast call --rpc-url $L1_RPC $GAME_ADDRESS "resolvedAt() returns (uint64)"
 ```
+
+### ✅ Automatic closeGame() Execution
+
+**🎉 Good News**: The script now **automatically** calls `closeGame()` after finality delay!
+
+The script will:
+1. ✅ Detect AnchorStateRegistry address from game contract
+2. ✅ Query finality delay setting
+3. ✅ Wait for finality delay to pass
+4. ✅ Verify game is finalized
+5. ✅ Call `closeGame()` automatically
+6. ✅ Verify anchorGame updated
+7. ✅ Confirm Cold Starting state resolved
+
+**No manual intervention needed!** The script handles everything.
+
+### Manual closeGame() (If Script Fails to Auto-Detect)
+
+If the script cannot detect AnchorStateRegistry, it will show:
+```
+⚠️  Could not auto-detect AnchorStateRegistry address
+💡 You may need to manually call closeGame() after finality delay
+
+Manual steps:
+  1. Wait for finality delay (check with AnchorStateRegistry.disputeGameFinalityDelaySeconds())
+  2. Call: cast send $GAME_ADDRESS "closeGame()" --rpc-url $L1_RPC --private-key $PRIVATE_KEY
+```
+
+Then you can manually call:
+```bash
+# Get AnchorStateRegistry (if needed)
+ANCHOR_STATE_REGISTRY="0x..."  # From deployment config
+
+# Wait for finality delay
+DELAY=$(cast call --rpc-url $L1_RPC $ANCHOR_STATE_REGISTRY "disputeGameFinalityDelaySeconds() returns (uint256)")
+sleep $DELAY
+
+# Call closeGame()
+cast send --rpc-url $L1_RPC --private-key $PRIVATE_KEY $GAME_ADDRESS "closeGame()"
+```
+
+**Why closeGame() is critical**:
+- `resolve()` only sets the game status
+- `closeGame()` actually updates `anchorGame` in AnchorStateRegistry
+- Without `closeGame()`, the system stays in Cold Starting state
+- All new games will continue to use invalid 0xdead... starting root
+
+**See Also**:
+- [anchor-game-update-guide.md](./anchor-game-update-guide.md) - Complete update process
+- [anchor-state-fix.md](./anchor-state-fix.md) - Cold Starting fix guide
 
 ### Check State Roots
 ```bash

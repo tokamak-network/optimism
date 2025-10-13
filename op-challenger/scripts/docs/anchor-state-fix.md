@@ -86,10 +86,81 @@ Since CANNON mode (game_type: 0) doesn't use L2OutputOracle, you need to manuall
      $GAME_TYPE $ROOT_CLAIM $EXTRA_DATA \
      --rpc-url http://127.0.0.1:58524)
 
-   # Resolve the game (this will automatically call setAnchorState)
+   # Resolve the game
    cast send $GAME_ADDRESS "resolve()" \
      --rpc-url http://127.0.0.1:58524 \
      --private-key [ADMIN_PRIVATE_KEY]
+   ```
+
+   ⚠️ **Important**: `resolve()` alone does NOT update anchorGame!
+
+4. **Wait for finality delay**:
+   ```bash
+   # Check finality delay setting (typically 7 days in production, shorter in devnet)
+   ANCHOR_STATE_REGISTRY=$(grep -o '"AnchorStateRegistryProxy": *"[^"]*"' /tmp/devnet-desc/env.json | cut -d'"' -f4)
+   DELAY=$(cast call $ANCHOR_STATE_REGISTRY \
+     "disputeGameFinalityDelaySeconds()(uint256)" \
+     --rpc-url http://127.0.0.1:58524)
+
+   echo "⏳ Finality delay: $DELAY seconds"
+
+   # For devnet testing, this is usually short (e.g., 30-60 seconds)
+   # For production, this is typically 604800 seconds (7 days)
+   sleep $DELAY
+
+   # Verify game is finalized
+   IS_FINALIZED=$(cast call $ANCHOR_STATE_REGISTRY \
+     "isGameFinalized(address)(bool)" $GAME_ADDRESS \
+     --rpc-url http://127.0.0.1:58524)
+
+   if [ "$IS_FINALIZED" == "true" ]; then
+     echo "✅ Game is finalized and ready for closeGame()"
+   else
+     echo "❌ Game not finalized yet, wait longer"
+   fi
+   ```
+
+5. **Call closeGame() to update anchorGame**:
+   ```bash
+   # Option A: Direct closeGame() call (RECOMMENDED)
+   echo "🎯 Calling closeGame() to update anchorGame..."
+   cast send $GAME_ADDRESS "closeGame()" \
+     --rpc-url http://127.0.0.1:58524 \
+     --private-key [ADMIN_PRIVATE_KEY]
+
+   # Option B: Call claimCredit() which automatically calls closeGame()
+   # (Only if you need to claim bonds)
+   # cast send $GAME_ADDRESS "claimCredit(address)" [RECIPIENT_ADDRESS] \
+   #   --rpc-url http://127.0.0.1:58524 \
+   #   --private-key [ADMIN_PRIVATE_KEY]
+   ```
+
+   💡 **Why closeGame() is critical**:
+   - `closeGame()` calls `setAnchorState()` internally (Line 1082 in FaultDisputeGame.sol)
+   - Without this call, `anchorGame` remains `address(0)`
+   - All new games will continue using the invalid 0xdead... starting root
+   - See [anchor-game-update-guide.md](./anchor-game-update-guide.md) for details
+
+6. **Verify anchorGame updated**:
+   ```bash
+   # Check if anchorGame is now set
+   ANCHOR_GAME=$(cast call $ANCHOR_STATE_REGISTRY \
+     "anchorGame()(address)" \
+     --rpc-url http://127.0.0.1:58524)
+
+   if [ "$ANCHOR_GAME" != "0x0000000000000000000000000000000000000000" ]; then
+     echo "✅ anchorGame successfully updated to: $ANCHOR_GAME"
+
+     # Verify new anchor root
+     NEW_ANCHOR_ROOT=$(cast call $ANCHOR_STATE_REGISTRY \
+       "getAnchorRoot()(bytes32,uint256)" \
+       --rpc-url http://127.0.0.1:58524 | head -1)
+     echo "✅ New anchor root: $NEW_ANCHOR_ROOT"
+   else
+     echo "❌ anchorGame still not set"
+     echo "💡 This may happen if another game is already the anchor"
+     echo "💡 Or if the game doesn't meet anchor requirements"
+   fi
    ```
 
 ### Method 2: Use OPContractsManager.updatePrestate()
@@ -128,13 +199,50 @@ function getAnchorRoot() public view returns (Hash, uint256) {
 }
 ```
 
-When a game is resolved, it automatically calls:
+### ⚠️ Important: Game Resolution vs AnchorGame Update
+
+**Common Misconception**: `resolve()` automatically updates anchorGame
+
+**Reality**: The update happens in `closeGame()`, NOT in `resolve()`
+
 ```solidity
-// In FaultDisputeGame.sol resolve() function
-try ANCHOR_STATE_REGISTRY.setAnchorState(IDisputeGame(address(this))) { } catch { }
+// ❌ WRONG: resolve() does NOT call setAnchorState()
+function resolve() external returns (GameStatus) {
+    // ... resolution logic ...
+    // NO setAnchorState() call here!
+}
+
+// ✅ CORRECT: closeGame() calls setAnchorState()
+function closeGame() public {
+    // ... validation checks ...
+
+    // Line 1082 in FaultDisputeGame.sol
+    try ANCHOR_STATE_REGISTRY.setAnchorState(IDisputeGame(address(this))) { } catch { }
+
+    // ... bond distribution logic ...
+}
 ```
 
+### Update Process
+
+1. **resolve()** → Sets game status to DEFENDER_WINS or CHALLENGER_WINS
+2. **Wait finality delay** → Typically 7 days (production) or 30-60 seconds (devnet)
+3. **closeGame()** → Actually updates anchorGame via `setAnchorState()`
+
 This updates `anchorGame` from `address(0)` to the resolved game, causing `getAnchorRoot()` to return the correct value instead of 0xdead.
+
+### Ways to Trigger closeGame()
+
+1. **Direct call** (Recommended):
+   ```bash
+   cast send $GAME_ADDRESS "closeGame()" --rpc-url $L1_RPC --private-key $KEY
+   ```
+
+2. **Automatic via claimCredit()**:
+   ```bash
+   cast send $GAME_ADDRESS "claimCredit(address)" $RECIPIENT --rpc-url $L1_RPC --private-key $KEY
+   ```
+   Note: `claimCredit()` calls `closeGame()` internally (Line 1008)
 
 ## Verification
 

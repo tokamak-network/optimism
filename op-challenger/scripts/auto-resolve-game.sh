@@ -1,7 +1,16 @@
 #!/bin/bash
 
-# Auto Resolve Dispute Game Script
+# Auto Resolve Dispute Game Script with closeGame() Support
+#
+# This script performs a complete game resolution:
+#   Step 1: resolveClaim(0,0) - Resolve root claim
+#   Step 2: resolve() - Resolve entire game
+#   Step 3: closeGame() - Update anchorGame (after finality delay)
+#
 # Usage: ./auto-resolve-game.sh <game_address> [wait_minutes] [l1_rpc_url] [private_key]
+#
+# Note: The script will automatically wait for finality delay and call closeGame()
+#       to update anchorGame, resolving Cold Starting state.
 
 set -e
 
@@ -210,7 +219,99 @@ if [[ $TOTAL_WAIT -gt 0 ]]; then
         echo "   📦 L2 block: $L2_BLOCK"
 
         echo ""
-        echo "🎉 Auto-resolve completed successfully!"
+        echo "✅ Step 2 completed: Game resolved!"
+
+        # Step 3: Wait for finality delay and call closeGame()
+        echo ""
+        echo "🔥 Step 3: Preparing to call closeGame()..."
+        echo "========================================="
+
+        # Get AnchorStateRegistry address (try to find it from common locations)
+        # You may need to adjust this based on your deployment
+        ANCHOR_STATE_REGISTRY=$(cast call --rpc-url "$L1_RPC" "$GAME_ADDRESS" "anchorStateRegistry() returns (address)" 2>/dev/null || echo "")
+
+        if [[ -z "$ANCHOR_STATE_REGISTRY" ]] || [[ "$ANCHOR_STATE_REGISTRY" == "0x0000000000000000000000000000000000000000" ]]; then
+            echo "⚠️  Could not auto-detect AnchorStateRegistry address"
+            echo "💡 You may need to manually call closeGame() after finality delay"
+            echo ""
+            echo "Manual steps:"
+            echo "  1. Wait for finality delay (check with AnchorStateRegistry.disputeGameFinalityDelaySeconds())"
+            echo "  2. Call: cast send $GAME_ADDRESS \"closeGame()\" --rpc-url $L1_RPC --private-key \$PRIVATE_KEY"
+            echo ""
+            echo "🎉 Auto-resolve completed (resolve only)!"
+        else
+            echo "✅ AnchorStateRegistry found: $ANCHOR_STATE_REGISTRY"
+
+            # Check finality delay
+            FINALITY_DELAY=$(cast call --rpc-url "$L1_RPC" "$ANCHOR_STATE_REGISTRY" "disputeGameFinalityDelaySeconds() returns (uint256)" 2>/dev/null || echo "0")
+            echo "⏳ Finality delay: $FINALITY_DELAY seconds ($(($FINALITY_DELAY/60)) minutes)"
+
+            if [[ "$FINALITY_DELAY" -gt 0 ]]; then
+                echo "⏰ Waiting for finality delay..."
+                sleep $FINALITY_DELAY
+
+                # Verify game is finalized
+                IS_FINALIZED=$(cast call --rpc-url "$L1_RPC" "$ANCHOR_STATE_REGISTRY" "isGameFinalized(address) returns (bool)" "$GAME_ADDRESS" 2>/dev/null || echo "false")
+
+                if [[ "$IS_FINALIZED" == "true" ]]; then
+                    echo "✅ Game is finalized, calling closeGame()..."
+
+                    # Call closeGame()
+                    CLOSE_RESULT=$(cast send --rpc-url "$L1_RPC" \
+                        --private-key "$PRIVATE_KEY" \
+                        "$GAME_ADDRESS" \
+                        "closeGame()" 2>&1)
+
+                    if [[ $? -ne 0 ]]; then
+                        echo "⚠️  closeGame() call failed: $CLOSE_RESULT"
+                        echo "💡 This may be normal if closeGame() was already called"
+                    else
+                        echo "✅ closeGame() successful!"
+                        echo "📄 Transaction: $CLOSE_RESULT"
+
+                        # Wait for transaction confirmation
+                        sleep 3
+
+                        # Verify anchorGame updated
+                        ANCHOR_GAME=$(cast call --rpc-url "$L1_RPC" "$ANCHOR_STATE_REGISTRY" "anchorGame() returns (address)" 2>/dev/null || echo "0x0000000000000000000000000000000000000000")
+
+                        if [[ "$ANCHOR_GAME" != "0x0000000000000000000000000000000000000000" ]]; then
+                            echo ""
+                            echo "🎉 SUCCESS: anchorGame updated!"
+                            echo "   New anchorGame: $ANCHOR_GAME"
+
+                            # Check if it's this game
+                            if [[ "$ANCHOR_GAME" == "$GAME_ADDRESS" ]]; then
+                                echo "   ✅ This game is now the anchor!"
+                            else
+                                echo "   ℹ️  Another game is the anchor (this may be normal)"
+                            fi
+
+                            # Verify anchor root changed from 0xdead
+                            ANCHOR_ROOT=$(cast call --rpc-url "$L1_RPC" "$ANCHOR_STATE_REGISTRY" "getAnchorRoot() returns (bytes32,uint256)" 2>/dev/null | head -1 || echo "")
+                            if [[ ! "$ANCHOR_ROOT" =~ ^0xdead ]]; then
+                                echo "   ✅ Anchor root is valid: ${ANCHOR_ROOT:0:20}..."
+                                echo ""
+                                echo "🎊 Cold Starting state resolved!"
+                                echo "🎊 All new games will now use valid starting root"
+                            fi
+                        else
+                            echo "⚠️  anchorGame still not set"
+                            echo "💡 This may happen if game doesn't meet anchor requirements"
+                        fi
+                    fi
+                else
+                    echo "❌ Game not finalized after waiting"
+                    echo "💡 May need to wait longer or check game status"
+                fi
+            else
+                echo "⚠️  Could not determine finality delay"
+                echo "💡 Manual closeGame() may be required"
+            fi
+
+            echo ""
+            echo "🎉 Auto-resolve completed successfully!"
+        fi
 
     ) &
 
@@ -289,5 +390,96 @@ else
     echo "   📦 L2 block: $L2_BLOCK"
 
     echo ""
-    echo "🎉 Auto-resolve completed successfully!"
+    echo "✅ Step 2 completed: Game resolved!"
+
+    # Step 3: Wait for finality delay and call closeGame()
+    echo ""
+    echo "🔥 Step 3: Preparing to call closeGame()..."
+    echo "========================================="
+
+    # Get AnchorStateRegistry address
+    ANCHOR_STATE_REGISTRY=$(cast call --rpc-url "$L1_RPC" "$GAME_ADDRESS" "anchorStateRegistry() returns (address)" 2>/dev/null || echo "")
+
+    if [[ -z "$ANCHOR_STATE_REGISTRY" ]] || [[ "$ANCHOR_STATE_REGISTRY" == "0x0000000000000000000000000000000000000000" ]]; then
+        echo "⚠️  Could not auto-detect AnchorStateRegistry address"
+        echo "💡 You may need to manually call closeGame() after finality delay"
+        echo ""
+        echo "Manual steps:"
+        echo "  1. Wait for finality delay (check with AnchorStateRegistry.disputeGameFinalityDelaySeconds())"
+        echo "  2. Call: cast send $GAME_ADDRESS \"closeGame()\" --rpc-url $L1_RPC --private-key \$PRIVATE_KEY"
+        echo ""
+        echo "🎉 Auto-resolve completed (resolve only)!"
+    else
+        echo "✅ AnchorStateRegistry found: $ANCHOR_STATE_REGISTRY"
+
+        # Check finality delay
+        FINALITY_DELAY=$(cast call --rpc-url "$L1_RPC" "$ANCHOR_STATE_REGISTRY" "disputeGameFinalityDelaySeconds() returns (uint256)" 2>/dev/null || echo "0")
+        echo "⏳ Finality delay: $FINALITY_DELAY seconds ($(($FINALITY_DELAY/60)) minutes)"
+
+        if [[ "$FINALITY_DELAY" -gt 0 ]]; then
+            echo "⏰ Waiting for finality delay..."
+            sleep $FINALITY_DELAY
+
+            # Verify game is finalized
+            IS_FINALIZED=$(cast call --rpc-url "$L1_RPC" "$ANCHOR_STATE_REGISTRY" "isGameFinalized(address) returns (bool)" "$GAME_ADDRESS" 2>/dev/null || echo "false")
+
+            if [[ "$IS_FINALIZED" == "true" ]]; then
+                echo "✅ Game is finalized, calling closeGame()..."
+
+                # Call closeGame()
+                CLOSE_RESULT=$(cast send --rpc-url "$L1_RPC" \
+                    --private-key "$PRIVATE_KEY" \
+                    "$GAME_ADDRESS" \
+                    "closeGame()" 2>&1)
+
+                if [[ $? -ne 0 ]]; then
+                    echo "⚠️  closeGame() call failed: $CLOSE_RESULT"
+                    echo "💡 This may be normal if closeGame() was already called"
+                else
+                    echo "✅ closeGame() successful!"
+                    echo "📄 Transaction: $CLOSE_RESULT"
+
+                    # Wait for transaction confirmation
+                    sleep 3
+
+                    # Verify anchorGame updated
+                    ANCHOR_GAME=$(cast call --rpc-url "$L1_RPC" "$ANCHOR_STATE_REGISTRY" "anchorGame() returns (address)" 2>/dev/null || echo "0x0000000000000000000000000000000000000000")
+
+                    if [[ "$ANCHOR_GAME" != "0x0000000000000000000000000000000000000000" ]]; then
+                        echo ""
+                        echo "🎉 SUCCESS: anchorGame updated!"
+                        echo "   New anchorGame: $ANCHOR_GAME"
+
+                        # Check if it's this game
+                        if [[ "$ANCHOR_GAME" == "$GAME_ADDRESS" ]]; then
+                            echo "   ✅ This game is now the anchor!"
+                        else
+                            echo "   ℹ️  Another game is the anchor (this may be normal)"
+                        fi
+
+                        # Verify anchor root changed from 0xdead
+                        ANCHOR_ROOT=$(cast call --rpc-url "$L1_RPC" "$ANCHOR_STATE_REGISTRY" "getAnchorRoot() returns (bytes32,uint256)" 2>/dev/null | head -1 || echo "")
+                        if [[ ! "$ANCHOR_ROOT" =~ ^0xdead ]]; then
+                            echo "   ✅ Anchor root is valid: ${ANCHOR_ROOT:0:20}..."
+                            echo ""
+                            echo "🎊 Cold Starting state resolved!"
+                            echo "🎊 All new games will now use valid starting root"
+                        fi
+                    else
+                        echo "⚠️  anchorGame still not set"
+                        echo "💡 This may happen if game doesn't meet anchor requirements"
+                    fi
+                fi
+            else
+                echo "❌ Game not finalized after waiting"
+                echo "💡 May need to wait longer or check game status"
+            fi
+        else
+            echo "⚠️  Could not determine finality delay"
+            echo "💡 Manual closeGame() may be required"
+        fi
+
+        echo ""
+        echo "🎉 Auto-resolve completed successfully!"
+    fi
 fi
