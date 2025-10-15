@@ -1,4 +1,4 @@
-# Optimism Challenger 검증 시스템 완벽 해부 - 동영상 스크립트
+# Optimism Challenger 검증 시스템 완벽 해부
 
 ## 동영상 개요
 - **제목**: "Optimism Challenger: 게임 발견부터 Anchor 업데이트까지 완벽 가이드"
