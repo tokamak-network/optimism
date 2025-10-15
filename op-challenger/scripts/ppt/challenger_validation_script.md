@@ -147,6 +147,191 @@ Phase 4: 사전 검증 실행 (ValidatePrestate)
 Phase 5: 게임 진행 (ProgressGame 주기적 호출)
     ↓
 Phase 6: 게임 종료 및 Anchor 업데이트 (resolve → closeGame) ⭐
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                             시작                                     │
+└────────────────────────────┬────────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  Phase 1: 게임 생성                                                  │
+│  Proposer → L1 Contract                                             │
+└────────────────────────────┬────────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  Phase 2: 게임 발견                                                  │
+│  Scheduler Monitor                                                  │
+└────────────────────────────┬────────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  Phase 3: Player 생성                                                │
+│  playerCreator 실행 🔍                                               │
+│                                                                     │
+│  ┌─────────────────────────────────────┐                           │
+│  │ skipPrestateValidation 체크 ⚙️       │                           │
+│  └────────┬───────────────┬────────────┘                           │
+│        false│              │true                                    │
+│     (기본값)│              │(Permissioned)                          │
+│            ↓              ↓                                         │
+│  [Validators 생성]  [Validators 없음]                               │
+│  - PrestateValidator     (빈 배열)                                  │
+│  - OutputRootValidator                                              │
+│            │              │                                         │
+│  ──────────┴──────────────┴────────────                             │
+│  GamePlayer 생성 (validators 포함)                                   │
+└────────────────────────────┬────────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  Phase 4: 사전 검증 실행                                             │
+│  ValidatePrestate() 호출                                            │
+│                                                                     │
+│  ┌──────────────────────────────┐                                  │
+│  │ validators 배열 순회 실행     │                                  │
+│  └────────┬──────────┬──────────┘                                  │
+│        비어있음│      │있음                                          │
+│            ↓         ↓                                              │
+│      [검증 스킵]  [검증 수행]                                        │
+│       자동 통과   ├─성공 → 통과                                      │
+│                  └─실패 → 에러 반환                                 │
+└────────────┬──────────┬──────────────────────────────────────────┘
+             │          │
+          ✅통과      ❌실패
+             │          │
+             │          ↓
+             │     ┌──────────────────────────────┐
+             │     │ coordinator.createJob():      │
+             │     │ return error                  │
+             │     │ → job 생성 안 됨!             │
+             │     └──────────┬───────────────────┘
+             │                │
+             │                ↓
+             │           ┌─────────────┐
+             │           │ 게임 스킵 ❌ │
+             │           │ L1 상태 유지 │
+             │           └──────┬──────┘
+             │                  │
+             │                  └──────────────┐
+             ↓                                 │
+    ┌────────────────────────┐                 │
+    │ coordinator.createJob():│                 │
+    │ return job ✅           │                 │
+    └────────┬───────────────┘                 │
+             ↓                                  │
+    ┌────────────────────────┐                 │
+    │ Phase 5: 게임 진행      │                 │
+    │ ProgressGame 주기적 호출│                 │
+    └────────┬───────────────┘                 │
+             ↓                                  │
+    ┌─────────────────────────────┐            │
+    │ Phase 6: 게임 종료 ⭐        │            │
+    │ resolve → closeGame         │            │
+    │ Anchor 업데이트             │            │
+    └────────┬────────────────────┘            │
+             ↓                                  ↓
+        [ 정상 종료 ] ◄──────────────────[ 스킵으로 종료 ]
+```
+
+**Mermaid 버전:**
+
+```mermaid
+graph TB
+    Start([시작]) --> Phase1
+
+    Phase1[Phase 1: 게임 생성<br/>Proposer → L1 Contract]
+    Phase1 --> Phase2
+
+    Phase2[Phase 2: 게임 발견<br/>Scheduler Monitor]
+    Phase2 --> Phase3
+
+    Phase3[Phase 3: Player 생성<br/>playerCreator 실행]
+    Phase3 --> SkipCheck{skipPrestateValidation<br/>체크}
+
+    SkipCheck -->|false<br/>기본값| CreateValidators[Validators 생성<br/>- PrestateValidator<br/>- OutputRootValidator]
+    SkipCheck -->|true<br/>PermissionedGameType<br/>SuperPermissionedGameType| NoValidators[Validators 없음<br/>빈 배열]
+
+    CreateValidators --> CreatePlayer[GamePlayer 생성]
+    NoValidators --> CreatePlayer
+
+    CreatePlayer --> Phase4[Phase 4: 사전 검증 실행<br/>ValidatePrestate 호출]
+
+    Phase4 --> ValidatorCheck{validators<br/>배열 확인}
+
+    ValidatorCheck -->|비어있음| AutoPass[검증 스킵<br/>자동 통과]
+    ValidatorCheck -->|있음| RunValidation[검증 수행<br/>각 validator.Validate]
+
+    RunValidation -->|성공| Pass[통과 ✅]
+    RunValidation -->|실패| Fail[에러 반환 ❌]
+
+    AutoPass --> Pass
+
+    Pass --> CreateJob[coordinator.createJob<br/>job 생성 ✅]
+    Fail --> NoJob[coordinator.createJob<br/>return error<br/>job 생성 안 됨 ❌]
+
+    NoJob --> Skip[게임 스킵<br/>L1 상태 유지]
+
+    CreateJob --> Phase5[Phase 5: 게임 진행<br/>ProgressGame 주기적 호출]
+    Phase5 --> Phase6[Phase 6: 게임 종료 ⭐<br/>resolve → closeGame<br/>Anchor 업데이트]
+
+    Phase6 --> NormalEnd([정상 종료])
+    Skip --> SkipEnd([스킵으로 종료])
+
+    style Phase1 fill:#e1f5ff
+    style Phase2 fill:#e1f5ff
+    style Phase3 fill:#fff4e1
+    style SkipCheck fill:#fff9e1
+    style Phase4 fill:#ffe1e1
+    style ValidatorCheck fill:#fff9e1
+    style Pass fill:#e1ffe1
+    style Fail fill:#ffe1e1
+    style Phase5 fill:#e1ffe1
+    style Phase6 fill:#ffe1f5
+    style Skip fill:#f0f0f0
+    style NoJob fill:#ffe1e1
+    style CreateJob fill:#e1ffe1
+```
+
+⚙️  코드 위치 및 동작:
+├─ register_task.go (Line 33-35)
+│  └─ RegisterTask 구조체에 skipPrestateValidation 필드 정의
+│
+├─ register_task.go (Line 58, 97, 200)
+│  └─ 각 RegisterTask 생성 함수에서 플래그 설정
+│     ├─ NewCannonRegisterTask (Line 97):
+│     │  skipPrestateValidation = (gameType == PermissionedGameType)
+│     ├─ NewSuperCannonRegisterTask (Line 58):
+│     │  skipPrestateValidation = (gameType == SuperPermissionedGameType)
+│     ├─ NewSuperAsteriscKonaRegisterTask (Line 200):
+│     │  skipPrestateValidation = (gameType == SuperPermissionedGameType)
+│     └─ NewAsteriscRegisterTask, NewAsteriscKonaRegisterTask:
+│        skipPrestateValidation 설정 안 함 (기본값 false)
+│
+├─ register_task.go (Line 336-339)
+│  └─ playerCreator 함수 내부에서 skipPrestateValidation 체크
+│     ├─ false (기본값): validators 배열 생성 (PrestateValidator, OutputRootValidator)
+│     └─ true: validators = [] (빈 배열)
+│
+├─ player.go (Line 161, 165-172)
+│  └─ GamePlayer 생성 시 validators 전달
+│     └─ ValidatePrestate() 메서드에서 validators 순회 실행
+│        ├─ validators가 비어있으면 → 검증 없이 자동 통과
+│        └─ validators가 있으면 → 각 validator의 Validate() 실행
+│
+└─ validator.go (Line 36-50)
+   └─ PrestateValidator.Validate()
+      ├─ L1 Contract의 prestate hash 가져오기
+      ├─ Local provider의 prestate hash 가져오기
+      └─ 두 값이 일치하는지 비교 (불일치 시 에러)
+
+📌 핵심 차이점:
+├─ skipPrestateValidation = false (기본값, Permissionless 게임)
+│  ├─ 적용 게임: CannonGameType, AsteriscGameType, AsteriscKonaGameType 등
+│  ├─ Phase 3: Validators 생성됨 ✅
+│  └─ Phase 4: 실제 검증 수행 → 실패 시 게임 스킵
+│
+└─ skipPrestateValidation = true (Permissioned 게임)
+   ├─ 적용 게임: PermissionedGameType (1), SuperPermissionedGameType (5)
+   ├─ Phase 3: Validators 생성 안 됨 ❌
+   ├─ Phase 4: ValidatePrestate() 호출되지만 빈 배열이라 자동 통과
+   └─ 이유: 신뢰된 참가자 전용, 유효한 prestate 없이 구성 가능
 ```
 
 **핵심 포인트**:
@@ -272,7 +457,7 @@ coordinator.createPlayer() 호출:
 ### 장면 7: skipPrestateValidation 플래그 (6:30-7:30)
 
 **내레이션**:
-"잠깐, 모든 게임이 검증을 거치는 건 아닙니다. skipPrestateValidation 플래그가 true면 검증을 건너뜁니다. Permissioned 게임처럼 신뢰할 수 있는 참여자만 있는 경우나, Cold Starting 문제를 회피해야 할 때 사용됩니다."
+"잠깐, 모든 게임이 검증을 거치는 건 아닙니다. skipPrestateValidation 플래그가 true면 검증을 건너뜁니다. 이는 신뢰할 수 있는 참여자만 있는 Permissioned 게임에서 사용됩니다. 이러한 게임들은 step() 호출에 도달할 것으로 예상되지 않으며, 종종 유효한 prestate 없이 구성되는 경우가 많지만, Challenger는 여전히 게임을 해결해야 합니다."
 
 **화면**:
 - 게임 타입별 분기
@@ -280,6 +465,12 @@ coordinator.createPlayer() 호출:
 
 **코드**:
 ```go
+// register_task.go:94-97 (실제 코드 주석)
+// Don't validate the absolute prestate or genesis output root for permissioned games
+// Only trusted actors participate in these games so they aren't expected to reach
+// the step() call and are often configured without valid prestates but the
+// challenger should still resolve the games.
+
 // register_task.go:336
 if !e.skipPrestateValidation {
     validators = append(validators, ...)
@@ -287,11 +478,25 @@ if !e.skipPrestateValidation {
     // 검증 없이 바로 게임 참여!
 }
 
-// 플래그 설정
-skipPrestateValidation:
-  gameType == PermissionedGameType ||
-  gameType == SuperPermissionedGameType
+// 플래그 설정 (각 RegisterTask 함수별)
+NewCannonRegisterTask:
+  skipPrestateValidation = (gameType == PermissionedGameType)  // GameType = 1
+
+NewSuperCannonRegisterTask:
+  skipPrestateValidation = (gameType == SuperPermissionedGameType)  // GameType = 5
+
+NewSuperAsteriscKonaRegisterTask:
+  skipPrestateValidation = (gameType == SuperPermissionedGameType)  // GameType = 5
+
+NewAsteriscRegisterTask, NewAsteriscKonaRegisterTask:
+  skipPrestateValidation = false (기본값, 설정 안 함)
 ```
+
+**핵심 이유 (코드 주석 기반):**
+- Permissioned 게임은 **신뢰된 참여자(trusted actors)만** 참여
+- step() 호출에 도달할 것으로 예상되지 않음
+- 종종 **유효한 prestate 없이 구성됨**
+- 하지만 Challenger는 여전히 **게임을 resolve해야 함**
 
 ---
 
@@ -549,8 +754,12 @@ NewGamePlayer() 생성 (player.go:88-162):
    └─ 게임 중 블록 검증에 사용
 
 2. Oracle & Preimage Uploader
-   ├─ DirectPreimageUploader
-   └─ LargePreimageUploader
+   ├─ DirectPreimageUploader (작은 데이터용)
+   ├─ LargePreimageUploader (큰 데이터용)
+   └─ SplitPreimageUploader (자동 선택)
+
+   역할: step() 실행 전 preimage를 L1에 업로드
+   (상세 설명은 장면 14-2 참조)
 
 3. Responder 생성
    └─ FaultResponder
@@ -666,69 +875,715 @@ func (a *Agent) Act(ctx context.Context) error {
 
 ---
 
-### 장면 15: solver.CalculateNextActions() - 모든 블록 검증 (15:30-16:15)
+### 장면 14-2: solver.CalculateNextActions() - 액션 계산 (15:00-16:00)
 
 **내레이션**:
-"여기가 바로 마법이 일어나는 곳입니다. Solver는 게임의 모든 claim을 순회하며 각각에 대해 TraceProvider.Get을 호출합니다. 이때 L2 RPC를 통해 실제 블록 값을 조회하고, Proposer의 주장과 비교합니다."
+"여기가 바로 마법이 일어나는 곳입니다. Solver는 게임의 모든 claim을 순회하며, 각 claim에 대해 먼저 shouldCounter로 대응 필요성을 판단합니다. Counter가 필요하면 agreeWithClaim으로 값을 비교하고, agree면 defend, disagree면 attack을 결정합니다. 이 과정에서 TraceProvider.Get이 여러 번 호출되며, 매번 L2 RPC를 통해 실제 블록 값을 조회합니다. 또한 우리가 만든 claim을 honestClaims에 추적하여, 다음 순회에서 불필요한 처리를 방지합니다."
 
 **화면**:
 - Bisection 과정 애니메이션
-- TraceProvider.Get 호출
+- TraceProvider.Get 호출 (여러 번)
+- shouldCounter → agreeWithClaim → attack/defend 흐름
+- honestClaims 추적 시각화
 - 블록별 검증 시각화
 
-**검증 프로세스**:
+**코드 위치**:
 ```
-solver.CalculateNextActions():
+주요 파일:
+├─ game/fault/solver/game_solver.go
+│  ├─ Line 92-145: CalculateNextActions() - 전체 조율
+│  ├─ Line 127-133: 모든 claim 순회 for loop
+│  ├─ Line 169-187: calculateMove() - 중간 claim 처리
+│  └─ Line 148-167: calculateStep() - leaf claim 처리
+│
+├─ game/fault/solver/solver.go
+│  ├─ Line 30-61: shouldCounter() - 대응 필요성 판단
+│  ├─ Line 64-82: NextMove() - 다음 move 계산
+│  ├─ Line 95-133: AttemptStep() - step 액션 계산
+│  ├─ Line 165-168: agreeWithClaim() - 값 비교
+│  ├─ Line 136-146: attack() - Attack 액션 생성
+│  └─ Line 149-162: defend() - Defend 액션 생성
+│
+└─ game/fault/solver/honest_claims.go
+   ├─ Line 22-27: AddHonestClaim() - 우리 claim 추적
+   └─ Line 29-31: IsHonest() - 정직한 claim 확인
+```
 
-For each claim in game:
+**🌳 게임 트리 구조 (MaxDepth 개념)**:
+```
+MaxDepth = 73 (일반적인 값)
 
-  1. TraceProvider.Get(position) 호출
-     └─ HonestBlockNumber(position)
-        → 블록 번호 계산
+Depth 0: [Root Claim]                    ← 최상단 (Block 100-200)
+           │
+    ┌──────┴──────┐
+Depth 1: [Claim] [Claim]                 ← 중간 노드 (Block 100-150 vs 150-200)
+           │         │
+    ┌──────┴──   ┌──┴──┐
+Depth 2: [C] [C] [C] [C]                 ← 중간 노드 (계속 bisection)
+           ...
+           ...                            ← Depth 3, 4, 5... 72까지 계속
+           ...
+    ┌──────┴──────┐
+Depth 73: [C] ... [C]                    ← Leaf nodes (최하단)
+          ↑                               ← 단일 instruction 수준
+          └─ claim.Depth() == game.MaxDepth()
+             → calculateStep() 호출
+             → step() 트랜잭션 생성 🔥
 
-  2. 🔥 L2 RPC 호출
-     └─ rollupClient.OutputAtBlock(ctx, blockNumber)
-        Example:
-        ├─ OutputAtBlock(100) ← Block 100 조회
-        ├─ OutputAtBlock(125) ← Block 125 조회
-        ├─ OutputAtBlock(150) ← Block 150 조회
-        ├─ OutputAtBlock(175) ← Block 175 조회
-        └─ OutputAtBlock(200) ← Block 200 조회
+중간 노드 (Depth < 73):
+├─ calculateMove() 사용
+├─ attack()/defend() 호출
+├─ ActionTypeMove 생성
+└─ L1: attack() 또는 defend() 트랜잭션
 
-  3. Proposer claim vs Honest value 비교
-     ├─ 일치 → Agree, 액션 불필요
-     └─ 불일치 → Disagree, Attack/Defend 필요
+Leaf 노드 (Depth == 73일 때만):
+├─ calculateStep() 사용
+├─ AttemptStep() 호출
+├─ ActionTypeStep 생성
+└─ L1: step() 트랜잭션 (PreState + Proof 포함)
 
-  4. 필요한 액션 생성
+⚠️ 핵심: step()은 MaxDepth에서만 호출됨!
+├─ claim.Depth() == game.MaxDepth() 조건 필요
+├─ 하지만 대부분 MaxDepth 이전에 게임 종료!
+└─ Proposer가 counter 안 하면 더 이상 진행 안 함
+   └─ 예: Depth 15에서 Proposer 포기
+       → Chess clock 만료 → resolve()
+       → MaxDepth 73까지 안 감!
+```
+
+**💡 MaxDepth = 73의 의미**:
+```
+2^73 = 9,444,732,965,739,290,427,392 ≈ 9.4 × 10^21
+└─ Cannon VM이 처리할 수 있는 이론적 최대 instruction 수
+
+MaxDepth = 73:
+├─ 게임 트리의 "최대 깊이" (이론적 한계)
+├─ 73번까지 bisection 가능
+└─ ⚠️ 실제로는 훨씬 적게 사용됨!
+
+실제 bisection 횟수 (트랜잭션 수):
+├─ 정직한 Proposer: 0번 (참여 안 함) ✅
+├─ 일반적인 분쟁: 10-20번 정도 ✅
+├─ 복잡한 분쟁: 30-40번
+└─ 최악의 경우: 최대 73번 (극히 드묾)
+
+게임 종료 조건 (MaxDepth 도달 전):
+├─ Proposer가 더 이상 counter 안 함
+├─ Chess clock 만료
+├─ 문제 지점 명확히 특정됨
+└─ → 그 시점에서 게임 종료! (MaxDepth까지 안 감)
+
+실제 게임 진행 예시:
+┌─────────────────────────────────────────┐
+│ 케이스 A: Depth 15에서 종료 (일반적)   │
+├─────────────────────────────────────────┤
+│ Depth 0: Root claim 틀림 → Attack       │
+│ Depth 1-14: Bisection 계속 (14번 tx)   │
+│ Depth 15: Challenger의 claim 제출      │
+│ └─ Proposer가 counter 안 함 (경제적 판단)│
+│    └─ 틀렸다는 걸 알았거나           │
+│    └─ Bond 손실 위험 > 반박 비용      │
+│                                         │
+│ 결과:                                   │
+│ ├─ 총 트랜잭션: 15번 ✅                 │
+│ ├─ MaxDepth(73)까지 안 감 ✅            │
+│ ├─ Chess clock 만료 → resolve()        │
+│ └─ Challenger 승리! (CHALLENGER_WINS)  │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│ 케이스 B: MaxDepth까지 진행 (극히 드묾)│
+├─────────────────────────────────────────┤
+│ Depth 0-72: Bisection 계속 (73번 tx)   │
+│ Depth 73: MaxDepth 도달 ✅              │
+│ └─ claim.Depth() == 73                 │
+│    └─ calculateStep() 호출 🔥          │
+│       └─ ActionTypeStep 생성           │
+│          └─ step() 트랜잭션            │
+│             └─ VM 실행 증명 제출       │
+│                                         │
+│ 결과:                                   │
+│ ├─ 총 트랜잭션: 73번 + step 1번        │
+│ ├─ MaxDepth에서 step() 실행 ✅         │
+│ └─ L1 Contract가 VM 재현해서 최종 판정│
+└─────────────────────────────────────────┘
+
+비유: "엘리베이터"
+├─ 73층 건물 (MaxDepth = 73)
+├─ 보통: 10-20층에서 내림 (게임 종료)
+└─ 극히 드물게: 73층 꼭대기까지
+```
+
+**⏱️ Chess Clock 메커니즘 - 게임 종료의 핵심**:
+```
+🎯 역할: 무한 게임 방지 & 공정한 시간 배분
+
+동작 방식:
+├─ 각 참여자에게 제한 시간 부여
+│  ├─ Production: 3.5일 (302400초)
+│  └─ Devnet: 20분 (1200초)
+├─ Claim 제출하면 상대방의 clock 시작
+├─ Counter하면 자신의 clock 시작
+└─ Clock 만료 시 더 이상 counter 못함
+
+값 설정 위치:
+└─ L1 Contract 배포 시 설정
+   └─ deploy-config/*.json
+      ├─ faultGameMaxClockDuration: 302400 (Production)
+      └─ faultGameMaxClockDuration: 1200 (Devnet)
+
+코드 참조:
+// game.go:119-127
+func ChessClock(now time.Time, claim Claim, parent Claim) time.Duration {
+    duration := now.Sub(claim.Clock.Timestamp)  // 현재까지 경과 시간
+    if parent != (Claim{}) {
+        duration = parent.Clock.Duration + duration  // 누적
+    }
+    return duration
+}
+
+// agent.go:191
+if ChessClock(now, claim, parent) <= maxClockDuration {
+    continue  // ← 아직 시간 안 지남
+}
+// 시간 지나면 resolve 가능!
+```
+
+**실제 시나리오 (Production 환경)**:
+```
+maxClockDuration = 3.5일 (302400초)
+
+T=0일: Root Claim (Proposer)
+       └─ Challenger의 clock 시작 ⏱️
+
+T=0.5일: Challenger Attack 제출
+         ├─ Challenger clock: 0.5일 사용
+         └─ Proposer의 clock 시작 ⏱️
+
+T=1일: Proposer Defend 제출
+       ├─ Proposer clock: 0.5일 사용
+       └─ Challenger clock 재시작 ⏱️
+
+T=2일: Challenger Attack 제출 (Depth 15)
+       ├─ Challenger clock: 총 1.5일 사용 (0.5일+1일)
+       └─ Proposer의 clock 시작 ⏱️
+
+T=2일~5.5일: Proposer가 counter 안 함 ❌
+              └─ Proposer clock 계속 증가...
+              └─ 0.5일, 1일, 2일, 3일, 3.5일... ⏰
+
+T=5.5일: ⏰ Chess Clock 만료!
+         ├─ ChessClock(now, claim) = 3.5일
+         ├─ 3.5일 >= maxClockDuration (3.5일)
+         ├─ Proposer가 더 이상 counter 못함
+         └─ resolve() 호출 가능! ✅
+
+결과:
+├─ 총 Depth: 15 (MaxDepth 73 안 감)
+├─ step() 없음
+├─ Chess clock 만료로 종료
+└─ Challenger 승리! (CHALLENGER_WINS)
+```
+
+**환경별 maxClockDuration 값**:
+```
+Production:
+├─ maxClockDuration: 3.5일 (302400초)
+├─ 게임 총 기간: 약 7일 (양쪽 합산)
+└─ deploy-config/mainnet.json, hardhat.json
+
+Devnet/Test:
+├─ maxClockDuration: 20분 (1200초)
+├─ 게임 총 기간: 약 40분 (양쪽 합산)
+└─ deploy-config/getting-started.json
+
+💡 참고:
+└─ 각 참여자에게 3.5일씩 주어짐
+   └─ Proposer: 3.5일 + Challenger: 3.5일
+   └─ 최대 총 게임 기간: 약 7일
+```
+
+**게임 종료 조건 정리**:
+```
+① Chess Clock 만료 (가장 흔함) ✅
+   ├─ 상대가 counter 안 함
+   ├─ maxClockDuration 초과
+   └─ 어느 depth에서든 종료 가능
+
+② MaxDepth에서 step() 증명 (드묾)
+   ├─ Depth 73까지 진행
+   ├─ step() 트랜잭션 제출
+   └─ VM 실행으로 최종 판정
+
+③ CounteredBy 확인
+   ├─ claim.CounteredBy != address(0)
+   ├─ 이미 counter된 claim
+   └─ 더 이상 처리 불필요
+
+대부분 ①번 방식으로 종료!
+└─ 경제적 합리성: 틀린 걸 알면 포기
+```
+
+**💡 핵심 요약:**
+- **MaxDepth까지 안 가도 됨**
+- **Chess Clock 만료**로 종료 (가장 흔함)
+- **step() 없이도 게임 종료** 가능
+- 효율적이고 경제적인 설계
+
+---
+
+### 장면 14-3: solver 실제 동작 흐름 요약
+
+**검증 프로세스 (간략)**:
+```
+for _, claim := range game.Claims() {
+  Step 1: shouldCounter() 체크
+  └─ 대응 필요한 claim만 선택
+
+  Step 2: agreeWithClaim()
+  └─ TraceProvider.Get() → L2 RPC 호출
+
+  Step 3: attack() 또는 defend()
+  └─ 새로운 position 계산 및 값 조회
+
+  Step 4: Action 생성
+  └─ honestClaims 추적 & 액션 반환
+}
+
+return actions  // ← 다음: performAction()으로 전달
+```
+
+**코드 위치**:
+```
+주요 파일:
+├─ game/fault/solver/game_solver.go
+│  ├─ Line 92-145: CalculateNextActions() - 전체 조율
+│  ├─ Line 127-133: 모든 claim 순회 for loop
+│  ├─ Line 169-187: calculateMove() - 중간 claim 처리
+│  └─ Line 148-167: calculateStep() - leaf claim 처리
+│
+├─ game/fault/solver/solver.go
+│  ├─ Line 30-61: shouldCounter() - 대응 필요성 판단
+│  ├─ Line 64-82: NextMove() - 다음 move 계산
+│  ├─ Line 95-133: AttemptStep() - step 액션 계산
+│  ├─ Line 165-168: agreeWithClaim() - 값 비교
+│  ├─ Line 136-146: attack() - Attack 액션 생성
+│  └─ Line 149-162: defend() - Defend 액션 생성
+│
+└─ game/fault/solver/honest_claims.go
+   ├─ Line 22-27: AddHonestClaim() - 우리 claim 추적
+   └─ Line 29-31: IsHonest() - 정직한 claim 확인
+```
+
+**검증 프로세스 (전체 흐름)**:
+```
+═══════════════════════════════════════════════════════
+Phase 1: 초기화
+═══════════════════════════════════════════════════════
+
+solver.CalculateNextActions(game):
+├─ agreeWithRootClaim 판단
+├─ honestClaims tracker 초기화
+└─ Root claim이 정직하면 honestClaims에 추가
+
+═══════════════════════════════════════════════════════
+Phase 2: 모든 Claim 순회
+═══════════════════════════════════════════════════════
+
+for _, claim := range game.Claims() {  // ← 게임의 모든 claim!
+
+  Step 1: Claim 타입 판단
+  ├─ claim.Depth() == MaxDepth?
+  │  ├─ Yes → calculateStep() 호출 (leaf node)
+  │  └─ No → calculateMove() 호출 (중간 node)
+
+  Step 2: shouldCounter() 체크 🔥
+  ├─ honestClaims.IsHonest(claim)?
+  │  └─ Yes → return false → 액션 없음 ✅ (우리가 만든 claim)
+  │
+  ├─ claim.IsRoot()?
+  │  └─ Yes → return true (정직하지 않으면 항상 counter)
+  │
+  ├─ parent가 honest claim?
+  │  └─ Yes → return true (정직한 claim 지키기)
+  │
+  ├─ parent에 honest counter 없음?
+  │  └─ Yes → return false → 액션 없음 ✅ (무시)
+  │
+  └─ 전략적 판단 (trace index 비교)
+     └─ return true/false
+
+  ⚠️ shouldCounter = false → 이 claim 스킵! (다음 claim으로)
+
+  Step 3: agreeWithClaim() 체크 🔥
+  └─ ourValue = s.trace.Get(ctx, game, claim, claim.Position)
+     ├─ 🔥 L2 RPC 호출!
+     │  └─ rollupClient.OutputAtBlock(blockNumber)
+     │     Example: OutputAtBlock(150)
+     │
+     └─ bytes.Equal(ourValue, claim.Value)
+        ├─ true → agree ✅
+        └─ false → disagree ❌
+
+  Step 4: 액션 결정
+  ├─ agree = true:
+  │  ├─ claim.IsRoot()?
+  │  │  ├─ Yes → return nil → 액션 없음 ✅
+  │  │  └─ No → defend() 호출 🛡️
+  │  │
+  │  └─ defend():
+  │     ├─ position = claim.Defend() (오른쪽 경로)
+  │     ├─ value = s.trace.Get(ctx, game, claim, position)
+  │     │  └─ 🔥 L2 RPC 호출! (defend position 값)
+  │     └─ return Claim{ Position, Value }
+  │
+  └─ agree = false:
+     └─ attack() 호출 ⚔️
+        ├─ position = claim.Attack() (왼쪽 자식)
+        ├─ value = s.trace.Get(ctx, game, claim, position)
+        │  └─ 🔥 L2 RPC 호출! (attack position 값)
+        └─ return Claim{ Position, Value }
+
+  Step 5: 액션 생성 & honestClaims 추적
+  ├─ honestClaims.AddHonestClaim(claim, move)
+  │  └─ 우리가 만든 move를 추적 (다음 순회에서 스킵용)
+  │
+  ├─ game.IsDuplicate(move)?
+  │  └─ Yes → 액션 없음 (중복)
+  │
+  └─ Action 생성:
      └─ Action{
           Type: ActionTypeMove,
-          IsAttack: true,
+          IsAttack: !game.DefendsParent(move),
           ParentClaim: claim,
-          Value: honestValue,
+          Value: move.Value,
         }
+}
+
+═══════════════════════════════════════════════════════
+Phase 3: 모든 액션 반환
+═══════════════════════════════════════════════════════
+
+return actions  // ← agent.performAction()으로 전달
+
+💡 핵심 포인트:
+├─ TraceProvider.Get()이 여러 번 호출됨:
+│  ├─ agreeWithClaim()에서 1회 (현재 position)
+│  └─ attack()/defend()에서 1회 (새로운 position)
+│  └─ 각 호출마다 L2 RPC (OutputAtBlock) 실행!
+│
+├─ honestClaims 추적이 중요:
+│  ├─ 우리가 만든 claim을 기록
+│  └─ 다음 순회에서 shouldCounter=false로 스킵
+│  └─ 효율성 & 무한루프 방지
+│
+└─ 모든 claim 순회:
+   ├─ 정직한 Proposer → 액션 거의 없음
+   └─ 부정직한 Proposer → 여러 Attack/Defend 생성
 ```
 
-**실제 시나리오**:
+**실제 시나리오 (상세)**:
 ```
 Game: Block 100 → 200 검증
 
-Round 1: Root Claim (Block 200)
-├─ TraceProvider.Get(RootPosition)
-├─ OutputAtBlock(200) ← 🔥 L2 RPC
-└─ 비교: rootClaim == honestValue?
-   └─ Agree → 액션 없음
+═══════════════════════════════════════════════════════
+시나리오 A: 정직한 Proposer (가장 흔한 케이스)
+═══════════════════════════════════════════════════════
 
-Round 2: Mid Claim (Block 150)
-├─ TraceProvider.Get(MidPosition)
-├─ OutputAtBlock(150) ← 🔥 L2 RPC
-└─ 비교 및 액션 결정
+초기화:
+├─ agreeWithRootClaim 체크
+│  ├─ ourValue = OutputAtBlock(200) → 0xAAA
+│  ├─ rootClaim.Value = 0xAAA
+│  └─ agree! → honestClaims에 Root 추가 ✅
+└─ game.Claims() = [Claim0: Root]
 
-Round 3: Block 125
-├─ OutputAtBlock(125) ← 🔥 L2 RPC
-└─ 계속 bisection...
+Claim0 처리 (Root):
+├─ calculateMove(Claim0)
+├─ shouldCounter(Claim0) 🔥
+│  └─ IsHonest(Claim0)? → Yes ✅
+│  └─ return false
+└─ 결과: 액션 없음 ✅
 
-Result: 모든 중간 블록이 검증됨!
+이후:
+└─ 다른 claim들도 모두 정직하면 액션 없음
+   └─ Challenger는 게임에 참여 안 함 (정직하니까!)
+
+═══════════════════════════════════════════════════════
+시나리오 B: 부정직한 Proposer - 전체 bisection
+═══════════════════════════════════════════════════════
+
+초기화:
+├─ agreeWithRootClaim 체크
+│  ├─ ourValue = OutputAtBlock(200) → 0xAAA
+│  ├─ rootClaim.Value = 0xBAD
+│  └─ disagree! ❌
+└─ game.Claims() = [Claim0: Root]
+
+────────────────────────────────────────────────────
+Round 1: Claim0 처리 (Root)
+────────────────────────────────────────────────────
+├─ calculateMove(Claim0)
+├─ shouldCounter(Claim0) 🔥
+│  ├─ IsHonest? → No
+│  ├─ IsRoot? → Yes
+│  └─ return true ✅
+│
+├─ agreeWithClaim(Claim0) 🔥
+│  ├─ ourValue = OutputAtBlock(200) → 0xAAA
+│  ├─ claim.Value = 0xBAD
+│  └─ return false ❌
+│
+├─ attack(Claim0) ⚔️
+│  ├─ position = Claim0.Attack() (depth:1, index:0)
+│  ├─ value = OutputAtBlock(150) → 0xCCC
+│  └─ return Move{ Position(1,0), Value=0xCCC }
+│
+├─ honestClaims.AddHonestClaim(Claim0, Move)
+│  └─ Move를 정직한 claim으로 추적
+│
+└─ Action 생성:
+   └─ Action{ Type:Move, IsAttack:true, Value:0xCCC }
+
+────────────────────────────────────────────────────
+Challenger가 Action 실행 → L1에 Claim1 생성됨!
+────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────
+Round 2: game.Claims() = [Claim0, Claim1, Claim2(Proposer)]
+────────────────────────────────────────────────────
+
+Claim0 처리:
+├─ shouldCounter(Claim0) → IsHonest? → No
+└─ (위와 동일 - 이미 처리됨, IsDuplicate 체크로 스킵)
+
+Claim1 처리 (우리가 만든 claim):
+├─ shouldCounter(Claim1) 🔥
+│  └─ IsHonest(Claim1)? → Yes ✅ (우리가 만듦)
+│  └─ return false
+└─ 액션 없음 ✅ (우리 claim은 counter 안 함)
+
+Claim2 처리 (Proposer의 counter):
+├─ shouldCounter(Claim2) 🔥
+│  ├─ IsHonest? → No
+│  ├─ Parent(Claim0)가 honest? → No
+│  ├─ Claim0에 honest counter 있음? → Yes (Claim1)
+│  └─ return true ✅
+│
+├─ agreeWithClaim(Claim2) 🔥
+│  ├─ ourValue = OutputAtBlock(175) → 0xDDD
+│  ├─ claim.Value = 0xDDD
+│  └─ return true ✅
+│
+├─ defend(Claim2) 🛡️
+│  ├─ position = Claim2.Defend()
+│  ├─ value = OutputAtBlock(...) → 계산
+│  └─ return Defend move
+│
+└─ Action 생성: Defend 액션
+
+────────────────────────────────────────────────────
+계속 bisection 진행...
+────────────────────────────────────────────────────
+
+Result:
+├─ 각 claim마다 OutputAtBlock() 호출
+├─ agree → Defend 🛡️ (정직한 claim 지지)
+├─ disagree → Attack ⚔️ (부정직한 claim 반박)
+└─ 모든 중간 블록이 검증됨!
 ```
+
+**💡 핵심:**
+- 모든 claim 검증 (L2 RPC 호출)
+- 필요한 액션만 계산
+- honestClaims 추적으로 효율성 확보
+
+---
+
+### 장면 15: performAction과 Preimage Uploader - 액션 실행 (16:00-16:45)
+
+**내레이션**:
+"Solver가 계산한 액션들은 agent.performAction을 통해 실행됩니다. 이 과정에서 중요한 것이 바로 Preimage Uploader입니다. step() 호출 전에 필요한 preimage 데이터를 L1 Contract에 업로드해야 합니다. 크기에 따라 DirectPreimageUploader 또는 LargePreimageUploader가 자동으로 선택됩니다. 모든 액션은 병렬로 실행되어 효율성을 극대화합니다."
+
+**화면**:
+- performAction → Responder.PerformAction 흐름
+- Preimage 업로드 프로세스 (Direct vs Large)
+- step() 실행 애니메이션
+- 병렬 실행 시각화
+
+**코드 위치**:
+```
+주요 파일:
+├─ game/fault/agent.go
+│  └─ Line 137-148: performAction() - 액션 실행 (병렬)
+│
+├─ game/fault/responder/responder.go
+│  ├─ Line 90-129: PerformAction() - 액션 타입별 처리
+│  ├─ Preimage 업로드 로직
+│  └─ AttackTx/DefendTx/StepTx 호출
+│
+└─ game/fault/preimages/
+   ├─ direct.go: DirectPreimageUploader
+   ├─ large.go: LargePreimageUploader
+   └─ split.go: SplitPreimageUploader (라우터)
+```
+
+**코드 플로우**:
+```go
+// agent.go:106-111 - 병렬 실행
+var wg sync.WaitGroup
+wg.Add(len(actions))
+for _, action := range actions {
+    go a.performAction(ctx, &wg, action)  // ← 병렬!
+}
+wg.Wait()
+
+// agent.go:137-148
+func (a *Agent) performAction(ctx context.Context, wg *sync.WaitGroup, action types.Action) {
+    defer wg.Done()
+
+    if err := a.responder.PerformAction(ctx, action); err != nil {
+        a.log.Error("Failed to perform action", "err", err)
+    }
+}
+
+// responder/responder.go:90-129
+func (r *FaultResponder) PerformAction(ctx context.Context, action types.Action) error {
+    // 1. Preimage 업로드 (step()용)
+    if action.OracleData != nil {
+        if !preimageExists {
+            r.uploader.UploadPreimage(ctx, ...)
+        }
+    }
+
+    // 2. 액션 타입별 실행
+    switch action.Type {
+    case ActionTypeMove:
+        if action.IsAttack {
+            candidate = r.contract.AttackTx(...)
+        } else {
+            candidate = r.contract.DefendTx(...)
+        }
+    case ActionTypeStep:
+        candidate = r.contract.StepTx(...)
+    case ActionTypeChallengeL2BlockNumber:
+        candidate = r.contract.ChallengeL2BlockNumberTx(...)
+    }
+
+    return r.sender.SendAndWaitSimple("perform action", candidate)
+}
+```
+
+**📋 3가지 Action Type 상세**:
+```
+① ActionTypeMove (중간 노드, Depth < MaxDepth)
+├─ 용도: Bisection 진행 (문제 지점 좁히기)
+├─ L1 함수:
+│  ├─ IsAttack=true → attack(parentIndex, claim)
+│  └─ IsAttack=false → defend(parentIndex, claim)
+├─ 데이터: claim hash만 전송 (32 bytes)
+└─ 비용: 낮음
+
+② ActionTypeStep (Leaf 노드, Depth == MaxDepth)
+├─ 용도: 단일 instruction 실행 증명
+├─ L1 함수: step(claimIndex, isAttack, stateData, proof)
+├─ 데이터:
+│  ├─ PreState: VM의 전체 상태 (메모리, 레지스터 등)
+│  ├─ ProofData: Merkle proof
+│  └─ OracleData: Preimage (사전 업로드 필요!)
+├─ 비용: 높음 (대량 데이터 + 실행)
+└─ 증명: L1 Contract가 VM 실행 재현
+
+③ ActionTypeChallengeL2BlockNumber (특수)
+├─ 용도: L2 블록 번호가 invalid할 때
+├─ L1 함수: challengeRootL2Block(outputRootProof, headerRlp)
+├─ 조건: Proposer가 미래 블록 제안
+└─ 예: L2 Safe Head=150인데 Block 200 제안
+```
+
+**📦 Preimage 업로드 메커니즘 상세**:
+```
+═══════════════════════════════════════════════════════
+Preimage 타입별 업로드 방식
+═══════════════════════════════════════════════════════
+
+① Local Preimage (IsLocal = true)
+├─ L1 Contract: FaultDisputeGame
+├─ 함수: addLocalData(localContext, claimIndex, offset)
+├─ 트랜잭션: 1개
+├─ 특징: 게임별로 독립적 저장
+├─ 예시: VM 실행 중 local 변수, 스택 데이터
+└─ 코드: faultdisputegame.go:355-362
+
+② Global Preimage (IsLocal = false)
+├─ L1 Contract: PreimageOracle
+├─ 함수 (key type에 따라):
+│  ├─ loadKeccak256PreimagePart(offset, data)
+│  ├─ loadSha256PreimagePart(offset, data)
+│  ├─ loadBlobPreimagePart(zPoint, y, commitment, proof, offset)
+│  └─ loadPrecompilePreimagePart(offset, addr, requiredGas, input)
+├─ 특징: 모든 게임이 공유
+├─ 예시: 블록 데이터, 트랜잭션 데이터
+└─ 한 번 업로드하면 재사용 가능 ✅
+
+═══════════════════════════════════════════════════════
+크기별 업로드 전략
+═══════════════════════════════════════════════════════
+
+① DirectPreimageUploader (작은 데이터)
+├─ 조건: size < threshold (보통 ~126KB)
+├─ 방식: 1개 트랜잭션에 전체 데이터 포함
+├─ 함수: UpdateOracleTx() 1번 호출
+└─ 코드: preimages/direct.go:31-44
+
+② LargePreimageUploader (큰 데이터)
+├─ 조건: size >= threshold
+├─ 방식: 여러 청크로 분할 (각 ~0.04MB)
+├─ 3단계 프로세스:
+│  1. InitLargePreimage(uuid, offset, size)
+│  2. AddLeaves(uuid, blockIndex, data) ← 여러 번
+│  3. Squeeze(uuid, stateMatrix, proofs)
+└─ 코드: preimages/large.go:51-91
+
+③ SplitPreimageUploader (자동 라우터)
+├─ 역할: 크기에 따라 Direct/Large 자동 선택
+├─ 로직:
+│  if (IsLocal || size < threshold):
+│     → DirectPreimageUploader
+│  else:
+│     → LargePreimageUploader
+└─ 코드: preimages/split.go:23-33
+```
+
+**🔄 실제 업로드 흐름**:
+```
+Step 1: Responder.PerformAction(action)
+        └─ action.OracleData 존재 확인
+
+Step 2: Oracle 존재 여부 체크
+        ├─ Local → 항상 업로드
+        └─ Global → GlobalDataExists() 체크
+
+Step 3: Uploader.UploadPreimage() 호출
+        ├─ SplitPreimageUploader가 크기 판단
+        │
+        ├─ 작은 데이터:
+        │  └─ UpdateOracleTx() → L1 트랜잭션 1개
+        │     ├─ Local: FaultDisputeGame.addLocalData()
+        │     └─ Global: PreimageOracle.loadKeccak256PreimagePart()
+        │
+        └─ 큰 데이터:
+           └─ InitLargePreimage() → AddLeaves() × N → Squeeze()
+              └─ L1 트랜잭션 N+2개
+
+Step 4: step() 트랜잭션 실행
+        └─ L1 Contract가 업로드된 preimage 읽어서 사용
+```
+
+**💡 핵심:**
+- **Local vs Global**: 저장 위치 다름
+- **Direct vs Large**: 크기에 따라 전략 다름
+- **step() 전에 필수**: Preimage 없으면 step() 실패
+- **재사용 가능**: Global은 한 번 업로드하면 모든 게임 사용
 
 ---
 
@@ -807,15 +1662,17 @@ Result: 모든 중간 블록이 검증됨!
 // agent.go:153-172
 func (a *Agent) tryResolve(ctx context.Context) bool {
     // 1. 개별 claim들을 먼저 resolve
-    if err := a.resolveClaims(ctx); err != nil {
+    if err := a.resolveClaims(ctx); err != nil {  // ← 항상 실행! (Bond unlock)
         a.log.Error("Failed to resolve claims", "err", err)
         return false
     }
 
     // 2. Selective mode 체크
     if a.selective {
-        // Bond 회수 못하므로 resolve 안 함
-        return false
+        // Selective 모드: 개별 claim은 resolve했지만 게임 전체는 안 함
+        // 게임 전체 resolve는 우리 bond unlock에 직접 도움 안 됨
+        // (이미 resolveClaims()로 bond unlock됨)
+        return false  // ← 게임 전체 resolve skip
     }
 
     // 3. 게임 resolve 가능한지 확인
@@ -824,13 +1681,69 @@ func (a *Agent) tryResolve(ctx context.Context) bool {
         return false
     }
 
-    // 4. 🔥 게임 resolve 실행
+    // 4. 🔥 게임 전체 resolve 실행 (일반 모드만)
     a.log.Info("Resolving game")
     if err := a.responder.Resolve(); err != nil {
         a.log.Error("Failed to resolve the game", "err", err)
     }
     return true
 }
+```
+
+**📊 Selective vs 일반 모드 비교**:
+```
+일반 모드 (selective = false):
+├─ ① resolveClaims() 실행 ✅
+│  └─ 모든 resolvable claim resolve
+│  └─ Bond unlock
+│
+└─ ② resolve() 실행 ✅
+   └─ 게임 전체 상태 변경
+   └─ DEFENDER_WINS / CHALLENGER_WINS 결정
+   └─ Gas 비용 발생 💸
+
+Selective 모드 (selective = true):
+├─ ① resolveClaims() 실행 ✅
+│  └─ 우리 관련 claim만 resolve
+│  │  ├─ 우리가 만든 claim (uncountered)
+│  │  └─ 우리가 counter한 claim
+│  └─ Bond unlock ✅ (정상적으로 회수!)
+│
+└─ ② resolve() skip ❌
+   └─ 게임 전체 resolve 안 함
+   └─ 다른 Challenger에게 맡김
+   └─ Gas 비용 절감 💰
+
+결론:
+└─ Selective 모드에서도 bond는 회수 가능! ✅
+   └─ 다만 게임 전체 resolve는 안 함 (비용 절감)
+```
+
+**⚙️ Selective 모드 설정**:
+```bash
+# Selective 모드 활성화
+op-challenger \
+  --selective-claim-resolution \
+  --claimants=$YOUR_ADDRESS
+
+# 또는 환경변수
+export OP_CHALLENGER_SELECTIVE_CLAIM_RESOLUTION=true
+export OP_CHALLENGER_CLAIMANTS=$YOUR_ADDRESS
+```
+
+**사용 케이스**:
+```
+Selective 모드 권장 상황:
+├─ 여러 Challenger가 동시에 운영될 때
+├─ Gas 비용 최적화가 중요할 때
+├─ 시스템 기여보다 bond 회수가 우선일 때
+└─ 다른 Challenger가 게임 resolve를 할 것으로 기대할 때
+
+일반 모드 권장 상황:
+├─ 유일한 Challenger일 때 (게임 resolve 필수)
+├─ 시스템 건강성 유지가 목표일 때
+├─ AnchorStateRegistry 업데이트를 위해 closeGame() 필요할 때
+└─ Gas 비용보다 완전성이 중요할 때
 ```
 
 **resolve() 트랜잭션**:
@@ -863,10 +1776,19 @@ function resolve() external returns (GameStatus) {
 **중요: resolve()가 하는 것 vs 안 하는 것**:
 ```
 ✅ resolve()가 하는 것:
-├─ 게임 상태 변경 (IN_PROGRESS → DEFENDER_WINS)
+├─ 게임 상태 변경 (IN_PROGRESS → DEFENDER_WINS 또는 CHALLENGER_WINS)
 ├─ resolvedAt 타임스탬프 기록
-├─ Bond claiming 가능하게 만듦
-└─ Withdrawal 허용
+└─ finality delay 시작 (3.5일)
+
+✅ resolve()가 직접 하지 않는 것:
+├─ Bond 분배 ❌
+│  └─ resolveClaim()에서 _distributeBond() 호출
+│  └─ resolve()는 상태 변경만!
+│
+└─ Withdrawal 즉시 허용 ❌
+   ├─ resolve() + 3.5일 (finality delay) 필요
+   └─ prove() + 7일 (maturity delay) 필요
+   └─ 두 조건 모두 만족해야 finalize 가능!
 
 ❌ resolve()가 안 하는 것:
 ├─ anchorGame 업데이트 안 함!
@@ -1045,17 +1967,72 @@ closeGame() 호출 시 검증 순서:
 → 다층 방어 (Defense in Depth)
 ```
 
-**왜 Finality Delay가 필요한가?**:
+**⚠️ 중요: 두 가지 서로 다른 Delay**:
 ```
-보안 목적:
-├─ 잘못된 게임이 즉시 anchor가 되는 것 방지
+① disputeGameFinalityDelaySeconds (3.5일 / 302400초)
+├─ 용도: closeGame() / setAnchorState() 허용
+├─ 체크: AnchorStateRegistry.isGameFinalized()
+├─ 목적: 게임을 anchor로 사용하기 위한 안전 기간
+└─ 영향: 다음 게임들의 시작점
+
+② faultGameWithdrawalDelay (7일 / 604800초)
+├─ 용도: L2 → L1 Withdrawal finalize 허용
+├─ 체크: OptimismPortal2.checkWithdrawal()
+├─ 목적: 사용자 자산 보호를 위한 안전 기간
+└─ 영향: 실제 자산 이동
+
+타임라인 (closeGame vs Withdrawal):
+┌─────────────────────────────────────────────────────┐
+│ closeGame (Anchor 업데이트)                         │
+├─────────────────────────────────────────────────────┤
+│ T=0      게임 생성                                  │
+│ T=3.5일  resolve()                                  │
+│ T=7일    closeGame() 가능 ✅                         │
+│          └─ resolve() 후 3.5일 (finality delay)    │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│ Withdrawal (사용자 자산 이동)                       │
+├─────────────────────────────────────────────────────┤
+│ T=0      사용자가 L2에서 withdrawal 요청            │
+│ T=3.5일  게임 resolve()                             │
+│ T=7일    사용자가 proveWithdrawalTransaction() 호출│
+│          ├─ 조건 1: status != CHALLENGER_WINS ✅    │
+│          │  (IN_PROGRESS도 가능!)                  │
+│          └─ provenWithdrawal.timestamp 기록        │
+│                                                     │
+│ T=14일   finalizeWithdrawalTransaction() 가능 ✅   │
+│          ├─ 조건 1: prove() 후 7일 ✅               │
+│          │  └─ PROOF_MATURITY_DELAY                │
+│          └─ 조건 2: isGameClaimValid() ✅           │
+│             └─ resolve() 후 3.5일                  │
+│             └─ status == DEFENDER_WINS             │
+└─────────────────────────────────────────────────────┘
+
+⚠️ 핵심 차이:
+├─ prove: 게임 진행 중에도 가능! (CHALLENGER_WINS만 막음)
+├─ finalize: 두 조건 모두 필요
+│  ├─ prove() 후 7일 (OptimismPortal2.sol:719)
+│  └─ resolve() 후 3.5일 (via isGameClaimValid)
+└─ 실제 대기: 보통 resolve 후 7일 정도
+
+💡 왜 두 delay가 있나?
+├─ Finality Delay (3.5일):
+│  ├─ 게임 자체의 신뢰성 확보
+│  └─ Anchor 업데이트, Withdrawal 모두에 적용
+│
+└─ Withdrawal Delay (7일):
+   ├─ 사용자 자산 보호를 위한 추가 안전장치
+   └─ Withdrawal에만 추가로 적용
+   └─ 3.5일 + 3.5일 = 7일 개념
+```
+
+**보안 목적**:
+```
+├─ 잘못된 게임이 즉시 사용되는 것 방지
 ├─ 버그 발견 시 대응 시간 확보
 ├─ L1 Reorg에 대한 안전성
 └─ 사회적 검토 기간 제공
-
-비유:
-"은행 송금의 취소 가능 기간"
-└─ 문제 발견 시 되돌릴 수 있는 마지막 기회
 ```
 
 ---
@@ -1455,29 +2432,62 @@ Challenger 입장:
 
 **게임 체인 (Game Chain)**:
 ```
-Game 1 (Genesis)
+════════════════════════════════════════════════
+시나리오 A: Permissioned로 Cold Starting 해결
+════════════════════════════════════════════════
+
+Step 1: 배포
+├─ DisputeGameFactory에 PermissionedGameType(1) 등록
+└─ (선택사항) CannonGameType(0) 추가 등록
+
+Step 2: Game 1 (Genesis - Cold Starting 해결)
 ├─ 생성: Cold Starting 상태 ❌
-├─ Challenger: skipPrestateValidation=true 필요
+├─ GameType: PermissionedGameType(1)
+│  └─ Proposer 설정: --game-type=1
+│  └─ DisputeGameFactory.create(gameType=1, ...)
+│  └─ Challenger: GameType=1을 읽고 자동으로 skipPrestateValidation=true
 ├─ 결과: DEFENDER_WINS
 └─ 🔥 closeGame() 호출 필수!
-   └─ anchorGame = Game1
+   └─ anchorGame = Game1 → Warm 상태 전환 ✅
 
        ↓
 
-Game 2
+Step 3: Game 2 이후 (Warm 상태)
 ├─ 생성: Warm 상태 ✅
-├─ startingOutputRoot = Game1.rootClaim
-├─ Challenger: 정상 검증 가능 ✅
+├─ startingOutputRoot = Game1.rootClaim ✅
+├─ GameType 선택:
+│  ├─ Option A: 계속 PermissionedGameType(1) 사용
+│  │  └─ Challenger: skipPrestateValidation=true (검증 스킵)
+│  │
+│  └─ Option B: CannonGameType(0)으로 변경 (권장)
+│     └─ ⚠️ 사전 조건: GameType 0이 Factory에 등록되어 있어야 함!
+│     └─ Proposer 설정: --game-type=0
+│     └─ Challenger: skipPrestateValidation=false (정상 검증 수행)
 ├─ 결과: DEFENDER_WINS
 └─ closeGame() 호출
    └─ anchorGame = Game2
 
        ↓
 
-Game 3
-├─ 생성: Warm 상태 ✅
-├─ startingOutputRoot = Game2.rootClaim
-└─ 계속 순환...
+Game 3, 4, 5...
+└─ 계속 순환... ♻️
+
+════════════════════════════════════════════════
+시나리오 B: Cannon으로만 운영 (단순)
+════════════════════════════════════════════════
+
+⚠️ Cold Starting 문제 발생 가능!
+
+Step 1: 배포
+└─ DisputeGameFactory에 CannonGameType(0) 등록
+
+Step 2: 모든 게임
+├─ GameType: CannonGameType(0)
+├─ Proposer 설정: --game-type=0
+├─ Challenger: 정상 검증 수행
+└─ ⚠️ 첫 게임에서 Cold Starting 문제 발생 시:
+   └─ skipPrestateValidation 플래그 수동 활성화 필요
+   └─ 또는 AnchorStateRegistry 초기값 올바르게 설정
 
 지속 가능한 생태계! ♻️
 ```
@@ -1493,30 +2503,51 @@ AnchorStateRegistry:
 └─ anchorGame: 여전히 address(0) ❌
 
 Game 2 생성:
-├─ startingOutputRoot: 0xdead... ❌
-└─ Challenger: 검증 실패, 게임 스킵 ❌
+├─ L1 Contract: 게임 정상 생성 ✅
+├─ startingOutputRoot: 0xdead... ❌ (Cold Starting 지속)
+└─ Challenger: 사전 검증 실패 → 게임 스킵 ❌
+   └─ ValidatePrestate() 실패 (off-chain)
+   └─ 이 Challenger는 게임에 참여하지 못함
 
 Game 3, 4, 5... 모두 동일:
-└─ 영구적으로 검증 실패 ❌
+├─ L1: 게임들은 계속 생성되고 진행됨 ✅
+└─ Challenger: 모두 검증 실패로 스킵 ❌
 
-시스템 마비! 🚨
+결과:
+├─ L1 게임 생성 (다른 참여자들 참여 가능)
+├─ 이 Challenger: 모든 게임 불참 (자동 검증 실패)
+├─ 영향:
+│  ├─ ❌ 자동화된 챌린저 보호 기능 작동 안 함
+│  ├─ ❌ 부정직한 제안에 대한 자동 반박 불가
+│  └─ ⚠️  수동 개입 또는 다른 Challenger 필요
+└─ 해결: Game 1의 resolve() & closeGame() 호출 필수!
 ```
 
 **운영 체크리스트 (중요!)**:
 ```
-✅ 1. 첫 게임 생성
-   └─ skipPrestateValidation=true 설정
+✅ 1. 배포 및 준비
+   └─ DisputeGameFactory에 필요한 GameType 구현체 등록
+   └─ ⚠️ 현재 배포 스크립트는 하나만 자동 등록
+   └─ 여러 GameType 사용 시 추가 등록 필요 (SetDisputeGameImpl.s.sol)
 
-✅ 2. 첫 게임 완료 대기 (7일)
+✅ 2. 첫 게임 생성 (Cold Starting 해결)
+   └─ Proposer 설정: --game-type=1 (PermissionedGameType)
+   └─ DisputeGameFactory.create(gameType=1, ...)
+   └─ Challenger: 자동으로 skipPrestateValidation=true 적용
+
+✅ 3. 첫 게임 완료 대기 (7일)
    └─ resolve() 호출
 
-✅ 3. Finality delay 대기 (3.5일)
-   └─ 총 10.5일 대기
+✅ 4. Finality delay 대기 (Production: 7일, Devnet: 30-60초)
+   └─ isGameFinalized() == true 확인
 
-✅ 4. 🔥 closeGame() 호출! (절대 잊지 말 것!)
-   └─ AnchorStateRegistry 업데이트
+✅ 5. 🔥 closeGame() 호출! (절대 잊지 말 것!)
+   └─ anchorGame 업데이트 → Warm 상태 전환
 
-✅ 5. 이후 게임들 자동화
+✅ 6. 이후 게임들 (선택사항: GameType 변경)
+   └─ Proposer 설정: --game-type=0 (CannonGameType)
+   └─ ⚠️ GameType 0이 Factory에 등록되어 있어야 함!
+   └─ Challenger: 정상 검증 수행 (skipPrestateValidation=false)
    └─ 주기적으로 closeGame() 호출
 ```
 
@@ -1652,24 +2683,106 @@ T=7일    Phase 6: 게임 종료 및 Anchor 업데이트
 
 **운영 체크리스트**:
 ```
-초기 설정:
+═══════════════════════════════════════════════════════
+Step 1: 초기 배포 (L1 Contracts)
+═══════════════════════════════════════════════════════
+
 □ L2 Archive Node 실행 중
 □ 파일서버 prestate 파일 준비
 □ AnchorStateRegistry 올바르게 초기화
-□ skipPrestateValidation 플래그 올바르게 설정
 
-첫 게임 처리 (Genesis Game):
-□ skipPrestateValidation=true로 설정
+□ DisputeGameFactory 배포 및 초기 GameType 등록
+  ⚠️ 현재 배포 프로세스는 하나의 GameType만 자동 등록!
+
+  배포 시 선택 (둘 중 하나):
+  ├─ Option A: PermissionedGameType(1) 배포
+  │  └─ OPContractsManager.sol이 PermissionedDisputeGame 등록
+  │  └─ Cold Starting 해결용
+  │
+  └─ Option B: CannonGameType(0) 배포 (일반적)
+     └─ OPContractsManager.sol이 FaultDisputeGame 등록
+     └─ Production 용도
+
+═══════════════════════════════════════════════════════
+Step 2: 추가 GameType 등록 (필요시)
+═══════════════════════════════════════════════════════
+
+⚠️ 여러 GameType을 사용하려면 수동 등록 필요!
+
+예시: Permissioned로 배포 후 Cannon 추가
+□ 1단계: Cannon 구현체 배포
+  └─ FaultDisputeGame.sol 배포
+
+□ 2단계: DisputeGameFactory에 등록
+  # 방법 1: SetDisputeGameImpl.s.sol 스크립트 사용
+  forge script SetDisputeGameImpl \
+    --sig "run(address,uint32,address)" \
+    $DISPUTE_GAME_FACTORY \
+    0 \
+    $CANNON_IMPL
+
+  # 방법 2: 직접 호출
+  cast send $DISPUTE_GAME_FACTORY \
+    "setImplementation(uint32,address)" \
+    0 $CANNON_IMPL \
+    --private-key $ADMIN_KEY
+
+□ 3단계: 검증
+  cast call $DISPUTE_GAME_FACTORY \
+    "gameImpls(uint32)(address)" 0
+  → Cannon 구현체 주소 반환 확인
+
+═══════════════════════════════════════════════════════
+Step 3: Cold Starting 해결 (첫 게임)
+═══════════════════════════════════════════════════════
+
+□ ⚠️ Proposer 설정을 PermissionedGameType으로 변경
+  op-proposer:
+    --game-type=1  # PermissionedGameType
+
+  또는 SuperPermissionedGameType(5) 사용
+
+□ 첫 게임 생성
+  └─ DisputeGameFactory.create(gameType=1, rootClaim, extraData)
+  └─ Challenger는 GameType=1을 읽고 자동으로 skipPrestateValidation=true
+
 □ 게임 완료 대기 (7일)
 □ resolve() 호출
-□ Finality delay 대기 (3.5일)
+□ Finality delay 대기 (Production: 7일, Devnet: 30-60초)
 □ 🔥 closeGame() 호출! ← 절대 잊지 말 것!
+  └─ anchorGame 업데이트됨 → Warm 상태 전환
+
+═══════════════════════════════════════════════════════
+Step 4: 일반 운영 (Warm 상태 이후)
+═══════════════════════════════════════════════════════
+
+□ Proposer 설정을 일반 GameType으로 변경 (선택사항)
+  op-proposer:
+    --game-type=0  # CannonGameType (일반 운영)
+
+  ⚠️ GameType 0이 DisputeGameFactory에 등록되어 있어야 함!
+
+□ 이후 게임들 정상 작동
+  └─ Challenger는 정상 검증 수행 (skipPrestateValidation=false)
+  └─ 각 게임마다 자동으로 적절한 RegisterTask 함수 매칭
 
 운영 자동화:
 □ 게임 완료 시 자동 resolve
 □ Finality delay 후 자동 closeGame
 □ Challenger 로그 모니터링
 □ AnchorStateRegistry 상태 주기적 확인
+
+═══════════════════════════════════════════════════════
+📝 중요 참고사항
+═══════════════════════════════════════════════════════
+
+1. GameType은 L1 Contract에 저장됨 (Proposer가 게임 생성 시 지정)
+2. Challenger는 GameType을 읽어서 자동으로 처리 방식 결정
+3. 여러 GameType을 혼용하려면:
+   - 모든 GameType의 구현체를 미리 DisputeGameFactory에 등록
+   - Proposer 설정만 변경하면 됨
+4. 현재 배포 스크립트(OPContractsManager.sol)는 하나만 등록
+   - 추가 GameType은 수동 등록 필요 (SetDisputeGameImpl.s.sol)
 ```
 
 ---
