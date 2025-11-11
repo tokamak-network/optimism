@@ -527,7 +527,6 @@ contract DeployOPChain is Script {
             console.log("DeployOPChain: _doo.ratProxy.selector =", uint32(_doo.ratProxy.selector));
             _doo.set(_doo.ratProxy.selector, address(deployOutput.ratProxy));
             console.log("DeployOPChain: RAT proxy set successfully");
-
         } else {
             console.log("DeployOPChain: RAT not deployed or address is zero");
         }

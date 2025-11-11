@@ -21,20 +21,20 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     /// @notice Challenger information structure
     /// @dev Packed to minimize storage slots
     struct ChallengerInfo {
-        uint256 stakingAmount;      // Slot 1: 32 bytes
+        uint256 stakingAmount; // Slot 1: 32 bytes
         uint256 totalSlashedAmount; // Slot 2: 32 bytes (total slashed amount for this challenger)
-        uint32 validatorIndex;      // Slot 3: 4 bytes
-        bool isValid;               // Slot 3: 1 byte (packed)
+        uint32 validatorIndex; // Slot 3: 4 bytes
+        bool isValid; // Slot 3: 1 byte (packed)
     }
 
     /// @notice Attention test information structure
     /// @dev Packed to minimize storage slots - 3 slots total
     struct AttentionInfo {
-        bytes32 stateRoot;          // Slot 1: 32 bytes
-        uint96 bondAmount;          // Slot 2: 12 bytes (packed with challengerAddress)
-        address challengerAddress;  // Slot 2: 20 bytes (packed with bondAmount)
-        uint64 l1BlockNumber;       // Slot 3: 8 bytes
-        bool evidenceSubmitted;     // Slot 3: 1 byte (packed)
+        bytes32 stateRoot; // Slot 1: 32 bytes
+        uint96 bondAmount; // Slot 2: 12 bytes (packed with challengerAddress)
+        address challengerAddress; // Slot 2: 20 bytes (packed with bondAmount)
+        uint64 l1BlockNumber; // Slot 3: 8 bytes
+        bool evidenceSubmitted; // Slot 3: 1 byte (packed)
     }
 
     /// @notice Emitted when a challenger stakes ETH
@@ -44,11 +44,7 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     event AttentionTriggered(address indexed gameAddress, address indexed challenger);
 
     /// @notice Emitted when correct evidence is submitted
-    event CorrectEvidenceSubmitted(
-        address indexed gameAddress,
-        address indexed challenger,
-        uint256 restoredAmount
-    );
+    event CorrectEvidenceSubmitted(address indexed gameAddress, address indexed challenger, uint256 restoredAmount);
 
     /// @notice Emitted when bonded amount is refunded through claim resolution
     event BondRefunded(address indexed gameAddress, address indexed challenger, uint256 refundedAmount);
@@ -87,7 +83,6 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     /// @notice Array of valid challengers (index 0 is reserved for "not found")
     address[] public validChallengers;
 
-
     /// @notice Error thrown when caller is not the DisputeGameFactory
     error NotDisputeGameFactory();
 
@@ -105,8 +100,6 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
     /// @notice Error thrown when caller is not the correct challenger
     error InvalidChallengerAddress();
-
-
 
     /// @notice Error thrown when proof verification fails
     error ProofVerificationFailed();
@@ -200,15 +193,11 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         return challengers[_challenger];
     }
 
-
-
     /// @notice Gets number of valid challengers
     /// @return Number of valid challengers
     function getValidChallengerCount() external view returns (uint256) {
         return validChallengers.length;
     }
-
-
 
     /// @notice Triggers attention test (called by DisputeGameFactory)
     /// @param _gameAddress Game contract address
@@ -227,10 +216,13 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
         uint256 validChallengersLength = validChallengers.length;
         if (validChallengersLength > 1) {
-
             // Optimize challenger selection
-            uint256 selectedIndex = validChallengersLength == 2 ? 1 :
-               ((uint256(keccak256(abi.encodePacked(_blockHash, block.timestamp))) & 0xFFFF) % (validChallengersLength-1) )+1; // -1 to exclude the dummy address(0)
+            uint256 selectedIndex = validChallengersLength == 2
+                ? 1
+                : (
+                    (uint256(keccak256(abi.encodePacked(_blockHash, block.timestamp))) & 0xFFFF)
+                        % (validChallengersLength - 1)
+                ) + 1; // -1 to exclude the dummy address(0)
 
             address selectedChallenger = validChallengers[selectedIndex];
 
@@ -281,13 +273,7 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     /// @param _gameAddress Game contract address
     /// @param _proofLV Left child state value
     /// @param _proofRV Right child state value
-    function submitCorrectEvidence(
-        address _gameAddress,
-        bytes32 _proofLV,
-        bytes32 _proofRV
-    )
-        external
-    {
+    function submitCorrectEvidence(address _gameAddress, bytes32 _proofLV, bytes32 _proofRV) external {
         AttentionInfo storage attentionTest = attentionTests[_gameAddress];
 
         // Early validation with cached values (gas optimization)
@@ -302,7 +288,9 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         if (block.number >= submissionDeadline) revert EvidenceSubmissionExpired();
 
         // Verify proof (gas optimized - single hash operation)
-        if (keccak256(abi.encodePacked(_proofLV, _proofRV)) != attentionTest.stateRoot) revert ProofVerificationFailed();
+        if (keccak256(abi.encodePacked(_proofLV, _proofRV)) != attentionTest.stateRoot) {
+            revert ProofVerificationFailed();
+        }
 
         // Cache values for gas optimization
         uint256 bond = uint256(attentionTest.bondAmount);
@@ -326,11 +314,7 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
             _removeFromValidChallengers(msg.sender, challengerInfo.validatorIndex);
         }
 
-        emit CorrectEvidenceSubmitted(
-            _gameAddress,
-            challengerAddress,
-            bond
-        );
+        emit CorrectEvidenceSubmitted(_gameAddress, challengerAddress, bond);
     }
 
     /// @notice Called when a claim is resolved in FaultDisputeGame
@@ -412,8 +396,6 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         return uint256(blockhash(block.number - 1)) % MAX_PROBABILITY < prob;
     }
 
-
-
     /// @notice Internal function to add challenger to valid list
     /// @param _challenger Address of the challenger
     /// @param _index Index to assign to the challenger
@@ -437,6 +419,4 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
             validChallengers.pop();
         }
     }
-
-
 }

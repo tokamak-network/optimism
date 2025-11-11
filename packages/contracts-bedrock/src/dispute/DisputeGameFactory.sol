@@ -197,8 +197,8 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
 
         // Trigger RAT attention test if RAT contract is set and game type is CANNON
         if (rat != address(0) && _gameType.raw() == GameTypes.CANNON.raw()) {
-            (, , address gameAddress) = id.unpack();
-            try IRAT(rat).triggerAttentionTest(gameAddress, Claim.unwrap(_rootClaim), parentHash) {} catch {}
+            (,, address gameAddress) = id.unpack();
+            try IRAT(rat).triggerAttentionTest(gameAddress, Claim.unwrap(_rootClaim), parentHash) { } catch { }
         }
     }
 

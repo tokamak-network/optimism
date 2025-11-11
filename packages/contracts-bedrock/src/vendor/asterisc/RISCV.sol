@@ -1130,8 +1130,10 @@ contract RISCV is IBigStepper {
                     revertWithCode(0xf001ca11) // unsupported system call
                 }
                 case 101 {
-                    // nanosleep - not supported, for now
-                    revertWithCode(0xf001ca11) // unsupported system call
+                    // nanosleep - treat as no-op for Go 1.23+ runtime compatibility
+                    // Return success (0) to indicate the sleep completed
+                    setRegister(toU64(10), toU64(0)) // a0 = 0 (success)
+                    setRegister(toU64(11), toU64(0)) // a1 = 0 (no error)
                 }
                 default {
                     // Ignore(no-op) unsupported system calls
