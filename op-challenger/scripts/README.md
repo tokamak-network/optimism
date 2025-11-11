@@ -38,18 +38,38 @@ This installs Docker, Go, Kurtosis, and all required tools automatically.
 
 ## Step 2: Pre-download Required Docker Images
 ```bash
-# Use the automated script to pre-download all required images
 ./pre-download-images.sh
 ```
 
-The script will automatically download all essential images with retry logic and proper error handling:
+스크립트는 Kurtosis devnet 및 챌린저 실행에 필요한 **핵심 이미지 + GameType 0/1/2/3용 VM 이미지**를 한 번에 내려받습니다.
+사전에 캐시해두면 배포 중 발생할 수 있는 네트워크 타임아웃을 크게 줄일 수 있습니다.
+
+**Core Images (항상 포함)**
 - `protolambda/eth2-val-tools:latest`
 - `consensys/teku:25.7.0`
 - `ethereum/client-go:latest`
 - `python:3.12-alpine`
 - `us-docker.pkg.dev/oplabs-tools-artifacts/images/proxyd:v4.14.5`
 
-⚠️ **Network Requirements**: These images are essential for deployment. Pre-downloading prevents timeout errors during the Kurtosis package execution phase.
+**VM Images (기본 포함, GameType 0/1/2/3)**
+- `vm-cannon`, `vm-op-program`, `op-challenger`, `op-node`, `op-batcher`, `op-proposer`
+- `vm-asterisc` (GameType 2)
+- `vm-kona-client` (GameType 3)
+
+**옵션 / 환경변수**
+- `VM_REGISTRY`, `VM_IMAGE_TAG` 환경변수를 지정하면 기본 레지스트리/태그를 변경할 수 있습니다.
+- `--registry`, `--tag` 옵션으로도 덮어쓸 수 있습니다.
+- GameType 2/3이 필요 없으면 `--skip-asterisc`, `--skip-kona` 옵션으로 제외할 수 있습니다.
+
+```bash
+# 사설 레지스트리/태그 사용 예시
+VM_REGISTRY=ghcr.io/tokamak-network VM_IMAGE_TAG=dev ./pre-download-images.sh
+
+# ASTERISC 이미지만 제외
+./pre-download-images.sh --skip-asterisc
+```
+
+⚠️ **참고**: Private 레지스트리를 사용할 경우 사전에 `docker login`을 수행해야 합니다.
 
 ## Step 3: Compile Contracts and Create Artifacts
 ```bash
@@ -58,7 +78,7 @@ forge build --force
 
 cd /optimism/op-challenger/scripts
 ./build-contract-artifacts.sh
-./build-binaries-for-challenger.sh --force
+./build-binaries-for-challenger.sh --force --asterisc
 ```
 
 ### Contract Build Options
@@ -72,13 +92,17 @@ The binary builder supports different modes:
 # Force rebuild even if binaries exist (recommended after contract changes)
 ./build-binaries-for-challenger.sh --force
 
+# Include ASTERISC(GameType 2) assets at the same time
+./build-binaries-for-challenger.sh --force --asterisc
+
 # Show help and options
 ./build-binaries-for-challenger.sh --help
 ```
 
 **💡 Important**: Always use `--force` after modifying contracts to ensure cannon/prestate files are regenerated with your changes.
+Use `--asterisc` alongside `--force` when you also need ASTERISC VM assets for GameType 2 testing.
 
-## Step 3: Configure Devnet Settings
+## Step 4: Configure Devnet Settings
 
 Edit `simple.yaml` to configure testing-optimized settings:
 
@@ -139,7 +163,7 @@ vi simple.yaml  # or your preferred editor
 | **1** | PERMISSIONED | Fast development/testing | ✅ working |
 | **2** | ASTERISC | Asterisc VM | ⚠️ needs testing |
 
-## Step 3.5: 🧪 RAT Testing (Optional)
+## Step 4.5: 🧪 RAT Testing (Optional)
 
 **Quick Start**:
 ```bash
@@ -152,7 +176,7 @@ go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E"
 
 ---
 
-## Step 4: Build Devnet Environment
+## Step 5: Build Devnet Environment
 
 ### Using build-devnet.sh (Recommended)
 
@@ -201,7 +225,32 @@ Autofix mode helps recover from failed devnet deployments by automatically clean
    - Removes all networks and containers
    - Use when you need a fresh start
 
-## Step 5: Post-Deployment Verification
+## Step 6: Status Check and Monitoring
+
+### Quick Status Check Scripts
+
+```bash
+# Check overall system health
+./health-check.sh
+
+# Monitor challenger activity and game participation
+./monitor-challenger.sh              # Full dashboard
+./monitor-challenger.sh config       # System configuration
+./monitor-challenger.sh games        # Game activity only
+./monitor-challenger.sh logs         # Live log tail
+./monitor-challenger.sh sync         # Sync status
+./monitor-challenger.sh errors       # Error analysis
+```
+
+**What these scripts check:**
+- ✅ Container status and uptime
+- ✅ RPC connectivity (L1, L2, Rollup)
+- ✅ Block synchronization status
+- ✅ Challenger activity and game participation
+- ✅ GameType configuration and deployment
+- ✅ Error analysis and troubleshooting
+
+## Step 7: Post-Deployment Verification
 
 **🚀 Quick Post-Deployment Check**: [Post-Deployment Verification Guide](./docs/post-deployment-verification-guide-en.md) - Complete automated verification process with scripts
 
@@ -228,7 +277,7 @@ L2 RPC: http://localhost:56781
 Rollup RPC: http://localhost:57029
 ```
 
-## Step 6: Monitoring and Management
+## Step 8: Real-time Log Monitoring and Management
 
 ### Real-time Log Monitoring
 
