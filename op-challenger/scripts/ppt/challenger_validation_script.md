@@ -540,6 +540,192 @@ Provider: 0x03a1a135...
 
 ---
 
+## 🔑 중요: Absolute Prestate vs Starting Output Root
+
+### ⚠️ 두 가지 Prestate의 차이점
+
+많은 혼동이 있는 부분입니다. ValidatePrestate()는 **두 가지 다른 것**을 검증합니다:
+
+```
+┌────────────────────────────────────────────────────┐
+│ 1️⃣ ABSOLUTE PRESTATE (고정값) ⭐                   │
+├────────────────────────────────────────────────────┤
+│ 무엇을: VM의 초기 상태 (op-program 바이너리)        │
+│ 어디서: Constructor에서 설정 (ABSOLUTE_PRESTATE)   │
+│ 특징:   **절대 변하지 않음!**                      │
+│ 영향:   closeGame()과 무관                          │
+│                                                    │
+│ ValidatePrestate #1 (Validator 1):                 │
+│ ├─ Contract: GetAbsolutePrestateHash()            │
+│ │  └─ 0x03a1a135... (배포 시 고정)                │
+│ │                                                  │
+│ └─ Provider: vmPrestateProvider                    │
+│    ├─ 로컬 캐시: ~/datadir/*.bin.gz               │
+│    ├─ 파일서버: fileserver/proofs/*.bin.gz        │
+│    └─ 결과: 0x03a1a135...                         │
+│                                                    │
+│ 비교 결과: 항상 같아야 함! ✅                      │
+└────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────┐
+│ 2️⃣ STARTING OUTPUT ROOT (변할 수 있음) ⭐          │
+├────────────────────────────────────────────────────┤
+│ 무엇을: 게임의 시작 블록 상태 (L2 output root)     │
+│ 어디서: initialize()에서 설정 (startingOutputRoot) │
+│ 특징:   **closeGame()으로 바뀔 수 있음!**          │
+│ 영향:   AnchorStateRegistry.setAnchorState()       │
+│                                                    │
+│ ValidatePrestate #2 (Validator 2):                 │
+│ ├─ Contract: GetStartingRootHash()                │
+│ │  ├─ AnchorStateRegistry.getAnchorRoot() 호출   │
+│ │  └─ Cold: 0xdead... (초기화 안 됨)              │
+│ │  └─ Warm: 0xabc123... (closeGame 후)           │
+│ │                                                  │
+│ └─ Provider: prestateProvider                      │
+│    ├─ **L2 Node (실시간)에서 계산!** ⭐           │
+│    ├─ RPC 호출: eth_getProof(addr, keys, #100)   │
+│    └─ 결과: 블록 #100의 Output Root 계산          │
+│                                                    │
+│ 비교 결과: L2 Node 계산 값과 일치해야 함! ✅       │
+└────────────────────────────────────────────────────┘
+```
+
+### 🔧 코드로 보는 차이
+
+```go
+// register_task.go:337-338
+
+// Validator 1: Absolute Prestate (고정)
+validators = append(validators,
+    NewPrestateValidator(
+        e.gameType.String(),
+        contract.GetAbsolutePrestateHash,  // ← Contract에서 고정값
+        vmPrestateProvider                  // ← 파일서버에서 다운로드
+    )
+)
+
+// Validator 2: Starting Output Root (변할 수 있음)
+validators = append(validators,
+    NewPrestateValidator(
+        "output root",
+        contract.GetStartingRootHash,       // ← AnchorStateRegistry (변함)
+        prestateProvider                    // ← L2 Node (실시간 계산)
+    )
+)
+```
+
+```solidity
+// FaultDisputeGame.sol
+
+// Constructor (한 번만 설정, 고정)
+constructor(GameConstructorParams memory _params) {
+    ABSOLUTE_PRESTATE = _params.absolutePrestate;  // ← 절대 안 바뀜!
+    ANCHOR_STATE_REGISTRY = _params.anchorStateRegistry;
+    // ...
+}
+
+// initialize() (게임마다 실행, 변할 수 있음)
+function initialize() external {
+    // AnchorStateRegistry에서 가져옴
+    (Hash root, uint256 rootBlockNumber) =
+        ANCHOR_STATE_REGISTRY.getAnchorRoot();  // ← closeGame()으로 바뀜!
+
+    // 게임의 starting point 설정
+    startingOutputRoot = Proposal({
+        l2SequenceNumber: rootBlockNumber,
+        root: root
+    });
+}
+```
+
+### 📊 질문: closeGame으로 바뀌면 어떻게 검증?
+
+**Q**: "closeGame()으로 Starting Output Root가 바뀌는데, 바뀐 값은 어떻게 찾아요? 로컬 캐시에도 없고 파일서버에도 없잖아요?"
+
+**A**: **L2 Node가 실시간으로 계산합니다!** 파일서버 필요 없음!
+
+```
+┌─────────────────────────────────────────────────────┐
+│ prestateProvider의 실체 = L2 Node ⭐                │
+├─────────────────────────────────────────────────────┤
+│ L2 Node (op-geth + op-node)                         │
+│ ├─ 실시간으로 L2 블록 동기화                        │
+│ ├─ 모든 블록의 State Root 보유                      │
+│ ├─ Archive Node: 과거 블록도 조회 가능              │
+│ └─ 어떤 블록 번호든 Output Root 계산 가능           │
+│                                                     │
+│ Challenger의 검증 흐름:                             │
+│ 1️⃣ Contract에서 읽기:                              │
+│    └─ starting block = #1000                       │
+│    └─ startingRootHash = 0xABCD...                 │
+│                                                     │
+│ 2️⃣ L2 Node에 RPC 호출:                            │
+│    └─ eth_getBlockByNumber(1000)                   │
+│    └─ eth_getProof(address, keys, 1000)            │
+│    └─ 블록 #1000의 Output Root 계산                │
+│    └─ 결과: 0xABCD...                              │
+│                                                     │
+│ 3️⃣ 비교:                                          │
+│    Contract: 0xABCD...                             │
+│    L2 Node:  0xABCD...                             │
+│    → ✅ 일치! 검증 통과!                            │
+└─────────────────────────────────────────────────────┘
+```
+
+### 🎯 Cold Starting 해결 후 타임라인
+
+```
+T=0: 첫 게임 생성
+├─ anchorGame = null (초기화 안 됨)
+├─ AnchorStateRegistry.getAnchorRoot()
+│  └─ return (0xdead..., 0)  ← Cold Starting!
+├─ Validator 1: PASS ✅ (Absolute Prestate 고정)
+└─ Validator 2: FAIL ❌ (Starting Root 없음)
+
+T=3일: 첫 게임 resolve + closeGame
+├─ resolve() → status = DEFENDER_WINS
+├─ closeGame() 호출
+│  └─ AnchorStateRegistry.setAnchorState(
+│      game: 첫게임주소,
+│      outputRoot: Hash(블록 #1000 output),
+│      l2BlockNumber: 1000
+│  )
+└─ anchorGame = 첫 게임 ✅
+
+T=3.5일: 두 번째 게임 생성
+├─ initialize() 호출
+├─ AnchorStateRegistry.getAnchorRoot()
+│  └─ return (0xABCD..., 1000)  ← Warm! ✅
+├─ startingOutputRoot = { #1000, 0xABCD... }
+│
+└─ ValidatePrestate 실행:
+   ├─ Validator 1: PASS ✅
+   │  └─ Absolute Prestate 고정 (항상 같음)
+   │
+   └─ Validator 2: PASS ✅
+      ├─ Contract: 0xABCD... (블록 #1000)
+      └─ L2 Node: 블록 #1000 조회 → 0xABCD... 계산
+      └─ 일치! ✅
+```
+
+### 💡 핵심 정리
+
+| 항목 | Absolute Prestate | Starting Output Root |
+|------|------------------|---------------------|
+| **무엇을** | VM 초기 상태 (바이너리) | L2 블록 상태 (output root) |
+| **어디서** | Constructor (고정) | initialize() (게임마다) |
+| **변화** | ❌ 절대 안 바뀜 | ✅ closeGame()으로 바뀜 |
+| **검증 소스** | 파일서버 (고정 파일) | L2 Node (실시간 계산) |
+| **캐시** | 로컬 캐시 필요 | 캐시 불필요 (RPC 호출) |
+| **Cold Starting** | 영향 없음 | 영향 있음 (초기값 없음) |
+
+**결론**:
+- Absolute Prestate: 파일서버에서 다운로드 (고정값)
+- Starting Output Root: L2 Node가 실시간 계산 (변하는 값)
+- **두 개는 완전히 다른 개념입니다!**
+
+---
+
 ### 장면 9: Validator 2 - Starting Output Root 검증 상세 (9:00-11:00)
 
 **내레이션**:
