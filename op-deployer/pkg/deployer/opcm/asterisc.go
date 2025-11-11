@@ -19,3 +19,15 @@ type DeployAsteriscScript script.DeployScriptWithOutput[DeployAsteriscInput, Dep
 func NewDeployAsteriscScript(host *script.Host) (DeployAsteriscScript, error) {
 	return script.NewDeployScriptWithOutputFromFile[DeployAsteriscInput, DeployAsteriscOutput](host, "DeployAsterisc.s.sol", "DeployAsterisc")
 }
+
+// DeployAsterisc deploys the Asterisc RISC-V VM singleton
+func DeployAsterisc(
+	host *script.Host,
+	input DeployAsteriscInput,
+) (DeployAsteriscOutput, error) {
+	deployScript, err := NewDeployAsteriscScript(host)
+	if err != nil {
+		return DeployAsteriscOutput{}, err
+	}
+	return deployScript.Run(input)
+}

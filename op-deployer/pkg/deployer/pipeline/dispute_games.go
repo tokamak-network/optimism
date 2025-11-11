@@ -98,6 +98,14 @@ func deployDisputeGame(
 			return fmt.Errorf("failed to deploy MIPS VM: %w", err)
 		}
 		vmAddr = out.MipsSingleton
+	case state.VMTypeAsterisc, state.VMTypeAsteriscKona:
+		out, err := opcm.DeployAsterisc(env.L1ScriptHost, opcm.DeployAsteriscInput{
+			PreimageOracle: oracleAddr,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to deploy Asterisc VM: %w", err)
+		}
+		vmAddr = out.AsteriscSingleton
 	default:
 		return fmt.Errorf("unsupported VM type: %v", game.VMType)
 	}
