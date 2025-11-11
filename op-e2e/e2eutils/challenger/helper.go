@@ -146,6 +146,20 @@ func WithAlphabet() Option {
 	}
 }
 
+func WithAsterisc(t *testing.T, system System) Option {
+	return func(c *config.Config) {
+		handleOptError(t, shared.WithAsteriscConfig(system.RollupCfgs(), system.L2Geneses(), system.PrestateVariant()))(c)
+		handleOptError(t, shared.WithAsteriscTraceType())(c)
+	}
+}
+
+func WithAsteriscKona(t *testing.T, system System) Option {
+	return func(c *config.Config) {
+		handleOptError(t, shared.WithAsteriscKonaConfig(system.RollupCfgs(), system.L2Geneses(), system.PrestateVariant()))(c)
+		handleOptError(t, shared.WithAsteriscKonaTraceType())(c)
+	}
+}
+
 func WithFastGames() Option {
 	return func(c *config.Config) {
 		c.TraceTypes = append(c.TraceTypes, types.TraceTypeFast)

@@ -442,6 +442,28 @@ func defaultIntent(root string, loc *artifacts.Locator, deployer common.Address,
 						},
 						VMType: cannonVMType(allocType),
 					},
+					{
+						ChainProofParams: state.ChainProofParams{
+							DisputeGameType:         2,
+							DisputeAbsolutePrestate: asteriscPrestateHash(root),
+							DisputeMaxGameDepth:     50,
+							DisputeSplitDepth:       14,
+							DisputeClockExtension:   0,
+							DisputeMaxClockDuration: 1200,
+						},
+						VMType: state.VMTypeAsterisc,
+					},
+					{
+						ChainProofParams: state.ChainProofParams{
+							DisputeGameType:         3,
+							DisputeAbsolutePrestate: asteriscKonaPrestateHash(root),
+							DisputeMaxGameDepth:     50,
+							DisputeSplitDepth:       14,
+							DisputeClockExtension:   0,
+							DisputeMaxClockDuration: 1200,
+						},
+						VMType: state.VMTypeAsteriscKona,
+					},
 				},
 			},
 		},
@@ -478,6 +500,10 @@ var cannonPrestateMT common.Hash
 var cannonPrestateMTNext common.Hash
 var cannonPrestateMTOnce sync.Once
 var cannonPrestateMTNextOnce sync.Once
+var asteriscPrestate common.Hash
+var asteriscPrestateOnce sync.Once
+var asteriscKonaPrestate common.Hash
+var asteriscKonaPrestateOnce sync.Once
 
 func cannonPrestate(monorepoRoot string, allocType AllocType) common.Hash {
 	var filename string
@@ -516,4 +542,54 @@ func cannonPrestate(monorepoRoot string, allocType AllocType) common.Hash {
 	})
 
 	return *cacheVar
+}
+
+func asteriscPrestateHash(monorepoRoot string) common.Hash {
+	asteriscPrestateOnce.Do(func() {
+		f, err := os.Open(path.Join(monorepoRoot, "op-program", "bin", "prestate-asterisc.json"))
+		if err != nil {
+			log.Warn("error opening asterisc prestate file", "err", err)
+			return
+		}
+		defer f.Close()
+
+		var prestate prestateFile
+		dec := json.NewDecoder(f)
+		if err := dec.Decode(&prestate); err != nil {
+			log.Warn("error decoding asterisc prestate file", "err", err)
+			return
+		}
+
+		asteriscPrestate = common.HexToHash(prestate.Pre)
+	})
+
+	return asteriscPrestate
+}
+
+func asteriscKonaPrestateHash(monorepoRoot string) common.Hash {
+	asteriscKonaPrestateOnce.Do(func() {
+		// Kona may have its own prestate file, or reuse Asterisc's
+		// For now, try kona-specific file first, fall back to asterisc
+		konaPath := path.Join(monorepoRoot, "kona", "bin", "prestate.json")
+		f, err := os.Open(konaPath)
+		if err != nil {
+			// Fall back to asterisc prestate
+			log.Info("kona prestate not found, using asterisc prestate", "err", err)
+			asteriscKonaPrestate = asteriscPrestateHash(monorepoRoot)
+			return
+		}
+		defer f.Close()
+
+		var prestate prestateFile
+		dec := json.NewDecoder(f)
+		if err := dec.Decode(&prestate); err != nil {
+			log.Warn("error decoding kona prestate file, using asterisc prestate", "err", err)
+			asteriscKonaPrestate = asteriscPrestateHash(monorepoRoot)
+			return
+		}
+
+		asteriscKonaPrestate = common.HexToHash(prestate.Pre)
+	})
+
+	return asteriscKonaPrestate
 }

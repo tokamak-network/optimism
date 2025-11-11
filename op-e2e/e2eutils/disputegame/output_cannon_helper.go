@@ -13,8 +13,10 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ethereum-optimism/optimism/op-challenger/game/fault/trace"
 	"github.com/ethereum-optimism/optimism/op-challenger/game/fault/trace/outputs"
 	"github.com/ethereum-optimism/optimism/op-challenger/game/fault/trace/vm"
+	faultTypes "github.com/ethereum-optimism/optimism/op-challenger/game/fault/types"
 	"github.com/ethereum-optimism/optimism/op-challenger/metrics"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/challenger"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
@@ -30,6 +32,22 @@ func NewOutputCannonGameHelper(t *testing.T, client *ethclient.Client, opts *bin
 	defaultChallengerOptions := func() []challenger.Option {
 		return []challenger.Option{
 			challenger.WithCannon(t, system),
+			challenger.WithFactoryAddress(factoryAddr),
+			challenger.WithGameAddress(gameAddr),
+		}
+	}
+	return &OutputCannonGameHelper{
+		OutputGameHelper: *outputGameHelper,
+		CannonHelper:     *NewCannonHelper(&outputGameHelper.SplitGameHelper, defaultChallengerOptions),
+	}
+}
+
+// NewOutputCannonGameHelperWithOptions creates an OutputCannonGameHelper with custom challenger options
+func NewOutputCannonGameHelperWithOptions(t *testing.T, client *ethclient.Client, opts *bind.TransactOpts, key *ecdsa.PrivateKey, game contracts.FaultDisputeGameContract, factoryAddr common.Address, gameAddr common.Address, provider *outputs.OutputTraceProvider, system DisputeSystem, vmOption challenger.Option) *OutputCannonGameHelper {
+	outputGameHelper := NewOutputGameHelper(t, require.New(t), client, opts, key, game, factoryAddr, gameAddr, provider, system)
+	defaultChallengerOptions := func() []challenger.Option {
+		return []challenger.Option{
+			vmOption, // Use the provided VM option (WithCannon, WithAsterisc, or WithAsteriscKona)
 			challenger.WithFactoryAddress(factoryAddr),
 			challenger.WithGameAddress(gameAddr),
 		}
@@ -81,8 +99,36 @@ func (g *OutputCannonGameHelper) CreateHonestActor(ctx context.Context, l2Node s
 	dir := filepath.Join(cfg.Datadir, "honest")
 	prestateProvider := outputs.NewPrestateProvider(rollupClient, actorCfg.PrestateSequenceNumber)
 	l1Head := g.GetL1Head(ctx)
-	accessor, err := outputs.NewOutputCannonTraceAccessor(
-		logger, metrics.NoopMetrics, cfg.Cannon, vm.NewOpProgramServerExecutor(logger), l2Client, prestateProvider, cfg.CannonAbsolutePreState, rollupClient, dir, l1Head, splitDepth, actorCfg.PrestateSequenceNumber, actorCfg.PoststateSequenceNumber)
-	g.Require.NoError(err, "Failed to create output cannon trace accessor")
+
+	// Determine which VM to use based on TraceTypes configuration
+	var accessor *trace.Accessor
+
+	// Check TraceTypes to determine which VM accessor to create
+	hasAsterisc := false
+	hasAsteriscKona := false
+	for _, tt := range cfg.TraceTypes {
+		if tt == faultTypes.TraceTypeAsterisc {
+			hasAsterisc = true
+		} else if tt == faultTypes.TraceTypeAsteriscKona {
+			hasAsteriscKona = true
+		}
+	}
+
+	if hasAsterisc {
+		// Use Asterisc VM
+		accessor, err = outputs.NewOutputAsteriscTraceAccessor(
+			logger, metrics.NoopMetrics, cfg.Asterisc, vm.NewOpProgramServerExecutor(logger), l2Client, prestateProvider, cfg.AsteriscAbsolutePreState, rollupClient, dir, l1Head, splitDepth, actorCfg.PrestateSequenceNumber, actorCfg.PoststateSequenceNumber)
+		g.Require.NoError(err, "Failed to create output asterisc trace accessor")
+	} else if hasAsteriscKona {
+		// Use AsteriscKona VM
+		accessor, err = outputs.NewOutputAsteriscTraceAccessor(
+			logger, metrics.NoopMetrics, cfg.AsteriscKona, vm.NewOpProgramServerExecutor(logger), l2Client, prestateProvider, cfg.AsteriscKonaAbsolutePreState, rollupClient, dir, l1Head, splitDepth, actorCfg.PrestateSequenceNumber, actorCfg.PoststateSequenceNumber)
+		g.Require.NoError(err, "Failed to create output asterisc-kona trace accessor")
+	} else {
+		// Use Cannon VM (default)
+		accessor, err = outputs.NewOutputCannonTraceAccessor(
+			logger, metrics.NoopMetrics, cfg.Cannon, vm.NewOpProgramServerExecutor(logger), l2Client, prestateProvider, cfg.CannonAbsolutePreState, rollupClient, dir, l1Head, splitDepth, actorCfg.PrestateSequenceNumber, actorCfg.PoststateSequenceNumber)
+		g.Require.NoError(err, "Failed to create output cannon trace accessor")
+	}
 	return NewOutputHonestHelper(g.T, g.Require, &g.OutputGameHelper.SplitGameHelper, g.Game, accessor)
 }

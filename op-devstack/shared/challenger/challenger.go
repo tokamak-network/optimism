@@ -57,12 +57,13 @@ func applyCannonConfig(c *config.Config, rollupCfgs []*rollup.Config, l2Geneses 
 	if err != nil {
 		return err
 	}
-	c.Cannon.VmBin = root + "cannon/bin/cannon"
-	c.Cannon.Server = root + "op-program/bin/op-program"
+	// E2E tests use bin-e2e for Mac-native binaries
+	c.Cannon.VmBin = root + "cannon/bin-e2e/cannon"
+	c.Cannon.Server = root + "op-program/bin-e2e/op-program"
 	if prestateVariant != "" {
-		c.CannonAbsolutePreState = root + "op-program/bin/prestate-" + string(prestateVariant) + ".bin.gz"
+		c.CannonAbsolutePreState = root + "op-program/bin-e2e/prestate-" + string(prestateVariant) + ".bin.gz"
 	} else {
-		c.CannonAbsolutePreState = root + "op-program/bin/prestate.bin.gz"
+		c.CannonAbsolutePreState = root + "op-program/bin-e2e/prestate.bin.gz"
 	}
 	c.Cannon.SnapshotFreq = 10_000_000
 
@@ -90,6 +91,89 @@ func applyCannonConfig(c *config.Config, rollupCfgs []*rollup.Config, l2Geneses 
 			return fmt.Errorf("write rollup config: %w", err)
 		}
 		c.Cannon.RollupConfigPaths = append(c.Cannon.RollupConfigPaths, rollupFile)
+	}
+	return nil
+}
+
+func applyAsteriscConfig(c *config.Config, rollupCfgs []*rollup.Config, l2Geneses []*core.Genesis, prestateVariant PrestateVariant) error {
+	root, err := findMonorepoRoot()
+	if err != nil {
+		return err
+	}
+	// E2E tests use bin-e2e for Mac-native binaries
+	c.Asterisc.VmBin = root + "asterisc/bin-e2e/asterisc"
+	c.Asterisc.Server = root + "op-program/bin-e2e/op-program"
+	// Asterisc uses binary archive prestate format (.bin.gz)
+	c.AsteriscAbsolutePreState = root + "op-program/bin-e2e/prestate-asterisc.bin.gz"
+	c.Asterisc.SnapshotFreq = 10_000_000
+
+	for _, l2Genesis := range l2Geneses {
+		genesisBytes, err := json.Marshal(l2Genesis)
+		if err != nil {
+			return fmt.Errorf("marshall l2 genesis config: %w", err)
+		}
+		genesisFile := filepath.Join(c.Datadir, fmt.Sprintf("l2-genesis-%v.json", l2Genesis.Config.ChainID))
+		err = os.WriteFile(genesisFile, genesisBytes, 0o644)
+		if err != nil {
+			return fmt.Errorf("write l2 genesis config: %w", err)
+		}
+		c.Asterisc.L2GenesisPaths = append(c.Asterisc.L2GenesisPaths, genesisFile)
+	}
+
+	for _, rollupCfg := range rollupCfgs {
+		rollupBytes, err := json.Marshal(rollupCfg)
+		if err != nil {
+			return fmt.Errorf("marshall rollup config: %w", err)
+		}
+		rollupFile := filepath.Join(c.Datadir, fmt.Sprintf("rollup-%v.json", rollupCfg.L2ChainID))
+		err = os.WriteFile(rollupFile, rollupBytes, 0o644)
+		if err != nil {
+			return fmt.Errorf("write rollup config: %w", err)
+		}
+		c.Asterisc.RollupConfigPaths = append(c.Asterisc.RollupConfigPaths, rollupFile)
+	}
+	return nil
+}
+
+func applyAsteriscKonaConfig(c *config.Config, rollupCfgs []*rollup.Config, l2Geneses []*core.Genesis, prestateVariant PrestateVariant) error {
+	root, err := findMonorepoRoot()
+	if err != nil {
+		return err
+	}
+	// E2E tests use bin-e2e for Mac-native binaries
+	c.AsteriscKona.VmBin = root + "asterisc/bin-e2e/asterisc"
+	c.AsteriscKona.Server = root + "kona/bin-e2e/kona-host"
+	if prestateVariant != "" {
+		c.AsteriscKonaAbsolutePreState = root + "kona/bin-e2e/prestate-" + string(prestateVariant) + ".bin.gz"
+	} else {
+		c.AsteriscKonaAbsolutePreState = root + "kona/bin-e2e/prestate.bin.gz"
+	}
+	c.AsteriscKona.SnapshotFreq = 10_000_000
+
+	for _, l2Genesis := range l2Geneses {
+		genesisBytes, err := json.Marshal(l2Genesis)
+		if err != nil {
+			return fmt.Errorf("marshall l2 genesis config: %w", err)
+		}
+		genesisFile := filepath.Join(c.Datadir, fmt.Sprintf("l2-genesis-%v.json", l2Genesis.Config.ChainID))
+		err = os.WriteFile(genesisFile, genesisBytes, 0o644)
+		if err != nil {
+			return fmt.Errorf("write l2 genesis config: %w", err)
+		}
+		c.AsteriscKona.L2GenesisPaths = append(c.AsteriscKona.L2GenesisPaths, genesisFile)
+	}
+
+	for _, rollupCfg := range rollupCfgs {
+		rollupBytes, err := json.Marshal(rollupCfg)
+		if err != nil {
+			return fmt.Errorf("marshall rollup config: %w", err)
+		}
+		rollupFile := filepath.Join(c.Datadir, fmt.Sprintf("rollup-%v.json", rollupCfg.L2ChainID))
+		err = os.WriteFile(rollupFile, rollupBytes, 0o644)
+		if err != nil {
+			return fmt.Errorf("write rollup config: %w", err)
+		}
+		c.AsteriscKona.RollupConfigPaths = append(c.AsteriscKona.RollupConfigPaths, rollupFile)
 	}
 	return nil
 }
@@ -131,6 +215,32 @@ func WithSuperCannonTraceType() Option {
 func WithSuperPermissionedTraceType() Option {
 	return func(c *config.Config) error {
 		c.TraceTypes = append(c.TraceTypes, types.TraceTypeSuperPermissioned)
+		return nil
+	}
+}
+
+func WithAsteriscConfig(rollupCfgs []*rollup.Config, l2Geneses []*core.Genesis, prestateVariant PrestateVariant) Option {
+	return func(c *config.Config) error {
+		return applyAsteriscConfig(c, rollupCfgs, l2Geneses, prestateVariant)
+	}
+}
+
+func WithAsteriscTraceType() Option {
+	return func(c *config.Config) error {
+		c.TraceTypes = append(c.TraceTypes, types.TraceTypeAsterisc)
+		return nil
+	}
+}
+
+func WithAsteriscKonaConfig(rollupCfgs []*rollup.Config, l2Geneses []*core.Genesis, prestateVariant PrestateVariant) Option {
+	return func(c *config.Config) error {
+		return applyAsteriscKonaConfig(c, rollupCfgs, l2Geneses, prestateVariant)
+	}
+}
+
+func WithAsteriscKonaTraceType() Option {
+	return func(c *config.Config) error {
+		c.TraceTypes = append(c.TraceTypes, types.TraceTypeAsteriscKona)
 		return nil
 	}
 }

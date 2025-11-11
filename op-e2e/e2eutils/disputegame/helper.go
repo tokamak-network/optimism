@@ -46,6 +46,8 @@ var (
 const (
 	cannonGameType            uint32 = 0
 	permissionedGameType      uint32 = 1
+	asteriscGameType          uint32 = 2
+	asteriscKonaGameType      uint32 = 3
 	superCannonGameType       uint32 = 4
 	superPermissionedGameType uint32 = 5
 	alphabetGameType          uint32 = 255
@@ -185,6 +187,30 @@ func (h *FactoryHelper) StartPermissionedGame(ctx context.Context, l2Node string
 	return h.startOutputCannonGameOfType(ctx, l2Node, l2BlockNumber, rootClaim, permissionedGameType, opts...)
 }
 
+func (h *FactoryHelper) StartOutputAsteriscGameWithCorrectRoot(ctx context.Context, l2Node string, l2BlockNumber uint64, opts ...GameOpt) *OutputCannonGameHelper {
+	cfg := NewGameCfg(opts...)
+	h.WaitForBlock(l2Node, l2BlockNumber, cfg)
+	output, err := h.System.RollupClient(l2Node).OutputAtBlock(ctx, l2BlockNumber)
+	h.Require.NoErrorf(err, "Failed to get output at block %v", l2BlockNumber)
+	return h.StartOutputAsteriscGame(ctx, l2Node, l2BlockNumber, common.Hash(output.OutputRoot), opts...)
+}
+
+func (h *FactoryHelper) StartOutputAsteriscGame(ctx context.Context, l2Node string, l2BlockNumber uint64, rootClaim common.Hash, opts ...GameOpt) *OutputCannonGameHelper {
+	return h.startOutputCannonGameOfType(ctx, l2Node, l2BlockNumber, rootClaim, asteriscGameType, opts...)
+}
+
+func (h *FactoryHelper) StartOutputAsteriscKonaGameWithCorrectRoot(ctx context.Context, l2Node string, l2BlockNumber uint64, opts ...GameOpt) *OutputCannonGameHelper {
+	cfg := NewGameCfg(opts...)
+	h.WaitForBlock(l2Node, l2BlockNumber, cfg)
+	output, err := h.System.RollupClient(l2Node).OutputAtBlock(ctx, l2BlockNumber)
+	h.Require.NoErrorf(err, "Failed to get output at block %v", l2BlockNumber)
+	return h.StartOutputAsteriscKonaGame(ctx, l2Node, l2BlockNumber, common.Hash(output.OutputRoot), opts...)
+}
+
+func (h *FactoryHelper) StartOutputAsteriscKonaGame(ctx context.Context, l2Node string, l2BlockNumber uint64, rootClaim common.Hash, opts ...GameOpt) *OutputCannonGameHelper {
+	return h.startOutputCannonGameOfType(ctx, l2Node, l2BlockNumber, rootClaim, asteriscKonaGameType, opts...)
+}
+
 func (h *FactoryHelper) startOutputCannonGameOfType(ctx context.Context, l2Node string, l2BlockNumber uint64, rootClaim common.Hash, gameType uint32, opts ...GameOpt) *OutputCannonGameHelper {
 	cfg := NewGameCfg(opts...)
 	logger := testlog.Logger(h.T, log.LevelInfo).New("role", "OutputCannonGameHelper")
@@ -224,7 +250,18 @@ func (h *FactoryHelper) startOutputCannonGameOfType(ctx context.Context, l2Node 
 	prestateProvider := outputs.NewPrestateProvider(rollupClient, prestateBlock)
 	provider := outputs.NewTraceProvider(logger, prestateProvider, rollupClient, l2Client, l1Head, splitDepth, prestateBlock, poststateBlock)
 
-	return NewOutputCannonGameHelper(h.T, h.Client, h.Opts, h.PrivKey, game, h.FactoryAddr, createdEvent.DisputeProxy, provider, h.System)
+	// Determine the appropriate VM option based on game type
+	var vmOption challenger.Option
+	switch gameType {
+	case asteriscGameType: // GameType 2
+		vmOption = challenger.WithAsterisc(h.T, h.System)
+	case asteriscKonaGameType: // GameType 3
+		vmOption = challenger.WithAsteriscKona(h.T, h.System)
+	default: // Cannon or others
+		vmOption = challenger.WithCannon(h.T, h.System)
+	}
+
+	return NewOutputCannonGameHelperWithOptions(h.T, h.Client, h.Opts, h.PrivKey, game, h.FactoryAddr, createdEvent.DisputeProxy, provider, h.System, vmOption)
 }
 
 func (h *FactoryHelper) StartSuperCannonGameWithCorrectRoot(ctx context.Context, opts ...GameOpt) *SuperCannonGameHelper {
