@@ -11,7 +11,7 @@
 # Devnet이 실행 중인지 확인
 kurtosis enclave inspect simple-devnet
 
-# Challenger가 실행 중인지 확인  
+# Challenger가 실행 중인지 확인
 docker ps | grep op-challenger
 
 # Challenger 로그 확인
@@ -35,7 +35,7 @@ curl -X POST -H "Content-Type: application/json" \
   http://localhost:65502
 ```
 
-#### L2 RPC 연결 확인  
+#### L2 RPC 연결 확인
 ```bash
 curl -X POST -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
@@ -73,7 +73,7 @@ grep -i "DisputeGameFactoryProxy" /tmp/state.json
 # 에러 로그만 필터링
 docker logs -f op-challenger 2>&1 | grep -i error
 
-# 성공 로그만 필터링  
+# 성공 로그만 필터링
 docker logs -f op-challenger 2>&1 | grep -i "success\|completed"
 
 # 게임 관련 로그만 필터링
@@ -173,7 +173,7 @@ docker exec op-challenger df -h /data
 # 블록 처리 속도 확인
 docker logs op-challenger 2>&1 | grep -i "block.*processed\|updated"
 
-# 게임 업데이트 빈도 확인  
+# 게임 업데이트 빈도 확인
 docker logs op-challenger 2>&1 | grep -i "game.*update" | tail -20
 ```
 
@@ -194,7 +194,7 @@ else
     exit 1
 fi
 
-# 2. RPC 연결 테스트  
+# 2. RPC 연결 테스트
 L1_RPC_PORT=$(kurtosis enclave inspect simple-devnet | grep "rpc: 8545/tcp" | head -1 | sed 's/.*-> //' | sed 's/.*://' | tr -d ' ')
 L2_RPC_PORT=$(kurtosis enclave inspect simple-devnet | grep "rpc: 8545/tcp" | tail -1 | sed 's/.*-> //' | sed 's/.*://' | tr -d ' ')
 
@@ -209,7 +209,7 @@ fi
 if curl -s -X POST -H "Content-Type: application/json" \
     --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
     "http://localhost:$L2_RPC_PORT" > /dev/null 2>&1; then
-    echo "✅ L2 RPC connection successful"  
+    echo "✅ L2 RPC connection successful"
 else
     echo "❌ L2 RPC connection failed"
 fi
@@ -246,11 +246,11 @@ echo "=== Health Check Complete ==="
 ## 다음 단계
 
 1. **기본 테스트 완료 후**: 실제 dispute game 참여 테스트
-2. **고급 테스트 완료 후**: 멀티 챌린저 환경 테스트  
+2. **고급 테스트 완료 후**: 멀티 챌린저 환경 테스트
 3. **성능 테스트 완료 후**: 프로덕션 환경 배포 준비
 
 ## 관련 문서
 
 - [Challenger Parameters](./challenger-parameters.md) - 설정 옵션 상세 설명
-- [Troubleshooting Guide](./troubleshooting.md) - 문제 해결 방법
+- [Troubleshooting Guide](../operations/troubleshooting-guide.md) - 문제 해결 방법
 - [Challenger Guide](./challenger-guide.md) - 기본 사용법

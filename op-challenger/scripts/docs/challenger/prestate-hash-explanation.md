@@ -178,8 +178,8 @@ make cannon-prestates
 ## 📚 **관련 문서**
 
 - [Prestate Synchronization Guide](./prestate-synchronization.md)
-- [Troubleshooting Guide](./troubleshooting.md)
-- [Game Type Configuration](./game-type-configuration.md)
+- [Troubleshooting Guide](../operations/troubleshooting-guide.md)
+- [Game Type Configuration](../dispute-games/dispute-game-configuration-guide.md)
 
 ---
 

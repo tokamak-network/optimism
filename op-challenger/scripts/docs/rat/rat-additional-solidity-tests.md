@@ -712,8 +712,8 @@ forge test --match-test "*RAT*" -vv
 
 ## 🔗 관련 문서
 
-- [RAT Testing Scenarios](./rat-testing-scenarios.md) - 통합 및 E2E 테스트 시나리오
-- [Proposer State Root Challenge Tests](./proposer-state-root-challenge-tests.md) - 기본 fault proof 테스트
+- [RAT Testing Implementation Plan](./rat-testing-implementation-plan.md) - 통합 및 E2E 테스트 시나리오
+- [Proposer State Root Challenge Tests](../proposer/proposer-state-root-challenge-tests.md) - 기본 fault proof 테스트
 - [RAT 배포 구현](./rat-deployment-implementation.md) - RAT 컨트랙트 배포 가이드
 
 ---

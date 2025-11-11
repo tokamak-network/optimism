@@ -152,10 +152,10 @@ grep -A 5 "proposer_params" /optimism/kurtosis-devnet/simple.yaml
 ## 🔗 관련 문서
 
 ### 내부 문서
-- [Devnet 설정 가이드](./devnet-configurations-guide.md) - Simple/Interop/Isthmus 환경 선택
-- [Game Types vs Trace Types](./game-types-vs-trace-types.md) - 개념 상세 설명
-- [Challenger Parameters](./challenger-parameters.md) - 챌린저 설정 옵션
-- [Game Type Configuration](./game-type-configuration.md) - 설정 불일치 해결
+- [Devnet 설정 가이드](../devnet/devnet-configurations-guide.md) - Simple/Interop/Isthmus 환경 선택
+- [Game Types vs Trace Types](../dispute-games/game-types.md) - 개념 상세 설명
+- [Challenger Parameters](../challenger/challenger-parameters.md) - 챌린저 설정 옵션
+- [Game Type Configuration](../dispute-games/dispute-game-configuration-guide.md) - 설정 불일치 해결
 
 ### 외부 문서
 - [OP Stack Proposals Spec](https://specs.optimism.io/protocol/proposals.html) - 프로토콜 명세

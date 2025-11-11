@@ -574,5 +574,5 @@ go test -v ./op-e2e/faultproofs -run "testCannon.*Incorrect"
 
 - [op-proposer 분석](./op-proposer-analysis.md)
 - [DisputeGameFactory 제안 플로우](./op-proposer-dgf-proposal-flow.md)
-- [RAT 배포 구현](./rat-deployment-implementation.md)
-- [Post-Deployment 검증 가이드](./post-deployment-verification-guide-en.md)
+- [RAT 배포 구현](../rat/rat-deployment-implementation.md)
+- [Post-Deployment 검증 가이드](../verification/post-deployment-verification-guide-en.md)

@@ -458,6 +458,6 @@ fi
 
 ## Related Documentation
 
-- [anchor-state-fix.md](./anchor-state-fix.md) - Step-by-step fix guide
-- [challenger-prestate-validation.md](./challenger-prestate-validation.md) - Validation process details
-- [troubleshooting-guide.md](./troubleshooting-guide.md) - General troubleshooting
+- [anchor-state-fix.md](../challenger/anchor-state-fix.md) - Step-by-step fix guide
+- [challenger-prestate-validation.md](../challenger/challenger-prestate-validation.md) - Validation process details
+- [troubleshooting-guide.md](../operations/troubleshooting-guide.md) - General troubleshooting

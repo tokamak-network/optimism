@@ -139,7 +139,7 @@ Since CANNON mode (game_type: 0) doesn't use L2OutputOracle, you need to manuall
    - `closeGame()` calls `setAnchorState()` internally (Line 1082 in FaultDisputeGame.sol)
    - Without this call, `anchorGame` remains `address(0)`
    - All new games will continue using the invalid 0xdead... starting root
-   - See [anchor-game-update-guide.md](./anchor-game-update-guide.md) for details
+   - See [anchor-game-update-guide.md](../dispute-games/anchor-game-update-guide.md) for details
 
 6. **Verify anchorGame updated**:
    ```bash

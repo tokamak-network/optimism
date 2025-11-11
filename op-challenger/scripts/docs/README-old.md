@@ -38,9 +38,9 @@ cd /optimism/op-challenger/scripts
 ./run-challenger-devnet.sh
 ```
 
-**📖 Detailed Configuration Guide**: [Rollup Configuration Guide](./docs/rollup-configuration-guide.md)
+**📖 Detailed Configuration Guide**: [Rollup Configuration Guide](./deployment/rollup-configuration-guide.md)
 
-**🔍 Deployment Monitoring**: [로그 모니터링 가이드](./docs/monitoring-deployment-logs.md) - devnet 배포 중 실시간 로그 확인 방법
+**🔍 Deployment Monitoring**: [로그 모니터링 가이드](./operations/monitoring-deployment-logs.md) - devnet 배포 중 실시간 로그 확인 방법
 
 
 ## ⏱️ Expected Build Times (Step 2)
@@ -148,24 +148,24 @@ docker rm op-challenger
 ### 📚 Detailed Documentation
 
 #### 🎯 Configuration & Setup
-- **[Devnet Configuration Guide](./docs/devnet-configurations-guide.md)** - ⭐ Simple/Interop/Isthmus configuration selection guide
-- **[Rollup Configuration Guide](./docs/rollup-configuration-guide.md)** - Game Type, Proposal Interval and other core settings
-- **[Game Types vs Trace Types](./docs/game-types-vs-trace-types.md)** - Concept distinction and relationships
-- **[Game Type Configuration](./docs/game-type-configuration.md)** - Configuration mismatch resolution
+- **[Devnet Configuration Guide](./devnet/devnet-configurations-guide.md)** - ⭐ Simple/Interop/Isthmus configuration selection guide
+- **[Rollup Configuration Guide](./deployment/rollup-configuration-guide.md)** - Game Type, Proposal Interval and other core settings
+- **[Game Types vs Trace Types](./dispute-games/game-types.md)** - Concept distinction and relationships
+- **[Game Type Configuration](./dispute-games/dispute-game-configuration-guide.md)** - Configuration mismatch resolution
 
 #### 🚀 Execution & Operations
-- **[OP-Challenger Execution Guide](./docs/challenger-guide.md)** - Script functionality and usage
-- **[Challenger Parameters](./docs/challenger-parameters.md)** - All configuration options explained
-- **[Challenger Feature Testing Guide](./docs/challenger-testing.md)** - Test scenarios and methods
+- **[OP-Challenger Execution Guide](./challenger/challenger-guide.md)** - Script functionality and usage
+- **[Challenger Parameters](./challenger/challenger-parameters.md)** - All configuration options explained
+- **[Challenger Feature Testing Guide](./challenger/challenger-testing.md)** - Test scenarios and methods
 
 #### 🛟 Troubleshooting
-- **[Troubleshooting Guide](./docs/troubleshooting.md)** - Common problem resolution methods
+- **[Troubleshooting Guide](./operations/troubleshooting-guide.md)** - Common problem resolution methods
 
 ## Troubleshooting
 
 ### Quick Solutions
 
-**For common issues, refer to the [Troubleshooting Guide](./docs/troubleshooting.md).**
+**For common issues, refer to the [Troubleshooting Guide](./operations/troubleshooting-guide.md).**
 
 #### Build Error Checklist
 1. Docker service is running

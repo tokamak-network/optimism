@@ -329,10 +329,10 @@ watch -n 5 "echo 'L1:' && cast block-number --rpc-url $L1_RPC && echo 'L2:' && c
 
 Once installation is complete:
 
-1. **📊 Monitoring**: [Dispute Game Monitoring Guide](./dispute-game-monitoring.md)
+1. **📊 Monitoring**: [Dispute Game Monitoring Guide](../dispute-games/dispute-game-monitoring.md)
 2. **🔧 Configuration**: [Configuration Guide](./configuration-guide.md)
-3. **🚨 Troubleshooting**: [Troubleshooting Guide](./troubleshooting-guide.md)
-4. **🧪 Testing**: [Testing Guide](./testing-guide.md)
+3. **🚨 Troubleshooting**: [Troubleshooting Guide](../operations/troubleshooting-guide.md)
+4. **🧪 Testing**: [Testing Guide](../rat/rat-e2e-testing-guide.md)
 
 ## Quick Reference
 

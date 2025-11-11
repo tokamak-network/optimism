@@ -73,7 +73,7 @@ grep "respectedGameType" /tmp/state.json
 
 **Cannon:**
 - ✅ `/optimism/cannon/bin/cannon`
-- ✅ `/optimism/op-program/bin/op-program` 
+- ✅ `/optimism/op-program/bin/op-program`
 - ✅ `/optimism/op-program/bin/prestate-mt64Next.bin.gz`
 - 📝 없으면 `./build-binaries-for-challenger.sh` 실행 안내
 
@@ -134,4 +134,4 @@ docker volume ls | grep challenger
 ## 관련 문서
 
 - [Challenger Parameters](./challenger-parameters.md)
-- [트러블슈팅 가이드](./troubleshooting.md)
+- [트러블슈팅 가이드](../operations/troubleshooting-guide.md)

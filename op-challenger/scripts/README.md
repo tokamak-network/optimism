@@ -130,7 +130,7 @@ vi simple.yaml  # or your preferred editor
 
 **Verification**: Check that all four sections exist in your `simple.yaml` before proceeding to Step 4.
 
-**📖 Complete Setup Guide**: [Fast Dispute Game Setup Guide](./docs/fast-dispute-game-setup.md) - Detailed configuration instructions and troubleshooting
+**📖 Complete Setup Guide**: [Fast Dispute Game Setup Guide](./docs/dispute-games/fast-dispute-game-setup.md) - Detailed configuration instructions and troubleshooting
 
 **Supported Game Types:**
 | Type | Name | Purpose | Status |
@@ -147,8 +147,8 @@ go clean -testcache
 go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E"
 ```
 
-**📖 Complete Guide**: [RAT E2E Testing Guide](./docs/rat-e2e-testing-guide.md)
-**📋 Implementation Status**: [RAT Testing Implementation Plan](./docs/rat-testing-implementation-plan.md)
+**📖 Complete Guide**: [RAT E2E Testing Guide](./docs/rat/rat-e2e-testing-guide.md)
+**📋 Implementation Status**: [RAT Testing Implementation Plan](./docs/rat/rat-testing-implementation-plan.md)
 
 ---
 
@@ -171,7 +171,7 @@ The `build-devnet.sh` script provides an automated way to build and deploy the d
 ./build-devnet.sh --help
 ```
 
-**📖 [build-devnet.sh Process Documentation](./docs/build-devnet-process.md)** - Detailed execution steps and technical specifications
+**📖 [build-devnet.sh Process Documentation](./docs/devnet/build-devnet-process.md)** - Detailed execution steps and technical specifications
 
 ### Alternative: Manual Deployment
 
@@ -203,7 +203,7 @@ Autofix mode helps recover from failed devnet deployments by automatically clean
 
 ## Step 5: Post-Deployment Verification
 
-**🚀 Quick Post-Deployment Check**: [Post-Deployment Verification Guide](./docs/post-deployment-verification-guide-en.md) - Complete automated verification process with scripts
+**🚀 Quick Post-Deployment Check**: [Post-Deployment Verification Guide](./docs/verification/post-deployment-verification-guide-en.md) - Complete automated verification process with scripts
 
 **What the verification guide includes:**
 - ✅ Automated contract configuration verification
@@ -248,7 +248,7 @@ Rollup RPC: http://localhost:57029
 
 ### Comprehensive Management
 
-**📖 [Devnet Management Guide](./docs/devnet-management.md)** - Complete operations and monitoring guide
+**📖 [Devnet Management Guide](./docs/devnet/devnet-management.md)** - Complete operations and monitoring guide
 
 **What the management guide includes:**
 - ✅ Service status monitoring and health checks
@@ -258,7 +258,7 @@ Rollup RPC: http://localhost:57029
 - ✅ Resource monitoring and metrics access
 - ✅ Quick reference commands for daily operations
 
-**📊 [Deployment Log Monitoring](./docs/monitoring-deployment-logs.md)** - Detailed guide for monitoring deployment progress
+**📊 [Deployment Log Monitoring](./docs/operations/monitoring-deployment-logs.md)** - Detailed guide for monitoring deployment progress
 
 
 # 🛠️ System Tools Auto Installation
@@ -282,7 +282,7 @@ Rollup RPC: http://localhost:57029
 
 For comprehensive devnet management operations including monitoring, cleanup, and log analysis:
 
-**📖 [Devnet Management Guide](./docs/devnet-management.md)**
+**📖 [Devnet Management Guide](./docs/devnet/devnet-management.md)**
 
 **What the management guide includes:**
 - ✅ Service status monitoring and health checks
@@ -292,22 +292,22 @@ For comprehensive devnet management operations including monitoring, cleanup, an
 - ✅ Resource monitoring and metrics access
 - ✅ Quick reference commands for daily operations
 
-**📊 [Deployment Log Monitoring](./docs/monitoring-deployment-logs.md)** - Detailed guide for monitoring deployment progress
+**📊 [Deployment Log Monitoring](./docs/operations/monitoring-deployment-logs.md)** - Detailed guide for monitoring deployment progress
 
 # 📚 Key Documentation
 
 **📖 Essential Guides**:
-- [Fast Dispute Game Setup](./docs/fast-dispute-game-setup.md) - 20-minute game configuration
-- [Post-Deployment Verification](./docs/post-deployment-verification-guide-en.md) - Automated testing
-- [Devnet Management](./docs/devnet-management.md) - Operations and monitoring
-- [Proposer State Root Challenge Tests](./docs/proposer-state-root-challenge-tests.md) - Test scenarios for dishonest proposer detection
-- [State Root Correction Mechanism](./docs/state-root-correction-mechanism.md) - How invalid state roots are detected and corrected
+- [Fast Dispute Game Setup](./docs/dispute-games/fast-dispute-game-setup.md) - 20-minute game configuration
+- [Post-Deployment Verification](./docs/verification/post-deployment-verification-guide-en.md) - Automated testing
+- [Devnet Management](./docs/devnet/devnet-management.md) - Operations and monitoring
+- [Proposer State Root Challenge Tests](./docs/proposer/proposer-state-root-challenge-tests.md) - Test scenarios for dishonest proposer detection
+- [State Root Correction Mechanism](./docs/proposer/state-root-correction-mechanism.md) - How invalid state roots are detected and corrected
 
 # 🔧 Troubleshooting
 
 For common deployment issues and solutions, see the comprehensive troubleshooting guide:
 
-**📖 [Devnet Troubleshooting Guide](./docs/devnet-troubleshooting.md)**
+**📖 [Devnet Troubleshooting Guide](./docs/devnet/devnet-troubleshooting.md)**
 
 **Common issues covered:**
 - ✅ Docker registry timeout errors
@@ -323,14 +323,14 @@ For common deployment issues and solutions, see the comprehensive troubleshootin
 For comprehensive understanding of the fault proof system and testing:
 
 **🧪 Testing & Development**:
-- [Proposer State Root Challenge Tests](./docs/proposer-state-root-challenge-tests.md) - Complete guide to dishonest proposer detection and correction scenarios
+- [Proposer State Root Challenge Tests](./docs/proposer/proposer-state-root-challenge-tests.md) - Complete guide to dishonest proposer detection and correction scenarios
   - Solidity unit tests for contract-level validation
   - Go E2E tests for integration-level validation
   - Test patterns for creating dishonest state roots
   - Game resolution verification methods
 
 **🔒 Security & Mechanisms**:
-- [State Root Correction Mechanism](./docs/state-root-correction-mechanism.md) - Comprehensive guide to how Optimism's fault proof system detects and corrects invalid state roots
+- [State Root Correction Mechanism](./docs/proposer/state-root-correction-mechanism.md) - Comprehensive guide to how Optimism's fault proof system detects and corrects invalid state roots
   - Complete workflow from invalid proposal to correction
   - RAT (Randomized Attention Test) integration
   - OptimismPortal withdrawal validation

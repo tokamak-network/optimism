@@ -269,9 +269,9 @@ curl -X POST -H "Content-Type: application/json" \
 
 ## Related Documentation
 
-- **[Log Monitoring Guide](./monitoring-deployment-logs.md)** - Detailed deployment log monitoring
+- **[Log Monitoring Guide](../operations/monitoring-deployment-logs.md)** - Detailed deployment log monitoring
 - **[Troubleshooting Guide](./devnet-troubleshooting.md)** - Common issues and solutions
-- **[Post-Deployment Verification](./post-deployment-verification-guide-en.md)** - Automated verification process
+- **[Post-Deployment Verification](../verification/post-deployment-verification-guide-en.md)** - Automated verification process
 
 ## Quick Reference Commands
 

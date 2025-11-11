@@ -190,9 +190,9 @@ cast send $FIRST_GAME "closeGame()" --rpc-url $L1_RPC --private-key $KEY
 ```
 
 **See Also**:
-- [anchor-state-fix.md](./anchor-state-fix.md) - Detailed fix guide
-- [anchor-game-update-guide.md](./anchor-game-update-guide.md) - Complete update process
-- [challenger-prestate-validation.md](./challenger-prestate-validation.md) - Validation details
+- [anchor-state-fix.md](../challenger/anchor-state-fix.md) - Detailed fix guide
+- [anchor-game-update-guide.md](../dispute-games/anchor-game-update-guide.md) - Complete update process
+- [challenger-prestate-validation.md](../challenger/challenger-prestate-validation.md) - Validation details
 
 ---
 
@@ -789,10 +789,10 @@ When asking for help, include:
 
 ### Related Documentation
 
-- **📖 Installation Guide**: [installation-guide.md](./installation-guide.md)
-- **📊 System Verification**: [system-verification.md](./system-verification.md)
-- **🎮 Game Monitoring**: [dispute-game-monitoring.md](./dispute-game-monitoring.md)
-- **⚙️ Configuration**: [configuration-guide.md](./configuration-guide.md)
+- **📖 Installation Guide**: [installation-guide.md](../deployment/installation-guide.md)
+- **📊 System Verification**: [system-verification.md](../verification/system-verification.md)
+- **🎮 Game Monitoring**: [dispute-game-monitoring.md](../dispute-games/dispute-game-monitoring.md)
+- **⚙️ Configuration**: [configuration-guide.md](../deployment/configuration-guide.md)
 
 ### Emergency Recovery Checklist
 

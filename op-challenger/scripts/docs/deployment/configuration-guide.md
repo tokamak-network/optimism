@@ -210,5 +210,5 @@ See the complete example in `/optimism/kurtosis-devnet/simple.yaml` for all avai
 ## Related Documentation
 
 - [README.md](../README.md) - Main setup guide
-- [Deployment Verification Guide](./deployment-verification-guide.md) - Post-deployment checks
-- [Troubleshooting Guide](./troubleshooting-guide.md) - Common issues and solutions
+- [Deployment Verification Guide](../verification/deployment-verification-guide.md) - Post-deployment checks
+- [Troubleshooting Guide](../operations/troubleshooting-guide.md) - Common issues and solutions

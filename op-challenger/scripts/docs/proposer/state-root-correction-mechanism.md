@@ -171,7 +171,7 @@ function resolveClaim(address _claimant) external {
 
 ## 📚 관련 문서
 
-- [RAT Testing Implementation Plan](./rat-testing-implementation-plan.md)
+- [RAT Testing Implementation Plan](../rat/rat-testing-implementation-plan.md)
 - [RAT Contract Documentation](../../../packages/contracts-bedrock/src/L1/RAT.sol)
 - [FaultDisputeGame Documentation](../../../packages/contracts-bedrock/src/dispute/FaultDisputeGame.sol)
 - [OptimismPortal2 Documentation](../../../packages/contracts-bedrock/src/L1/OptimismPortal2.sol)

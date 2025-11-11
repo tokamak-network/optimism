@@ -128,7 +128,7 @@ just simple-devnet
 
 ### 🔗 크로스체인 개발
 ```bash
-# 추천: interop.yaml  
+# 추천: interop.yaml
 just interop-devnet
 ```
 **이유**: 멀티체인 환경이 필요한 작업
@@ -230,7 +230,7 @@ just simple-devnet
 ```
 
 ### Phase 2: 고급 기능
-```bash  
+```bash
 # 필요에 따라 더 복잡한 환경으로 전환
 just interop-devnet        # 멀티체인 필요시
 just isthmus-devnet        # 최신 기능 필요시
@@ -307,12 +307,12 @@ kurtosis enclave inspect simple-devnet
 ## 🔗 관련 문서
 
 ### 설정 관련
-- [롤업 설정 가이드](./rollup-configuration-guide.md) - 게임 타입 및 파라미터 설정
-- [Game Types vs Trace Types](./game-types-vs-trace-types.md) - 개념 구분
+- [롤업 설정 가이드](../deployment/rollup-configuration-guide.md) - 게임 타입 및 파라미터 설정
+- [Game Types vs Trace Types](../dispute-games/game-types.md) - 개념 구분
 
-### 실행 관련  
-- [OP-Challenger 실행 가이드](./challenger-guide.md) - 스크립트 사용법
-- [트러블슈팅 가이드](./troubleshooting.md) - 문제 해결 방법
+### 실행 관련
+- [OP-Challenger 실행 가이드](../challenger/challenger-guide.md) - 스크립트 사용법
+- [트러블슈팅 가이드](../operations/troubleshooting-guide.md) - 문제 해결 방법
 
 ### 외부 문서
 - [Kurtosis Devnet Book](https://devdocs.optimism.io/kurtosis-devnet/) - 공식 문서

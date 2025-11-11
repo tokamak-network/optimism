@@ -402,7 +402,7 @@ cast send --rpc-url $L1_RPC --private-key $PRIVATE_KEY $GAME_ADDRESS "closeGame(
 - All new games will continue to use invalid 0xdead... starting root
 
 **See Also**:
-- [anchor-game-update-guide.md](./anchor-game-update-guide.md) - Complete update process
+- [anchor-game-update-guide.md](../dispute-games/anchor-game-update-guide.md) - Complete update process
 - [anchor-state-fix.md](./anchor-state-fix.md) - Cold Starting fix guide
 
 ### Check State Roots

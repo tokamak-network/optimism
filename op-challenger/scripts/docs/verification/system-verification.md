@@ -560,10 +560,10 @@ chmod +x continuous-monitor.sh
 If health checks fail, see the comprehensive troubleshooting guide:
 
 **📚 Related Guides:**
-- [Installation Guide](./installation-guide.md) - Step-by-step setup
-- [Dispute Game Monitoring Guide](./dispute-game-monitoring.md) - Detailed monitoring
-- [Troubleshooting Guide](./troubleshooting-guide.md) - Problem resolution
-- [Configuration Guide](./configuration-guide.md) - Advanced configuration
+- [Installation Guide](../deployment/installation-guide.md) - Step-by-step setup
+- [Dispute Game Monitoring Guide](../dispute-games/dispute-game-monitoring.md) - Detailed monitoring
+- [Troubleshooting Guide](../operations/troubleshooting-guide.md) - Problem resolution
+- [Configuration Guide](../deployment/configuration-guide.md) - Advanced configuration
 
 ## Health Check Alerts
 

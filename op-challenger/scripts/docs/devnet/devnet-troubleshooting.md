@@ -87,10 +87,10 @@ cast send $DGF "create(uint32,bytes32,bytes)" \
 ```
 
 **References**:
-- [AnchorStateRegistry Fix Guide](./docs/anchor-state-fix.md) for detailed explanation
-- [Game Types Guide](./docs/game-types.md) for CANNON vs PERMISSIONED differences
-- [Fast Dispute Game Setup Guide](./docs/fast-dispute-game-setup.md) for 20-minute game configuration
-- [Auto-Resolve Script Guide](./docs/auto-resolve-script-guide.md) for automated game resolution
+- [AnchorStateRegistry Fix Guide](../challenger/anchor-state-fix.md) for detailed explanation
+- [Game Types Guide](../dispute-games/game-types.md) for CANNON vs PERMISSIONED differences
+- [Fast Dispute Game Setup Guide](../dispute-games/fast-dispute-game-setup.md) for 20-minute game configuration
+- [Auto-Resolve Script Guide](../challenger/auto-resolve-script-guide.md) for automated game resolution
 
 ### 4. Docker Resource Issues
 

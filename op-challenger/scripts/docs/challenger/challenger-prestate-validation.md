@@ -1654,7 +1654,7 @@ cast send $GAME_ADDRESS "closeGame()"  # ← 이것이 anchorGame을 업데이�
 - ❌ Cold Starting 상태 영구화!
 
 자세한 절차는 [anchor-state-fix.md](./anchor-state-fix.md)와
-[anchor-game-update-guide.md](./anchor-game-update-guide.md) 참조.
+[anchor-game-update-guide.md](../dispute-games/anchor-game-update-guide.md) 참조.
 
 ### 3. --allow-invalid-prestate 플래그
 - Cold Starting 상태에서 prestate validation을 우회
