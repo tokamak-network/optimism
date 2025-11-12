@@ -48,6 +48,7 @@ func (s *KonaExecutor) OracleCommand(cfg Config, dataDir string, inputs utils.Lo
 
 	if len(cfg.RollupConfigPaths) > 0 {
 		args = append(args, "--rollup-config-path", cfg.RollupConfigPaths[0])
+		// rollup-config-path already provides custom chain config, so l2-chain-id is not needed (and cannot be used together)
 	} else {
 		if len(cfg.Networks) == 0 {
 			return nil, errors.New("network is not defined")

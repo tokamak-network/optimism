@@ -568,27 +568,42 @@ func asteriscPrestateHash(monorepoRoot string) common.Hash {
 
 func asteriscKonaPrestateHash(monorepoRoot string) common.Hash {
 	asteriscKonaPrestateOnce.Do(func() {
-		// Kona may have its own prestate file, or reuse Asterisc's
-		// For now, try kona-specific file first, fall back to asterisc
-		konaPath := path.Join(monorepoRoot, "kona", "bin", "prestate.json")
-		f, err := os.Open(konaPath)
-		if err != nil {
-			// Fall back to asterisc prestate
-			log.Info("kona prestate not found, using asterisc prestate", "err", err)
-			asteriscKonaPrestate = asteriscPrestateHash(monorepoRoot)
-			return
-		}
-		defer f.Close()
-
-		var prestate prestateFile
-		dec := json.NewDecoder(f)
-		if err := dec.Decode(&prestate); err != nil {
-			log.Warn("error decoding kona prestate file, using asterisc prestate", "err", err)
-			asteriscKonaPrestate = asteriscPrestateHash(monorepoRoot)
-			return
+		// For E2E tests, try bin-e2e first, then bin
+		// DO NOT fall back to Asterisc prestate - Kona must have its own prestate file
+		konaPaths := []string{
+			path.Join(monorepoRoot, "kona", "bin-e2e", "prestate.json"),
+			path.Join(monorepoRoot, "kona", "bin", "prestate.json"),
 		}
 
-		asteriscKonaPrestate = common.HexToHash(prestate.Pre)
+		var lastErr error
+		for _, konaPath := range konaPaths {
+			f, err := os.Open(konaPath)
+			if err != nil {
+				log.Warn("Kona prestate file not found", "path", konaPath, "err", err)
+				lastErr = err
+				continue // Try next path
+			}
+			defer f.Close()
+
+			var prestate prestateFile
+			dec := json.NewDecoder(f)
+			if err := dec.Decode(&prestate); err != nil {
+				log.Error("Error decoding kona prestate file", "path", konaPath, "err", err)
+				lastErr = err
+				continue // Try next path
+			}
+
+			asteriscKonaPrestate = common.HexToHash(prestate.Pre)
+			log.Info("Using kona prestate", "path", konaPath, "hash", asteriscKonaPrestate.Hex())
+			return
+		}
+
+		// CRITICAL ERROR: No valid Kona prestate file found
+		// This indicates the build script did not properly generate prestate.json
+		log.Crit("FATAL: Kona prestate.json not found in any location. "+
+			"Please run build-binaries-for-challenger-e2e.sh with --kona flag to generate prestate files. "+
+			"Searched paths: kona/bin-e2e/prestate.json, kona/bin/prestate.json",
+			"lastErr", lastErr)
 	})
 
 	return asteriscKonaPrestate

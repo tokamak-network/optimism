@@ -143,11 +143,8 @@ func applyAsteriscKonaConfig(c *config.Config, rollupCfgs []*rollup.Config, l2Ge
 	// E2E tests use bin-e2e for Mac-native binaries
 	c.AsteriscKona.VmBin = root + "asterisc/bin-e2e/asterisc"
 	c.AsteriscKona.Server = root + "kona/bin-e2e/kona-host"
-	if prestateVariant != "" {
-		c.AsteriscKonaAbsolutePreState = root + "kona/bin-e2e/prestate-" + string(prestateVariant) + ".bin.gz"
-	} else {
-		c.AsteriscKonaAbsolutePreState = root + "kona/bin-e2e/prestate.bin.gz"
-	}
+	// Kona uses a single universal prestate file regardless of variant
+	c.AsteriscKonaAbsolutePreState = root + "kona/bin-e2e/prestate.bin.gz"
 	c.AsteriscKona.SnapshotFreq = 10_000_000
 
 	for _, l2Genesis := range l2Geneses {

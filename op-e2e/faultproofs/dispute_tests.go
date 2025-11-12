@@ -3,6 +3,7 @@ package faultproofs
 import (
 	"context"
 	"testing"
+	"time"
 
 	gameTypes "github.com/ethereum-optimism/optimism/op-challenger/game/types"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/disputegame"
@@ -55,6 +56,16 @@ func testCannonGame(t *testing.T, ctx context.Context, arena gameArena, game *di
 
 	arena.AdvanceTime(game.MaxClockDuration(ctx))
 	require.NoError(t, wait.ForNextBlock(ctx, arena.L1Client()))
+
+	// Wait for challenger to finish making moves after time advance
+	game.WaitForInactivity(ctx, 2, false)
+
+	// Wait for challenger to complete resolve
+	time.Sleep(5 * time.Second)
+
+	// Close the game to change the game status
+	game.CloseGame(ctx)
+
 	game.WaitForGameStatus(ctx, gameTypes.GameStatusChallengerWon)
 }
 
