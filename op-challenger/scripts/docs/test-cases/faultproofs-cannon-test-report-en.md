@@ -109,7 +109,46 @@ All commands were executed from the repository root (`/Users/zena/tokamak-projec
 
 ---
 
+### TestOutputCannonBondCostMeasurement
+
+- **Purpose:** measure the bond costs when an honest challenger responds to a malicious proposer in GameType 0 (Cannon), progressing through the full dispute game tree to maximum depth.
+- **Command:** `go test -v ./op-e2e/faultproofs -run "TestOutputCannonBondCostMeasurement"`
+- **Result & Duration:** PASS, 361.41 seconds (~6 minutes).
+- **Notes:** demonstrates exponential bond escalation from depth 0 to 50, requiring ~483.18 ETH total bonds from both parties.
+- **Related Documentation:** [Bond Cost Measurement Report](./bond-cost-measurement-report.md)
+
+**Execution Flow:**
+1. **First Game (Cold Start):** creates invalid root claim to establish initial game state and prestate.
+   - Challenger responds and wins
+   - Time advances past game duration
+   - Game closed and resolved as Challenger Won
+2. **Second Game (Bond Measurement):** creates invalid root claim that triggers full dispute.
+   - Honest challenger (Alice) attacks the invalid claim
+   - Malicious proposer (Bob) actively defends each claim
+   - Game progresses through:
+     - Output Bisection Phase (depth 0-14): bisecting L2 output roots
+     - Execution Trace Phase (depth 15-50): bisecting VM execution trace
+   - Total 51 claims created (depth 0-50)
+   - Time advances past game duration
+   - Game closed and resolved as Challenger Won
+3. Detailed bond analysis logged for each claim at every depth level
+4. Final cost report showing bonds, gas costs, and net results for both parties
+
+**Key Coverage:**
+- `DefendClaim` with recursive defense strategy reaches maximum depth (50)
+- `WithoutWaitingForStep()` option skips STEP function execution (focuses on bond measurement)
+- Bond escalation: ~14.17% increase per depth level
+- Total bonds required: Challenger 225.62 ETH + Proposer 257.56 ETH = 483.18 ETH
+- Gas price tracking and accurate gwei display
+- `CloseGame` and game resolution after time advancement
+- Bond calculation using hardcoded values (Big Bonds v1.5 spec) independent of actual gas prices
+- Comprehensive logging of all claims with claimant addresses, bonds, and position data
+
+---
+
 ## Summary
 
 All Cannon + large-preimage regression tests completed successfully. The benchmark remains intentionally skipped until the associated TODO is implemented. Re-run any scenario by invoking the listed command from the repo root. No additional configuration is required as long as the standard devnet environment is available.
+
+For detailed bond cost analysis and game mechanics, see the [Bond Cost Measurement Report](./bond-cost-measurement-report.md).
 
