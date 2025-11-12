@@ -9,8 +9,11 @@ This directory contains comprehensive documentation for Optimism's fault proof s
 #### Cannon (GameType 0 - MIPS-based)
 - **[Test Report](./faultproofs-cannon-test-report-en.md)** - Cannon VM test execution results
 
-#### Asterisc (GameType 2 & 3 - RISC-V-based)
+#### Asterisc (GameType 2 - RISC-V-based)
 - **[Test Report](./faultproofs-asterisc-test-report-en.md)** - Asterisc VM test execution results
+
+#### Asterisc-Kona (GameType 3 - RISC-V with Kona Client)
+- **[Test Report](./faultproofs-asterisc-kona-test-report.md)** - Asterisc-Kona VM test execution results
 
 #### General E2E Tests
 - **[Test Guide](./faultproofs-e2e-en.md)** - General fault proofs E2E test guide
@@ -37,11 +40,9 @@ This directory contains comprehensive documentation for Optimism's fault proof s
 
 **Documentation**: See [Cannon Test Report](./faultproofs-cannon-test-report-en.md)
 
-### 2. Asterisc Tests (RISC-V VM)
+### 2. Asterisc Tests (RISC-V VM - GameType 2)
 
-**Test Files**:
-- `op-e2e/faultproofs/output_asterisc_test.go` (GameType 2)
-- `op-e2e/faultproofs/output_asterisc_kona_test.go` (GameType 3)
+**Test File**: `op-e2e/faultproofs/output_asterisc_test.go`
 
 **Key Tests**:
 - Basic game flow
@@ -52,7 +53,24 @@ This directory contains comprehensive documentation for Optimism's fault proof s
 
 **Documentation**: See [Asterisc Test Report](./faultproofs-asterisc-test-report-en.md)
 
-### 3. Bond Cost Measurement
+### 3. Asterisc-Kona Tests (RISC-V VM with Kona - GameType 3)
+
+**Test File**: `op-e2e/faultproofs/output_asterisc_kona_test.go`
+
+**Oracle Server**: kona-host (Rust-based replacement for op-program)
+
+**Key Tests**:
+- Basic game flow with kona-host
+- Dispute games (StepFirst, StepMiddle, StepInExtension, StepAttackDummyClaim)
+- Large preimage handling
+- Blob preimage tests
+- Valid/invalid output root handling
+- Game clock and timeout tests
+- Withdraw claim tests
+
+**Documentation**: See [Asterisc-Kona Test Report](./faultproofs-asterisc-kona-test-report.md)
+
+### 4. Bond Cost Measurement
 
 **Test**: `TestOutputCannonBondCostMeasurement`
 
@@ -83,16 +101,29 @@ go test -v ./op-e2e/faultproofs -run TestOutputCannon -timeout 30m
 # Expected: Multiple tests pass, takes ~10-15 minutes total
 ```
 
-### Run All Asterisc Tests
+### Run All Asterisc Tests (GameType 2)
 
 ```bash
 # From repository root: /path/to/optimism
 pwd  # Verify location
 
-# Run all Asterisc (RISC-V VM) tests
+# Run all Asterisc (RISC-V VM) tests - excludes Kona tests
 go test -v ./op-e2e/faultproofs -run TestOutputAsterisc -timeout 30m
 
 # Expected: Multiple tests pass, takes ~15-20 minutes total
+```
+
+### Run All Asterisc-Kona Tests (GameType 3)
+
+```bash
+# From repository root: /path/to/optimism
+pwd  # Verify location
+
+# Run all Asterisc-Kona (RISC-V VM with Kona) tests
+go test -v ./op-e2e/faultproofs -run TestOutputAsteriscKona -timeout 30m
+
+# Expected: Multiple tests pass, takes ~15-20 minutes total
+# Note: Requires kona-host binary built via build-binaries-for-challenger-e2e.sh --kona
 ```
 
 ### Run Bond Cost Measurement Test
@@ -285,14 +316,20 @@ cd op-challenger/scripts
 pwd
 # Should show: /path/to/optimism/op-challenger/scripts
 
-# Build all VMs (Cannon + Asterisc)
-./build-binaries-for-challenger.sh --asterisc
+# Build VMs for E2E Testing
+# Option 1: Cannon + Asterisc only (GameType 0, 2)
+./build-binaries-for-challenger-e2e.sh --asterisc
 # ⏱️ Takes ~5-10 minutes (first time)
+
+# Option 2: All VMs including Kona (GameType 0, 2, 3) - RECOMMENDED
+./build-binaries-for-challenger-e2e.sh --asterisc --kona
+# ⏱️ Takes ~8-12 minutes (first time)
 # This script builds:
-#   - Cannon VM (MIPS)
-#   - Asterisc VM (RISC-V)
-#   - op-program (Oracle server)
-#   - Prestate files
+#   - Cannon VM (MIPS) - GameType 0
+#   - Asterisc VM (RISC-V) - GameType 2
+#   - op-program (Oracle server for Cannon/Asterisc)
+#   - kona-host (Oracle server for Kona) - GameType 3
+#   - Prestate files for all VMs
 
 # Return to repository root
 cd ../..
@@ -324,9 +361,14 @@ ls -lh op-program/bin/prestate.bin.gz
 ls -lh op-program/bin/prestate-asterisc.json
 # Should show: ~10KB file
 
+# Check kona-host (if built with --kona)
+ls -lh kona/bin-e2e/kona-host
+# Should show: ~25MB file
+
 # Test binaries work
 ./cannon/bin/cannon --version
 ./asterisc/bin/asterisc --version
+./kona/bin-e2e/kona-host --version  # if built with --kona
 ```
 
 ---
