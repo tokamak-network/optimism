@@ -24,7 +24,7 @@ git clone https://github.com/tokamak-network/optimism.git
 cd optimism
 
 # Checkout the feature branch for local development
-git checkout feature/local-setup-rat
+git checkout feature/challenger-game-type-check
 ```
 
 **💡 Note**: This guide assumes you're working with the `feature/local-setup-rat` branch which contains the latest local development setup improvements.
