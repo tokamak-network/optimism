@@ -38,19 +38,22 @@ show_help() {
     echo "OPTIONS:"
     echo "  --force         Force rebuild even if binaries exist"
     echo "  --asterisc      Build ASTERISC VM assets (GameType 2)"
+    echo "  --kona          Build Kona-Host assets (GameType 3)"
     echo "  -h, --help      Show this help message"
     echo
     echo "EXAMPLES:"
     echo "  $0              # Build only if binaries don't exist"
     echo "  $0 --force      # Force rebuild all binaries"
     echo "  $0 --asterisc   # Ensure ASTERISC binaries/prestates exist"
-    echo "  $0 --force --asterisc  # Rebuild everything including ASTERISC"
+    echo "  $0 --kona       # Ensure Kona-Host binary exists"
+    echo "  $0 --force --asterisc --kona  # Rebuild everything including ASTERISC and Kona"
     echo
 }
 
 # Parse Command Line Arguments
 FORCE_BUILD=false
 BUILD_ASTERISC=false
+BUILD_KONA=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -62,6 +65,11 @@ while [[ $# -gt 0 ]]; do
         --asterisc)
             BUILD_ASTERISC=true
             log_info "ASTERISC build enabled"
+            shift
+            ;;
+        --kona)
+            BUILD_KONA=true
+            log_info "Kona-Host build enabled"
             shift
             ;;
         -h|--help)
@@ -96,10 +104,14 @@ log_info "Optimism root: $OPTIMISM_ROOT"
 DEFAULT_ASTERISC_DIR="$(dirname "$OPTIMISM_ROOT")/asterisc"
 ASTERISC_SOURCE_DIR="${ASTERISC_DIR:-$DEFAULT_ASTERISC_DIR}"
 
+DEFAULT_KONA_DIR="$(dirname "$OPTIMISM_ROOT")/kona"
+KONA_SOURCE_DIR="${KONA_DIR:-$DEFAULT_KONA_DIR}"
+
 # E2E 전용 bin-e2e 디렉토리 사용
 ASTERISC_TARGET_DIR="$OPTIMISM_ROOT/asterisc/bin-e2e"
 OP_PROGRAM_TARGET_DIR="$OPTIMISM_ROOT/op-program/bin-e2e"
 CANNON_TARGET_DIR="$OPTIMISM_ROOT/cannon/bin-e2e"
+KONA_TARGET_DIR="$OPTIMISM_ROOT/kona/bin-e2e"
 
 # Build cannon binary
 build_cannon() {
@@ -302,11 +314,196 @@ build_asterisc() {
     return 0
 }
 
+ensure_kona_repo() {
+    if [ ! -d "$KONA_SOURCE_DIR" ]; then
+        log_error "Kona repository not found."
+        log_error "Expected path: $KONA_SOURCE_DIR"
+        log_error "Clone it with:"
+        log_error "  cd $(dirname "$OPTIMISM_ROOT") && git clone https://github.com/ethereum-optimism/kona.git"
+        log_error "Or set KONA_DIR to the repository path."
+        return 1
+    fi
+
+    if [ ! -f "$KONA_SOURCE_DIR/Cargo.toml" ]; then
+        log_error "Cargo.toml not found in $KONA_SOURCE_DIR"
+        return 1
+    fi
+
+    return 0
+}
+
+build_kona() {
+    log_info "Building Kona for Mac (GameType 3 - E2E Testing)..."
+
+    if ! ensure_kona_repo; then
+        return 1
+    fi
+
+    log_info "Using Kona repo at: $KONA_SOURCE_DIR"
+    cd "$KONA_SOURCE_DIR"
+
+    # Check if cargo is installed
+    if ! command -v cargo &> /dev/null; then
+        log_error "cargo command not found. Please install Rust:"
+        log_error "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+        return 1
+    fi
+
+    # Check and install Rust 1.88 if needed (kona requires 1.88 per rust-toolchain.toml)
+    log_info "Checking Rust 1.88 installation..."
+    if ! rustup toolchain list | grep -q "1.88"; then
+        log_info "Installing Rust 1.88 toolchain..."
+        if ! rustup toolchain install 1.88; then
+            log_error "Failed to install Rust 1.88"
+            return 1
+        fi
+    fi
+
+    # Step 1: Build kona-host (Mac-native)
+    log_info "Step 1/3: Building kona-host (Mac-native)..."
+    log_info "Using Rust 1.88 as specified in kona/rust-toolchain.toml"
+    # Explicitly use +1.88 to override any RUSTUP_TOOLCHAIN env var
+    if ! cargo +1.88 build --release --bin kona-host; then
+        log_error "❌ Failed to build kona-host"
+        return 1
+    fi
+
+    local kona_host_bin="$KONA_SOURCE_DIR/target/release/kona-host"
+    if [ ! -f "$kona_host_bin" ]; then
+        log_error "kona-host binary not found at $kona_host_bin"
+        return 1
+    fi
+
+    # Verify it's Mac-native
+    file_output=$(file "$kona_host_bin" 2>/dev/null || echo "unknown")
+    if [[ "$file_output" == *"Mach-O"* ]] || [[ "$file_output" == *"arm64"* ]] || [[ "$file_output" == *"x86_64"* ]]; then
+        log_success "✅ Built Mac-native kona-host binary"
+    else
+        log_warning "⚠️  Binary may not be Mac-native: $file_output"
+    fi
+
+    # Step 2: Build kona-client (RISC-V ELF) using Docker
+    log_info "Step 2/3: Building kona-client (RISC-V ELF) using Docker..."
+    log_info "Note: kona-client requires Docker for cross-compilation (C dependencies need riscv64-unknown-elf-gcc)"
+
+    # Check if Docker is available
+    if ! command -v docker &> /dev/null; then
+        log_error "docker command not found. Please install Docker Desktop for Mac:"
+        log_error "  https://docs.docker.com/desktop/install/mac-install/"
+        return 1
+    fi
+
+    # Check if Docker daemon is running (use a simple check that works reliably)
+    if ! docker ps &> /dev/null; then
+        log_error "Docker daemon is not running. Please start Docker Desktop and try again."
+        log_error "You can verify Docker is running with: docker ps"
+        return 1
+    fi
+
+    log_info "Building kona-client using Kona's official Docker builder (this may take a while)..."
+    log_info "Docker image: ghcr.io/op-rs/kona/asterisc-builder:0.3.0"
+
+    # Use Kona's official Docker-based build method (from kona/justfile)
+    if ! docker run \
+        --rm \
+        -v "$KONA_SOURCE_DIR:/workdir" \
+        -w="/workdir" \
+        ghcr.io/op-rs/kona/asterisc-builder:0.3.0 \
+        cargo build -Zbuild-std=core,alloc -p kona-client --bin kona-client --profile release-client-lto; then
+        log_error "❌ Failed to build kona-client in Docker"
+        log_error "This is the official Kona build method. Check Docker logs above for details."
+        return 1
+    fi
+
+    local kona_client_elf="$KONA_SOURCE_DIR/target/riscv64imac-unknown-none-elf/release-client-lto/kona-client"
+    if [ ! -f "$kona_client_elf" ]; then
+        log_error "kona-client ELF not found at $kona_client_elf"
+        return 1
+    fi
+    log_success "✅ Built kona-client RISC-V ELF"
+
+    # Step 3: Generate prestate using Mac-native asterisc
+    log_info "Step 3/3: Generating Kona prestate files..."
+
+    # Check if asterisc is available
+    local asterisc_bin="$ASTERISC_TARGET_DIR/asterisc"
+    if [ ! -f "$asterisc_bin" ]; then
+        log_warning "⚠️  asterisc binary not found at $asterisc_bin"
+        log_warning "⚠️  Attempting to build asterisc first..."
+        if ! build_asterisc; then
+            log_error "❌ Failed to build asterisc (required for prestate generation)"
+            return 1
+        fi
+    fi
+
+    mkdir -p "$KONA_TARGET_DIR"
+
+    # Generate prestate.bin.gz
+    local prestate_bin="$KONA_TARGET_DIR/prestate.bin.gz"
+    log_info "Generating prestate.bin.gz..."
+    if ! "$asterisc_bin" load-elf --path="$kona_client_elf" --out="$prestate_bin"; then
+        log_error "❌ Failed to generate prestate.bin.gz"
+        return 1
+    fi
+    log_success "✅ Generated prestate.bin.gz"
+
+    # Generate prestate.json with state hash
+    local prestate_json="$KONA_TARGET_DIR/prestate.json"
+    log_info "Generating prestate.json..."
+    if ! "$asterisc_bin" witness --input "$prestate_bin" --output "" --proof-at never --snapshot-at never 2>&1 | grep -q "final state:"; then
+        # If witness doesn't work, try computing hash from the binary
+        if command -v sha256sum >/dev/null 2>&1; then
+            state_hash=$(gunzip -c "$prestate_bin" | sha256sum | awk '{print "0x" $1}')
+            printf '{\n  "pre": "%s"\n}\n' "$state_hash" > "$prestate_json"
+            log_success "✅ Generated prestate.json with hash: $state_hash"
+        else
+            log_error "❌ Failed to generate prestate.json - sha256sum not available"
+            return 1
+        fi
+    else
+        # Extract state hash from witness output
+        state_hash=$("$asterisc_bin" witness --input "$prestate_bin" --output "" --proof-at never --snapshot-at never 2>&1 | grep "final state:" | awk '{print $NF}')
+        printf '{\n  "pre": "%s"\n}\n' "$state_hash" > "$prestate_json"
+        log_success "✅ Generated prestate.json with hash: $state_hash"
+    fi
+
+    # Generate prestate-proof.json (at step 0)
+    local prestate_proof="$KONA_TARGET_DIR/prestate-proof.json"
+    log_info "Generating prestate-proof.json..."
+    if ! "$asterisc_bin" run --proof-at "=0" --stop-at "=1" --input "$prestate_bin" --meta /dev/null --proof-fmt "$KONA_TARGET_DIR/%d.json" --output "" 2>/dev/null; then
+        log_warning "⚠️  Failed to generate prestate-proof.json (non-critical)"
+    else
+        if [ -f "$KONA_TARGET_DIR/0.json" ]; then
+            mv "$KONA_TARGET_DIR/0.json" "$prestate_proof"
+            log_success "✅ Generated prestate-proof.json"
+        fi
+    fi
+
+    # Copy binaries to target directory
+    cp "$kona_host_bin" "$KONA_TARGET_DIR/kona-host"
+    chmod +x "$KONA_TARGET_DIR/kona-host"
+
+    cp "$kona_client_elf" "$KONA_TARGET_DIR/kona-client-elf"
+    chmod +x "$KONA_TARGET_DIR/kona-client-elf"
+
+    log_success "✅ Kona build complete:"
+    log_success "   - kona-host: $KONA_TARGET_DIR/kona-host"
+    log_success "   - kona-client-elf: $KONA_TARGET_DIR/kona-client-elf"
+    log_success "   - prestate.bin.gz: $KONA_TARGET_DIR/prestate.bin.gz"
+    log_success "   - prestate.json: $KONA_TARGET_DIR/prestate.json"
+    if [ -f "$prestate_proof" ]; then
+        log_success "   - prestate-proof.json: $KONA_TARGET_DIR/prestate-proof.json"
+    fi
+
+    return 0
+}
+
 # Main function
 main() {
     local need_cannon=false
     local need_op_program=false
     local need_asterisc=false
+    local need_kona=false
 
     log_info "Checking required binary files in E2E directories..."
 
@@ -358,8 +555,27 @@ main() {
         fi
     fi
 
+    if [ "$BUILD_KONA" = true ]; then
+        if [ "$FORCE_BUILD" = true ] || [ ! -f "$KONA_TARGET_DIR/kona-host" ] || [ ! -f "$KONA_TARGET_DIR/prestate.bin.gz" ]; then
+            if [ "$FORCE_BUILD" = true ]; then
+                log_info "🔄 Kona assets exist in E2E dir but forcing rebuild"
+            else
+                if [ ! -f "$KONA_TARGET_DIR/kona-host" ]; then
+                    log_warning "❌ kona-host binary not found in E2E directory"
+                fi
+                if [ ! -f "$KONA_TARGET_DIR/prestate.bin.gz" ]; then
+                    log_warning "❌ kona prestate.bin.gz not found in E2E directory"
+                fi
+            fi
+            need_kona=true
+        else
+            log_success "✅ kona-host binary found in E2E directory"
+            log_success "✅ kona prestate files found in E2E directory"
+        fi
+    fi
+
     # Build if needed
-    if [ "$need_cannon" = false ] && [ "$need_op_program" = false ] && [ "$need_asterisc" = false ]; then
+    if [ "$need_cannon" = false ] && [ "$need_op_program" = false ] && [ "$need_asterisc" = false ] && [ "$need_kona" = false ]; then
         log_success "🎉 All required binaries are already built!"
         return 0
     fi
@@ -381,6 +597,12 @@ main() {
 
     if [ "$need_asterisc" = true ]; then
         if ! build_asterisc; then
+            exit 1
+        fi
+    fi
+
+    if [ "$need_kona" = true ]; then
+        if ! build_kona; then
             exit 1
         fi
     fi

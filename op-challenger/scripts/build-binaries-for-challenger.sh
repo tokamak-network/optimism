@@ -38,19 +38,22 @@ show_help() {
     echo "OPTIONS:"
     echo "  --force         Force rebuild even if binaries exist"
     echo "  --asterisc      Build ASTERISC VM assets (GameType 2)"
+    echo "  --kona          Build Kona assets (GameType 3)"
     echo "  -h, --help      Show this help message"
     echo
     echo "EXAMPLES:"
     echo "  $0              # Build only if binaries don't exist"
     echo "  $0 --force      # Force rebuild all binaries"
     echo "  $0 --asterisc   # Ensure ASTERISC binaries/prestates exist"
-    echo "  $0 --force --asterisc  # Rebuild everything including ASTERISC"
+    echo "  $0 --kona       # Ensure Kona binaries/prestates exist"
+    echo "  $0 --force --asterisc --kona  # Rebuild everything"
     echo
 }
 
 # Parse Command Line Arguments
 FORCE_BUILD=false
 BUILD_ASTERISC=false
+BUILD_KONA=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -62,6 +65,11 @@ while [[ $# -gt 0 ]]; do
         --asterisc)
             BUILD_ASTERISC=true
             log_info "ASTERISC build enabled"
+            shift
+            ;;
+        --kona)
+            BUILD_KONA=true
+            log_info "Kona build enabled"
             shift
             ;;
         -h|--help)
@@ -97,6 +105,11 @@ DEFAULT_ASTERISC_DIR="$(dirname "$OPTIMISM_ROOT")/asterisc"
 ASTERISC_SOURCE_DIR="${ASTERISC_DIR:-$DEFAULT_ASTERISC_DIR}"
 ASTERISC_TARGET_DIR="$OPTIMISM_ROOT/asterisc/bin"
 OP_PROGRAM_TARGET_DIR="$OPTIMISM_ROOT/op-program/bin"
+
+# Kona directory configuration
+DEFAULT_KONA_DIR="$(dirname "$OPTIMISM_ROOT")/kona"
+KONA_SOURCE_DIR="${KONA_DIR:-$DEFAULT_KONA_DIR}"
+KONA_TARGET_DIR="$OPTIMISM_ROOT/kona/bin"
 
 # Build cannon binary
 build_cannon() {
@@ -279,11 +292,133 @@ build_asterisc() {
     return 0
 }
 
+# Build Kona assets (GameType 3)
+build_kona() {
+    log_info "Building Kona VM (GameType 3)..."
+
+    # Check if kona repository exists, clone if needed
+    if [ ! -d "$KONA_SOURCE_DIR" ]; then
+        log_warning "Kona repository not found at: $KONA_SOURCE_DIR"
+        log_info "Cloning kona repository..."
+
+        local parent_dir="$(dirname "$OPTIMISM_ROOT")"
+        cd "$parent_dir"
+
+        if git clone --depth 1 https://github.com/op-rs/kona.git; then
+            log_success "✅ Kona repository cloned successfully"
+            KONA_SOURCE_DIR="${parent_dir}/kona"
+        else
+            log_error "❌ Failed to clone kona repository"
+            log_error "Please clone it manually:"
+            log_error "  cd $(dirname "$OPTIMISM_ROOT") && git clone https://github.com/op-rs/kona.git"
+            return 1
+        fi
+    fi
+
+    if ! command -v docker >/dev/null 2>&1; then
+        log_error "Docker is required to build Kona assets. Please install/start Docker."
+        return 1
+    fi
+
+    log_info "Using Kona repo at: $KONA_SOURCE_DIR"
+    cd "$KONA_SOURCE_DIR"
+
+    # Check for kona's official Dockerfile
+    local dockerfile_path="docker/fpvm-prestates/asterisc-repro.dockerfile"
+    if [ ! -f "$dockerfile_path" ]; then
+        log_error "Kona's official dockerfile not found: $dockerfile_path"
+        return 1
+    fi
+
+    log_info "Using kona's official prestate generation system..."
+    log_info "  Dockerfile: $dockerfile_path"
+    log_info "  This builds: asterisc + kona-client + prestate files"
+    echo
+
+    # Build arguments for kona's Dockerfile
+    local ASTERISC_TAG="${ASTERISC_TAG:-master}"
+    local CLIENT_BIN="${CLIENT_BIN:-kona-client}"
+    local CLIENT_TAG="${CLIENT_TAG:-main}"
+    local IMAGE_TAG="kona-prestate:local"
+
+    log_info "Build arguments:"
+    log_info "  ASTERISC_TAG=$ASTERISC_TAG"
+    log_info "  CLIENT_BIN=$CLIENT_BIN"
+    log_info "  CLIENT_TAG=$CLIENT_TAG"
+    echo
+
+    log_info "Running Docker build for kona (may take 15-20 minutes)..."
+    if ! docker build --platform linux/amd64 \
+        --build-arg ASTERISC_TAG="$ASTERISC_TAG" \
+        --build-arg CLIENT_BIN="$CLIENT_BIN" \
+        --build-arg CLIENT_TAG="$CLIENT_TAG" \
+        -f "$dockerfile_path" -t "$IMAGE_TAG" .; then
+        log_error "❌ Failed to build Kona via Docker"
+        return 1
+    fi
+
+    log_success "✅ Kona image built successfully"
+
+    # Extract prestate files from Docker image
+    log_info "Extracting prestate files from Docker image..."
+    local container_id=$(docker create "$IMAGE_TAG" true 2>/dev/null)
+
+    if [ -z "$container_id" ]; then
+        log_error "Failed to create temporary container from image"
+        return 1
+    fi
+
+    mkdir -p "$KONA_TARGET_DIR"
+    mkdir -p "$OP_PROGRAM_TARGET_DIR"
+
+    # Extract prestate-proof.json (deployment format)
+    if docker cp "${container_id}:/prestate-proof.json" "$OP_PROGRAM_TARGET_DIR/prestate-kona.json" 2>/dev/null; then
+        log_success "✅ prestate-kona.json extracted (deployment format)"
+
+        # Display hash if jq or python3 is available
+        if command -v jq >/dev/null 2>&1; then
+            local kona_hash=$(jq -r '.pre' "$OP_PROGRAM_TARGET_DIR/prestate-kona.json" 2>/dev/null)
+            if [ -n "$kona_hash" ] && [ "$kona_hash" != "null" ]; then
+                log_success "  Kona prestate hash: ${kona_hash:0:10}...${kona_hash: -8}"
+            fi
+        elif command -v python3 >/dev/null 2>&1; then
+            local kona_hash=$(python3 -c "import json; print(json.load(open('$OP_PROGRAM_TARGET_DIR/prestate-kona.json')).get('pre', ''))" 2>/dev/null)
+            if [ -n "$kona_hash" ]; then
+                log_success "  Kona prestate hash: ${kona_hash:0:10}...${kona_hash: -8}"
+            fi
+        fi
+    else
+        log_warning "⚠️  prestate-proof.json not found in image"
+    fi
+
+    # Extract prestate.bin.gz (runtime format)
+    if docker cp "${container_id}:/prestate.bin.gz" "$OP_PROGRAM_TARGET_DIR/prestate-kona.bin.gz" 2>/dev/null; then
+        log_success "✅ prestate-kona.bin.gz extracted (runtime format)"
+    else
+        log_warning "⚠️  prestate.bin.gz not found in image"
+        log_warning "      GameType 3 may not work properly without this file"
+    fi
+
+    # Extract kona-client binary
+    if docker cp "${container_id}:/kona-client-elf" "$KONA_TARGET_DIR/kona-client" 2>/dev/null; then
+        chmod +x "$KONA_TARGET_DIR/kona-client"
+        log_success "✅ kona-client binary extracted"
+    else
+        log_warning "⚠️  kona-client binary not found in image"
+    fi
+
+    # Cleanup
+    docker rm "$container_id" >/dev/null 2>&1
+
+    return 0
+}
+
 # Main function
 main() {
     local need_cannon=false
     local need_op_program=false
     local need_asterisc=false
+    local need_kona=false
 
     log_info "Checking required binary files..."
 
@@ -335,8 +470,27 @@ main() {
         fi
     fi
 
+    if [ "$BUILD_KONA" = true ]; then
+        if [ "$FORCE_BUILD" = true ] || [ ! -f "$KONA_TARGET_DIR/kona-client" ] || [ ! -f "$OP_PROGRAM_TARGET_DIR/prestate-kona.json" ]; then
+            if [ "$FORCE_BUILD" = true ] && [ -f "$KONA_TARGET_DIR/kona-client" ]; then
+                log_info "🔄 Kona assets exist but forcing rebuild"
+            else
+                if [ ! -f "$KONA_TARGET_DIR/kona-client" ]; then
+                    log_warning "❌ Kona client binary not found at $KONA_TARGET_DIR/kona-client"
+                fi
+                if [ ! -f "$OP_PROGRAM_TARGET_DIR/prestate-kona.json" ]; then
+                    log_warning "❌ Kona prestate proof not found at $OP_PROGRAM_TARGET_DIR/prestate-kona.json"
+                fi
+            fi
+            need_kona=true
+        else
+            log_success "✅ Kona client binary found"
+            log_success "✅ Kona prestate proof found"
+        fi
+    fi
+
     # Build if needed
-    if [ "$need_cannon" = false ] && [ "$need_op_program" = false ] && [ "$need_asterisc" = false ]; then
+    if [ "$need_cannon" = false ] && [ "$need_op_program" = false ] && [ "$need_asterisc" = false ] && [ "$need_kona" = false ]; then
         log_success "🎉 All required binaries are already built!"
         return 0
     fi
@@ -358,6 +512,12 @@ main() {
 
     if [ "$need_asterisc" = true ]; then
         if ! build_asterisc; then
+            exit 1
+        fi
+    fi
+
+    if [ "$need_kona" = true ]; then
+        if ! build_kona; then
             exit 1
         fi
     fi
