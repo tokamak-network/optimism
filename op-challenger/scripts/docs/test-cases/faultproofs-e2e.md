@@ -96,6 +96,11 @@ go test -v ./op-e2e/faultproofs -run "TestOutputAsteriscDefendStep"
 ```
 
 테스트 로그와 결과 분석은 다음 문서를 참고하세요:
-- Cannon 테스트: `faultproofs-cannon-test-report.md`
-- Asterisc 테스트: `faultproofs-asterisc-test-report.md`
+- Cannon 테스트: [`faultproofs-cannon-test-report.md`](./faultproofs-cannon-test-report.md)
+- Asterisc 테스트: [`faultproofs-asterisc-test-report.md`](./faultproofs-asterisc-test-report.md)
+
+
+
+
+
 

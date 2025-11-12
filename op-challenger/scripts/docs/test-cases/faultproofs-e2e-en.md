@@ -90,7 +90,7 @@ go test -v ./op-e2e/faultproofs -run "TestOutputAsteriscDefendStep"
 ```
 
 For detailed logs and analysis refer to:
-- Cannon report: `faultproofs-cannon-test-report-en.md`
-- Asterisc report: `faultproofs-asterisc-test-report-en.md`
+- Cannon report: [`faultproofs-cannon-test-report-en.md`](./faultproofs-cannon-test-report-en.md)
+- Asterisc report: [`faultproofs-asterisc-test-report-en.md`](./faultproofs-asterisc-test-report-en.md)
 
 
