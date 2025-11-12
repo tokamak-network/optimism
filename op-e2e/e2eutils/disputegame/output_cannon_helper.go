@@ -132,3 +132,10 @@ func (g *OutputCannonGameHelper) CreateHonestActor(ctx context.Context, l2Node s
 	}
 	return NewOutputHonestHelper(g.T, g.Require, &g.OutputGameHelper.SplitGameHelper, g.Game, accessor)
 }
+
+// CreateDishonestHelper creates a dishonest actor that defends invalid claims
+// defender = true means this actor will defend the root claim (act as proposer)
+// defender = false means this actor will attack the root claim
+func (g *OutputCannonGameHelper) CreateDishonestHelper(ctx context.Context, l2Node string, defender bool) *DishonestHelper {
+	return newDishonestHelper(&g.OutputGameHelper, g.CreateHonestActor(ctx, l2Node), defender)
+}

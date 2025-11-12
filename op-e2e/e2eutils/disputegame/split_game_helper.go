@@ -17,6 +17,8 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/errutil"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/sources/batching/rpcblock"
+	"github.com/ethereum-optimism/optimism/op-service/txmgr"
+	"github.com/ethereum-optimism/optimism/packages/contracts-bedrock/snapshots"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -297,6 +299,24 @@ func (g *SplitGameHelper) Resolve(ctx context.Context) {
 	defer cancel()
 	candidate, err := g.Game.ResolveTx()
 	g.Require.NoError(err)
+	transactions.RequireSendTx(g.T, ctx, g.Client, candidate, g.PrivKey)
+}
+
+func (g *SplitGameHelper) CloseGame(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	// Create transaction to call closeGame on the contract
+	gameAbi := snapshots.LoadFaultDisputeGameABI()
+	txData, err := gameAbi.Pack("closeGame")
+	g.Require.NoError(err, "Failed to pack closeGame transaction")
+
+	candidate := txmgr.TxCandidate{
+		To:       &g.Addr,
+		TxData:   txData,
+		GasLimit: 0, // Will be estimated
+	}
+
 	transactions.RequireSendTx(g.T, ctx, g.Client, candidate, g.PrivKey)
 }
 
