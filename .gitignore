@@ -95,6 +95,8 @@ asterisc/bin/
 asterisc/bin-e2e/
 op-program/bin-e2e/
 cannon/bin-e2e/
+kona/bin-e2e/
+kona/bin/
 
 # Kurtosis devnet artifacts and generated files
 contract-artifacts/
