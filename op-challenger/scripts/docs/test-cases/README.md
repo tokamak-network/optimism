@@ -7,16 +7,13 @@ This directory contains comprehensive documentation for Optimism's fault proof s
 ### Test Reports
 
 #### Cannon (GameType 0 - MIPS-based)
-- **[English Report](./faultproofs-cannon-test-report-en.md)** - Cannon VM test execution results
-- **[Korean Report](./faultproofs-cannon-test-report.md)** - 캐논 VM 테스트 실행 결과
+- **[Test Report](./faultproofs-cannon-test-report-en.md)** - Cannon VM test execution results
 
 #### Asterisc (GameType 2 & 3 - RISC-V-based)
-- **[English Report](./faultproofs-asterisc-test-report-en.md)** - Asterisc VM test execution results
-- **[Korean Report](./faultproofs-asterisc-test-report.md)** - Asterisc VM 테스트 실행 결과
+- **[Test Report](./faultproofs-asterisc-test-report-en.md)** - Asterisc VM test execution results
 
 #### General E2E Tests
-- **[English Guide](./faultproofs-e2e-en.md)** - General fault proofs E2E test guide
-- **[Korean Guide](./faultproofs-e2e.md)** - 일반 Fault Proofs E2E 테스트 가이드
+- **[Test Guide](./faultproofs-e2e-en.md)** - General fault proofs E2E test guide
 
 ### Analysis Reports
 

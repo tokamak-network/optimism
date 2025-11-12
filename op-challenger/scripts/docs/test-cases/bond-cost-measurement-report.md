@@ -1,159 +1,147 @@
-# Output Cannon Bond Cost Measurement - Test Analysis Report
+# 출력 Cannon 본드 비용 측정 - 테스트 분석 보고서
 
-## Test Configuration
+## 테스트 구성
 
-- **Test Duration**: 361.41 seconds (~6 minutes)
-- **Gas Price**: 0.7656 gwei (765625001 wei)
-- **Split Depth**: 14 (transition from Output Bisection to Execution Trace)
-- **Max Depth**: 50
+- **테스트 소요 시간**: 361.41초 (약 6분)
+- **가스 가격**: 0.7656 gwei (765625001 wei)
+- **스플릿 깊이**: 14 (Output Bisection → Execution Trace 전환 지점)
+- **최대 깊이**: 50
 
-## Participants
+## 참가자
 
-- **Honest Challenger (Alice)**: `0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65`
-- **Malicious Proposer (Bob)**: `0x71562b71999873DB5b286dF957af199Ec94617F7`
+- **정직한 챌린저 (Alice)**: `0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65`
+- **악의적인 프로포저 (Bob)**: `0x71562b71999873DB5b286dF957af199Ec94617F7`
 
-## Game Summary
+## 게임 요약
 
-- **Total Claims**: 51
-- **Maximum Depth Reached**: 50 ✓
-- **Final Game Status**: Challenger Won ✓
-- **Game Resolution**: Successfully closed and resolved after time advancement
+- **총 클레임 수**: 51개
+- **도달한 최대 깊이**: 50 ✓
+- **최종 게임 상태**: Challenger Won ✓
+- **게임 종료 방식**: 시간 경과 후 정상적으로 CloseGame 수행
 
-## Bond Summary
+## 본드 요약
 
-### Challenger Bonds
-- **Number of Claims**: 25
-- **Total Bonds Required**: 225.621709 ETH (225,621,708,600,000,000,000 wei)
+### 챌린저 본드
+- **클레임 수**: 25개
+- **총 필요 본드**: 225.621709 ETH (225,621,708,600,000,000,000 wei)
 
-### Proposer Bonds
-- **Number of Claims**: 26
-- **Total Bonds Required**: 257.562190 ETH (257,562,189,600,000,000,000 wei)
+### 프로포저 본드
+- **클레임 수**: 26개
+- **총 필요 본드**: 257.562190 ETH (257,562,189,600,000,000,000 wei)
 
-### Grand Total
-- **Total Bonds Required**: 483.183898 ETH (483,183,898,200,000,000,000 wei)
+### 총합
+- **총 필요 본드**: 483.183898 ETH (483,183,898,200,000,000,000 wei)
 
-## Phase Breakdown
+## 단계별 요약
 
-### Output Bisection Phase (Depth 0-14)
-- **Claims**: 15
-- **Description**: Bisecting the L2 output root to find disagreement point
+### Output Bisection 단계 (깊이 0-14)
+- **클레임 수**: 15개
+- **설명**: L2 출력 루트를 이분 탐색하여 불일치 지점을 찾는 구간
 
-### Execution Trace Phase (Depth 15-50)
-- **Claims**: 36
-- **Description**: Bisecting VM execution trace to find specific instruction
+### Execution Trace 단계 (깊이 15-50)
+- **클레임 수**: 36개
+- **설명**: VM 실행 트레이스를 이분 탐색하여 특정 명령어를 추적하는 구간
 
-## Detailed Claims
+## 세부 클레임 목록
 
-| Claim | Depth | Phase | Role | Bond (ETH) | Bond (wei) |
+| 클레임 | 깊이 | 단계 | 역할 | 본드 (ETH) | 본드 (wei) |
 |------:|------:|:------|:-----|----------:|:-----------|
-| #0 | 0 | Output Bisection | Proposer | 0.000000 | 0 |
-| #1 | 1 | Output Bisection | Challenger | 0.091325 | 91,325,200,000,000,000 |
-| #2 | 2 | Output Bisection | Proposer | 0.104254 | 104,253,800,000,000,000 |
-| #3 | 3 | Output Bisection | Challenger | 0.119013 | 119,012,600,000,000,000 |
-| #4 | 4 | Output Bisection | Proposer | 0.135861 | 135,861,000,000,000,000 |
-| #5 | 5 | Output Bisection | Challenger | 0.155094 | 155,094,200,000,000,000 |
-| #6 | 6 | Output Bisection | Proposer | 0.177050 | 177,050,400,000,000,000 |
-| #7 | 7 | Output Bisection | Challenger | 0.202115 | 202,115,000,000,000,000 |
-| #8 | 8 | Output Bisection | Proposer | 0.230728 | 230,727,600,000,000,000 |
-| #9 | 9 | Output Bisection | Challenger | 0.263391 | 263,391,000,000,000,000 |
-| #10 | 10 | Output Bisection | Proposer | 0.300678 | 300,678,400,000,000,000 |
-| #11 | 11 | Output Bisection | Challenger | 0.343244 | 343,244,400,000,000,000 |
-| #12 | 12 | Output Bisection | Proposer | 0.391836 | 391,836,200,000,000,000 |
-| #13 | 13 | Output Bisection | Challenger | 0.447307 | 447,307,200,000,000,000 |
-| #14 | 14 | Output Bisection | Proposer | 0.510631 | 510,630,800,000,000,000 |
-| #15 | 15 | Execution Trace | Challenger | 0.582919 | 582,919,200,000,000,000 |
-| #16 | 16 | Execution Trace | Proposer | 0.665441 | 665,441,000,000,000,000 |
-| #17 | 17 | Execution Trace | Challenger | 0.759645 | 759,645,200,000,000,000 |
-| #18 | 18 | Execution Trace | Proposer | 0.867185 | 867,185,400,000,000,000 |
-| #19 | 19 | Execution Trace | Challenger | 0.989950 | 989,950,000,000,000,000 |
-| #20 | 20 | Execution Trace | Proposer | 1.130094 | 1,130,093,800,000,000,000 |
-| #21 | 21 | Execution Trace | Challenger | 1.290077 | 1,290,077,200,000,000,000 |
-| #22 | 22 | Execution Trace | Proposer | 1.472709 | 1,472,709,000,000,000,000 |
-| #23 | 23 | Execution Trace | Challenger | 1.681195 | 1,681,195,200,000,000,000 |
-| #24 | 24 | Execution Trace | Proposer | 1.919196 | 1,919,196,200,000,000,000 |
-| #25 | 25 | Execution Trace | Challenger | 2.190890 | 2,190,890,200,000,000,000 |
-| #26 | 26 | Execution Trace | Proposer | 2.501047 | 2,501,046,800,000,000,000 |
-| #27 | 27 | Execution Trace | Challenger | 2.855111 | 2,855,111,400,000,000,000 |
-| #28 | 28 | Execution Trace | Proposer | 3.259300 | 3,259,299,600,000,000,000 |
-| #29 | 29 | Execution Trace | Challenger | 3.720707 | 3,720,707,400,000,000,000 |
-| #30 | 30 | Execution Trace | Proposer | 4.247435 | 4,247,435,000,000,000,000 |
-| #31 | 31 | Execution Trace | Challenger | 4.848730 | 4,848,729,600,000,000,000 |
-| #32 | 32 | Execution Trace | Proposer | 5.535147 | 5,535,147,400,000,000,000 |
-| #33 | 33 | Execution Trace | Challenger | 6.318739 | 6,318,739,000,000,000,000 |
-| #34 | 34 | Execution Trace | Proposer | 7.213261 | 7,213,260,800,000,000,000 |
-| #35 | 35 | Execution Trace | Challenger | 8.234417 | 8,234,417,200,000,000,000 |
-| #36 | 36 | Execution Trace | Proposer | 9.400135 | 9,400,135,000,000,000,000 |
-| #37 | 37 | Execution Trace | Challenger | 10.730879 | 10,730,879,400,000,000,000 |
-| #38 | 38 | Execution Trace | Proposer | 12.250013 | 12,250,012,800,000,000,000 |
-| #39 | 39 | Execution Trace | Challenger | 13.984205 | 13,984,204,600,000,000,000 |
-| #40 | 40 | Execution Trace | Proposer | 15.963900 | 15,963,899,800,000,000,000 |
-| #41 | 41 | Execution Trace | Challenger | 18.223854 | 18,223,853,800,000,000,000 |
-| #42 | 42 | Execution Trace | Proposer | 20.803741 | 20,803,741,400,000,000,000 |
-| #43 | 43 | Execution Trace | Challenger | 23.748855 | 23,748,854,800,000,000,000 |
-| #44 | 44 | Execution Trace | Proposer | 27.110898 | 27,110,897,600,000,000,000 |
-| #45 | 45 | Execution Trace | Challenger | 30.948893 | 30,948,893,200,000,000,000 |
-| #46 | 46 | Execution Trace | Proposer | 35.330221 | 35,330,220,600,000,000,000 |
-| #47 | 47 | Execution Trace | Challenger | 40.331797 | 40,331,797,000,000,000,000 |
-| #48 | 48 | Execution Trace | Proposer | 46.041429 | 46,041,429,400,000,000,000 |
-| #49 | 49 | Execution Trace | Challenger | 52.559355 | 52,559,354,600,000,000,000 |
-| #50 | 50 | Execution Trace | Proposer | 60.000000 | 59,999,999,800,000,000,000 |
+| #0 | 0 | Output Bisection | 프로포저 | 0.000000 | 0 |
+| #1 | 1 | Output Bisection | 챌린저 | 0.091325 | 91,325,200,000,000,000 |
+| #2 | 2 | Output Bisection | 프로포저 | 0.104254 | 104,253,800,000,000,000 |
+| #3 | 3 | Output Bisection | 챌린저 | 0.119013 | 119,012,600,000,000,000 |
+| #4 | 4 | Output Bisection | 프로포저 | 0.135861 | 135,861,000,000,000,000 |
+| #5 | 5 | Output Bisection | 챌린저 | 0.155094 | 155,094,200,000,000,000 |
+| #6 | 6 | Output Bisection | 프로포저 | 0.177050 | 177,050,400,000,000,000 |
+| #7 | 7 | Output Bisection | 챌린저 | 0.202115 | 202,115,000,000,000,000 |
+| #8 | 8 | Output Bisection | 프로포저 | 0.230728 | 230,727,600,000,000,000 |
+| #9 | 9 | Output Bisection | 챌린저 | 0.263391 | 263,391,000,000,000,000 |
+| #10 | 10 | Output Bisection | 프로포저 | 0.300678 | 300,678,400,000,000,000 |
+| #11 | 11 | Output Bisection | 챌린저 | 0.343244 | 343,244,400,000,000,000 |
+| #12 | 12 | Output Bisection | 프로포저 | 0.391836 | 391,836,200,000,000,000 |
+| #13 | 13 | Output Bisection | 챌린저 | 0.447307 | 447,307,200,000,000,000 |
+| #14 | 14 | Output Bisection | 프로포저 | 0.510631 | 510,630,800,000,000,000 |
+| #15 | 15 | Execution Trace | 챌린저 | 0.582919 | 582,919,200,000,000,000 |
+| #16 | 16 | Execution Trace | 프로포저 | 0.665441 | 665,441,000,000,000,000 |
+| #17 | 17 | Execution Trace | 챌린저 | 0.759645 | 759,645,200,000,000,000 |
+| #18 | 18 | Execution Trace | 프로포저 | 0.867185 | 867,185,400,000,000,000 |
+| #19 | 19 | Execution Trace | 챌린저 | 0.989950 | 989,950,000,000,000,000 |
+| #20 | 20 | Execution Trace | 프로포저 | 1.130094 | 1,130,093,800,000,000,000 |
+| #21 | 21 | Execution Trace | 챌린저 | 1.290077 | 1,290,077,200,000,000,000 |
+| #22 | 22 | Execution Trace | 프로포저 | 1.472709 | 1,472,709,000,000,000,000 |
+| #23 | 23 | Execution Trace | 챌린저 | 1.681195 | 1,681,195,200,000,000,000 |
+| #24 | 24 | Execution Trace | 프로포저 | 1.919196 | 1,919,196,200,000,000,000 |
+| #25 | 25 | Execution Trace | 챌린저 | 2.190890 | 2,190,890,200,000,000,000 |
+| #26 | 26 | Execution Trace | 프로포저 | 2.501047 | 2,501,046,800,000,000,000 |
+| #27 | 27 | Execution Trace | 챌린저 | 2.855111 | 2,855,111,400,000,000,000 |
+| #28 | 28 | Execution Trace | 프로포저 | 3.259300 | 3,259,299,600,000,000,000 |
+| #29 | 29 | Execution Trace | 챌린저 | 3.720707 | 3,720,707,400,000,000,000 |
+| #30 | 30 | Execution Trace | 프로포저 | 4.247435 | 4,247,435,000,000,000,000 |
+| #31 | 31 | Execution Trace | 챌린저 | 4.848730 | 4,848,729,600,000,000,000 |
+| #32 | 32 | Execution Trace | 프로포저 | 5.535147 | 5,535,147,400,000,000,000 |
+| #33 | 33 | Execution Trace | 챌린저 | 6.318739 | 6,318,739,000,000,000,000 |
+| #34 | 34 | Execution Trace | 프로포저 | 7.213261 | 7,213,260,800,000,000,000 |
+| #35 | 35 | Execution Trace | 챌린저 | 8.234417 | 8,234,417,200,000,000,000 |
+| #36 | 36 | Execution Trace | 프로포저 | 9.400135 | 9,400,135,000,000,000,000 |
+| #37 | 37 | Execution Trace | 챌린저 | 10.730879 | 10,730,879,400,000,000,000 |
+| #38 | 38 | Execution Trace | 프로포저 | 12.250013 | 12,250,012,800,000,000,000 |
+| #39 | 39 | Execution Trace | 챌린저 | 13.984205 | 13,984,204,600,000,000,000 |
+| #40 | 40 | Execution Trace | 프로포저 | 15.963900 | 15,963,899,800,000,000,000 |
+| #41 | 41 | Execution Trace | 챌린저 | 18.223854 | 18,223,853,800,000,000,000 |
+| #42 | 42 | Execution Trace | 프로포저 | 20.803741 | 20,803,741,400,000,000,000 |
+| #43 | 43 | Execution Trace | 챌린저 | 23.748855 | 23,748,854,800,000,000,000 |
+| #44 | 44 | Execution Trace | 프로포저 | 27.110898 | 27,110,897,600,000,000,000 |
+| #45 | 45 | Execution Trace | 챌린저 | 30.948893 | 30,948,893,200,000,000,000 |
+| #46 | 46 | Execution Trace | 프로포저 | 35.330221 | 35,330,220,600,000,000,000 |
+| #47 | 47 | Execution Trace | 챌린저 | 40.331797 | 40,331,797,000,000,000,000 |
+| #48 | 48 | Execution Trace | 프로포저 | 46.041429 | 46,041,429,400,000,000,000 |
+| #49 | 49 | Execution Trace | 챌린저 | 52.559355 | 52,559,354,600,000,000,000 |
+| #50 | 50 | Execution Trace | 프로포저 | 60.000000 | 59,999,999,800,000,000,000 |
 
-## Conclusion
+## 결론
 
-### Test Execution Flow
+### 테스트 실행 흐름
 
-This test runs two games to measure bond costs:
+본 테스트는 본드 비용 측정을 위해 두 개의 게임을 연속으로 실행합니다.
 
-#### First Game (Cold Start)
-1. **Initialization**: Creates invalid root claim to establish initial game state and prestate
-2. **Challenger Response**: Honest challenger responds and wins
-3. **Time Advancement**: Game duration elapses
-4. **Game Closure**: Game is closed and resolved as Challenger Won
+#### 첫 번째 게임 (콜드 스타트)
+1. **초기화**: 초기 상태와 prestate를 확보하기 위해 잘못된 루트 클레임을 제출
+2. **챌린저 응답**: 정직한 챌린저가 대응하여 승리
+3. **시간 경과**: 게임 지속 시간이 모두 소진되도록 시계 이동
+4. **게임 종료**: `CloseGame()` 호출로 게임을 닫고 Challenger Won 상태 확인
 
-#### Second Game (Bond Measurement)
-1. **Game Initialization**: Proposer posted an invalid root claim with bond = 0
-2. **Output Bisection (Depth 0-14)**: Challenger and Proposer exchanged claims, bisecting the output root
-3. **Execution Trace (Depth 15-50)**: After reaching split depth, the game transitioned to bisecting VM execution trace
-4. **Reached MAX DEPTH**: Game progressed to depth 50, which represents a single VM instruction
-5. **Time Advancement**: Game duration elapses to allow resolution
-6. **Challenger Completion**: Wait for challenger to finish all moves and resolve operations
-7. **Game Closure**: `CloseGame()` called to finalize the game
-8. **Final Resolution**: Game status confirmed as **Challenger Won**
+#### 두 번째 게임 (본드 측정)
+1. **게임 초기화**: 프로포저가 본드 없이 잘못된 루트 클레임 제출
+2. **Output Bisection (깊이 0-14)**: 챌린저와 프로포저가 번갈아 클레임을 제출하며 출력 루트를 이분 탐색
+3. **Execution Trace (깊이 15-50)**: 스플릿 깊이에 도달한 뒤 VM 실행 트레이스 이분 탐색으로 전환
+4. **최대 깊이 도달**: 단일 VM 명령어에 해당하는 깊이 50까지 도달
+5. **시간 경과**: 게임이 해결될 수 있도록 시간 이동
+6. **챌린저 종료 확인**: 챌린저가 모든 동작을 마치고 Resolve까지 완료할 때까지 대기
+7. **게임 종료**: `CloseGame()` 호출로 게임을 종료
+8. **최종 상태**: 게임 상태가 **Challenger Won**인지 확인
 
-### Implementation Note
+### 구현 메모
 
-The test uses `WithoutWaitingForStep()` option to skip STEP function execution, focusing purely on bond cost measurement across the full dispute tree depth.
+이 테스트는 `WithoutWaitingForStep()` 옵션을 사용해 STEP 실행을 건너뛰고, 전체 분쟁 트리 깊이에 걸친 본드 비용 측정에 집중했습니다.
 
-### Bond Escalation Pattern
+### 주요 관찰 사항
 
-The test demonstrates the bond escalation mechanism:
-
-- Bonds increase exponentially with depth (approximately 14.2% per level)
-- This prevents spam attacks by making deep disputes increasingly expensive
-- At depth 50, the bond reaches ~60 ETH (starting from 0.091 ETH at depth 1)
-- Total bonds required: ~483.18 ETH from both parties combined
-
-### Key Observations
-
-- **Test Duration**: 361.41 seconds (~6 minutes)
-- **Gas Price**: 0.7656 gwei (relatively low for testing)
-- **Challenger made 25 claims**, locking 225.62 ETH
-- **Proposer made 26 claims**, locking 257.56 ETH
-- **Game reached the deepest level** (depth 50), demonstrating full bisection capability
-- **STEP function was NOT executed** in this test (using `WithoutWaitingForStep()` option)
-- **Game successfully closed and resolved** as Challenger Won after time advancement
+- **본드 증가 추세**: 깊이가 1 증가할 때마다 약 14.2%씩 지수적으로 상승 (깊이 1 → 0.091 ETH, 깊이 50 → 60 ETH)
+- **경제적 안전장치**: 총 483.18 ETH의 본드가 필요하여 깊은 분쟁을 유발하는 스팸 공격을 억제
+- **STEP 미실행**: 본드 측정에만 집중하기 위해 STEP 호출을 생략
+- **게임 종료**: 시간 경과 후 CloseGame으로 정상 종료, 결과적으로 Challenger Won
 
 ---
 
-## Bond Calculation Formula
+## 본드 계산 공식
 
-The bond amount required for each claim is calculated using the `getRequiredBond()` function in `FaultDisputeGame.sol` (lines 956-997). This implements the "Big Bonds v1.5" specification.
+각 클레임에 필요한 본드 금액은 `FaultDisputeGame.sol` 956-997라인에 구현된 `getRequiredBond()` 함수를 통해 계산됩니다. 이는 “Big Bonds v1.5” 사양을 구현한 것입니다.
 
-**Contract Location**: `packages/contracts-bedrock/src/dispute/FaultDisputeGame.sol:956-997`
+**컨트랙트 위치**: `packages/contracts-bedrock/src/dispute/FaultDisputeGame.sol:956-997`
 
-### Parameters
+### 파라미터
 
-From `FaultDisputeGame.sol:961-963`:
+`FaultDisputeGame.sol:961-963` 발췌:
 
 ```solidity
 // Values taken from Big Bonds v1.5 (TM) spec.
@@ -162,61 +150,61 @@ uint256 baseGasCharged = 400_000;
 uint256 highGasCharged = 300_000_000;
 ```
 
-And from the contract immutable:
-- `MAX_GAME_DEPTH = 50` (line 139)
+컨트랙트 상수:
+- `MAX_GAME_DEPTH = 50` (라인 139)
 
-**⚠️ IMPORTANT**: These are **hardcoded constant values**, NOT dynamic based on actual network gas prices:
-- The `assumedBaseFee = 200 gwei` is a fixed value in the contract
-- Actual test gas price: 0.7656 gwei (261x lower!)
-- The bond calculation is **independent of real-time gas prices**
-- This means bonds represent **economic security deposits**, not actual gas cost reimbursement
+**⚠️ 중요**: 위 값들은 실시간 네트워크 가스 가격과 무관한 **하드코딩 상수**입니다.
+- `assumedBaseFee = 200 gwei`는 컨트랙트에 고정된 값
+- 실제 테스트 가스 가격: 0.7656 gwei (261배 낮음)
+- 본드 계산은 실시간 가스 가격에 **영향받지 않는다**
+- 즉, 본드는 가스 비용 환급이 아니라 **경제적 담보** 역할을 한다
 
-### Mathematical Formula
+### 수학적 공식
 
-The bond calculation uses exponential growth based on the claim depth:
+깊이에 따른 지수 성장을 사용합니다.
 
 ```
 Bond(depth) = assumedBaseFee × requiredGas(depth)
 ```
 
-Where `requiredGas(depth)` is calculated as:
+`requiredGas(depth)`는 다음과 같이 계산됩니다.
 
 ```
 requiredGas(depth) = baseGasCharged × multiplier^depth
 ```
 
-The `multiplier` is derived from:
+`multiplier`는 다음에서 유도됩니다.
 
 ```
 multiplier = (highGasCharged / baseGasCharged)^(1 / MAX_GAME_DEPTH)
 multiplier = (300,000,000 / 400,000)^(1 / 50)
 multiplier = 750^(1/50)
-multiplier ≈ 1.141701559 (approximately 14.17% increase per depth)
+multiplier ≈ 1.141701559 (깊이당 약 14.17% 증가)
 ```
 
-### Implementation Details
+### 구현 상세
 
-The actual implementation uses fixed-point mathematics to compute the multiplier and exponential:
+고정소수점(Fixed-point) 수학을 활용해 승수를 계산합니다.
 
-1. **Calculate the base multiplier**:
+1. **기본 승수 계산**
    ```
    a = highGasCharged / baseGasCharged = 750
    base = e^(ln(a) / MAX_GAME_DEPTH)
    ```
 
-2. **Apply exponential to depth**:
+2. **깊이에 따른 지수 적용**
    ```
    rawGas = base^depth × baseGasCharged
    ```
 
-3. **Calculate final bond**:
+3. **최종 본드 계산**
    ```
    requiredBond = assumedBaseFee × rawGas
    ```
 
-### Solidity Code
+### Solidity 코드
 
-**Source**: `packages/contracts-bedrock/src/dispute/FaultDisputeGame.sol:956-997`
+**출처**: `packages/contracts-bedrock/src/dispute/FaultDisputeGame.sol:956-997`
 
 ```solidity
 /// @notice Returns the required bond for a given move kind.
@@ -266,45 +254,44 @@ function getRequiredBond(Position _position) public view returns (uint256 requir
 }
 ```
 
-**Key Code References**:
-- Line 961: `assumedBaseFee = 200 gwei` - Comment says "Values taken from Big Bonds v1.5 (TM) spec"
-- Line 962: `baseGasCharged = 400_000` - Base gas for depth 0
-- Line 963: `highGasCharged = 300_000_000` - Target gas for MAX_GAME_DEPTH
-- Line 970: Comment explains the goal: "solve for (highGasCharged/baseGasCharged) ** (1/MAX_GAME_DEPTH)"
-- Line 971-972: Mathematical identity used: `a ** (b/c) = e ** (ln(a) * (b/c))`
-- Line 975: `a = highGasCharged / baseGasCharged` = 750
-- Line 976-977: Set up WAD precision (1e18) for fixed-point math
-- Line 981: Calculate `ln(a)` using FixedPointMathLib
-- Line 984: Calculate `(b / c)` = `(1 / MAX_GAME_DEPTH)`
-- Line 988-989: Calculate `e ** (ln(a) * (b/c))` to get the base multiplier
-- Line 992: Raise base to the power of depth: `base ** depth`
-- Line 993: Multiply by baseGasCharged to get required gas
-- Line 996: Final bond = `assumedBaseFee * requiredGas`
+**주요 코드 포인트**
+- 라인 961: `assumedBaseFee = 200 gwei` – Big Bonds v1.5 사양에서 그대로 가져옴
+- 라인 962: `baseGasCharged = 400_000` – 깊이 0의 기본 가스량
+- 라인 963: `highGasCharged = 300_000_000` – 최대 깊이에서 목표로 하는 가스량
+- 라인 970: “(highGasCharged/baseGasCharged) ** (1/MAX_GAME_DEPTH)”를 해결하는 것이 목표
+- 라인 971-972: `a ** (b/c) = e ** (ln(a) * (b/c))` 수학 공식 사용
+- 라인 975: `a = highGasCharged / baseGasCharged` = 750
+- 라인 976-977: WAD(1e18) 정밀도로 고정소수점 계산을 준비
+- 라인 981: `ln(a)` 계산
+- 라인 984: `(b / c) = (1 / MAX_GAME_DEPTH)` 계산
+- 라인 988-989: `e ** (ln(a) * (b/c))`로 승수 도출
+- 라인 992: 깊이만큼 승수를 거듭제곱
+- 라인 996: 최종 본드 = `assumedBaseFee × requiredGas`
 
-**Simplified Formula**:
+**단순화된 공식**
 ```
 
 Bond(depth) = Gas Fee × Gas Amount(depth)
             = 200 gwei × [400,000 × (1.1417)^depth]
 
-Where:
-- Gas Fee (fixed): assumedBaseFee = 200 gwei (never changes)
-- Gas Amount(depth): baseGasCharged × (multiplier)^depth
+설명:
+- 가스 요율(고정): assumedBaseFee = 200 gwei (변하지 않음)
+- 깊이별 가스량: baseGasCharged × (multiplier)^depth
 - multiplier = (highGasCharged / baseGasCharged)^(1 / MAX_GAME_DEPTH)
-    =>  1.1417 = 750^(1/50) ≈ increases by ~14% per depth level
+    ⇒ 1.1417 = 750^(1/50) ≈ 깊이당 약 14% 증가
 ```
 
-**Examples**:
-- Depth 0: 200 gwei × 400,000 = 0.08 ETH
-- Depth 10: 200 gwei × 1,503,392 = 0.30 ETH
-- Depth 50: 200 gwei × 300,000,000 = 60 ETH
+**예시**
+- 깊이 0: 200 gwei × 400,000 = 0.08 ETH
+- 깊이 10: 200 gwei × 1,503,392 = 0.30 ETH
+- 깊이 50: 200 gwei × 300,000,000 = 60 ETH
 
-### Example Calculations
+### 깊이별 예시 계산
 
-Using the formula, bonds at various depths:
+공식을 적용한 깊이별 본드 값:
 
-| Depth | Multiplier^Depth | Required Gas | Bond (ETH) |
-|------:|:-----------------|-------------:|-----------:|
+| 깊이 | 승수^깊이 | 필요 가스량 | 본드 (ETH) |
+|------:|:---------|-----------:|-----------:|
 | 0 | 1.0000 | 400,000 | 0.0800 |
 | 1 | 1.1417 | 456,680 | 0.0913 |
 | 10 | 3.7585 | 1,503,392 | 0.3007 |
@@ -313,383 +300,189 @@ Using the formula, bonds at various depths:
 | 40 | 199.5488 | 79,819,497 | 15.9639 |
 | 50 | 750.0000 | 300,000,000 | 60.0000 |
 
-### Economic Rationale
+### 경제적 배경
 
-The exponential bond growth serves several purposes:
+지수적 본드 증가는 다음과 같은 목적을 가집니다.
 
-1. **Spam Prevention**: Making deep disputes exponentially expensive prevents frivolous challenges
-2. **Economic Security**: Ensures that attackers need significant capital to force deep game trees
-3. **Incentive Alignment**: Honest parties are incentivized to resolve disputes at shallower depths when possible
-4. **Predictable Economics**: Fixed bond amounts provide predictable costs regardless of gas price volatility
+1. **스팸 차단**: 깊은 분쟁을 유도하려면 기하급수적으로 많은 자산이 필요하므로 무분별한 도전을 억제
+2. **경제적 안전장치**: 공격자가 전체 트리를 강제로 탐색하려면 상당한 자본이 필요
+3. **인센티브 정렬**: 정직한 참여자는 가능한 얕은 깊이에서 문제를 해결하려는 유인을 얻음
+4. **예측 가능성**: 본드 금액이 고정되어 있어 가스 가격 변동과 무관하게 비용 계산이 쉬움
 
-The formula ensures that:
-- At depth 0 (root claim), the bond is 0.08 ETH (low barrier to entry)
-- At depth 50 (maximum depth), the bond reaches 60 ETH (significant commitment)
-- Each level increases the bond by approximately 14.17%
-- The total bond across all depths grows from ~0.08 ETH to ~60 ETH over 50 levels
-
-### Important Clarifications
-
-**Bonds ≠ Gas Costs**:
-
-The bond amounts are **NOT** calculated from actual network gas prices. Key facts:
-
-1. **Hardcoded Values**:
-   - `assumedBaseFee = 200 gwei` is fixed in the contract code
-   - Does NOT change with network conditions
-   - Does NOT reflect actual gas prices (test showed 0.7656 gwei, 261x lower)
-
-2. **Economic Security Mechanism**:
-   - Bonds are **economic deposits** to ensure honest behavior
-   - Not intended to reimburse actual transaction costs
-   - Designed to make attacks economically unfeasible
-
-3. **Why Use "Gas" Terminology?**:
-   - The formula uses `baseGasCharged` and `highGasCharged` as abstract units
-   - These represent **computational complexity**, not literal gas costs
-   - The multiplier (750x from base to max) reflects the increasing complexity of deeper disputes
-
-4. **Real-World Implications**:
-   - In low gas price environments (like the test: 0.7656 gwei):
-     - Bonds are much higher than actual transaction costs
-     - This is intentional for security
-   - In high gas price environments (e.g., 200+ gwei):
-     - Bonds might be closer to actual costs
-     - Still primarily serve as economic deterrents, not cost recovery
-
-5. **Comparison**:
-   ```
-   Hardcoded assumedBaseFee:  200.0000 gwei
-   Test environment gas price:  0.7656 gwei
-   Ratio:                       261.2x higher
-
-   This means bonds in the test are 261x higher than
-   what would be needed to cover actual gas costs.
-   ```
-
-**Design Rationale**: By using fixed, high bond values, the system ensures economic security even in low gas price environments, preventing Sybil attacks and spam that could otherwise overwhelm the dispute resolution system.
+이를 통해 얻는 보장:
+- 깊이 0(루트 클레임)에서는 0.08 ETH로 진입 장벽이 낮음
+- 깊이 50(최대 깊이)에서는 60 ETH까지 상승하여 의미 있는 담보 요구
+- 깊이가 1 증가할 때마다 본드가 약 14.17%씩 증가
+- 전체 깊이(0~50)에 걸쳐 총 본드는 약 0.08 ETH에서 60 ETH까지 증가
 
 ---
 
-## Why Hardcoded Bond Values?
+## 왜 본드 값이 하드코딩되어 있을까?
 
-### Design Rationale for Fixed Bond Amounts
+### 본드 ≠ 가스 비용
 
-The decision to use hardcoded values instead of dynamic gas-based pricing is intentional and serves several critical purposes:
+본드 금액은 실제 네트워크 가스 가격을 반영하지 않습니다.
 
-#### 1. **Predictability and Stability**
-
-**Problem with Dynamic Pricing**:
-- If bonds were based on real-time gas prices, costs would fluctuate wildly
-- During low gas periods (like nights/weekends), bonds could be extremely cheap
-- Attackers could time attacks for low-gas periods
-
-**Solution with Fixed Values**:
-- Participants know exact bond costs before starting a dispute
-- No need to monitor gas prices or wait for optimal timing
-- Stable economics make it easier to reason about attack costs
-
-#### 2. **Economic Security Floor**
-
-**The Core Issue**:
+**테스트 환경 비교**
 ```
-Scenario: Gas price drops to 1 gwei (very cheap)
-- With dynamic bonds: Attack cost = 1 gwei × gas = ~0.0004 ETH per claim
-- With fixed bonds: Attack cost = 200 gwei × gas = ~0.08 ETH per claim
-- Difference: 200x cheaper to attack with dynamic pricing!
+하드코딩 assumedBaseFee  : 200.0000 gwei (컨트랙트 고정)
+테스트 가스 가격          :   0.7656 gwei (실제)
+비율                       : 261배
 ```
 
-**Why This Matters**:
-- An attacker could wait for low gas periods and spam thousands of fake disputes
-- Each dispute forces defenders to respond (or lose bonds)
-- The cost of defending could exceed the cost of attacking
-- The entire system's security would depend on gas prices staying high
+즉, 실제 가스 비용을 기준으로 본다면 본드는 **261배** 높게 책정되어 있습니다. 이는 보안을 위한 의도적인 설계입니다.
 
-**Fixed Bonds Ensure**:
-- Minimum economic commitment regardless of gas prices
-- Attack costs remain prohibitively expensive even in cheap gas environments
-- Security doesn't degrade when L1 is less congested
+### 고정 본드 설계 철학
 
-#### 3. **Prevents Gas Price Manipulation**
+실시간 가스 기반이 아닌 고정 값을 사용하는 이유는 다음과 같습니다.
 
-**Attack Vector with Dynamic Pricing**:
-1. Attacker identifies a valuable dispute worth 100 ETH
-2. Attacker floods L1 with transactions to drive gas price down
-3. Once gas is cheap, launches dispute with minimal bond costs
-4. Could profit even if dispute is invalid
+#### 1. **예측 가능성과 안정성**
 
-**Fixed Values Prevent This**:
-- Bond costs are immune to gas price manipulation
-- Attacker cannot reduce their bond obligation through L1 congestion games
-- Decouples dispute game security from L1 market conditions
+**동적 가격의 문제점**
+- 가스 가격에 따라 본드가 크게 변동
+- 야간/주말 등 가스가 싸질 때 공격자가 비용을 낮출 수 있음
+- 저렴한 구간을 노린 공격 가능
 
-#### 4. **Cross-Chain Consistency**
+**고정 값의 장점**
+- 분쟁을 시작하기 전에 정확한 비용을 알 수 있음
+- 가스 가격을 감시하거나 타이밍을 기다릴 필요가 없음
+- 공격 비용을 추정하기 쉬움
 
-**Challenge with L1/L2 Integration**:
-- Dispute games on L1 protect L2 state
-- L1 gas prices can vary 100x (1 gwei → 100+ gwei)
-- L2 economic value should not depend on L1 gas market volatility
+#### 2. **경제적 안전 하한선**
 
-**Fixed Bonds Provide**:
-- Consistent security guarantees regardless of L1 conditions
-- L2 participants can predict costs
-- Cross-chain bridges can rely on stable economics
+**핵심 이슈**
+```
+가정: 가스 가격이 1 gwei로 하락
+- 동적 본드라면: 공격 비용 = 1 gwei × 가스 ≈ 0.0004 ETH/클레임
+- 고정 본드라면: 공격 비용 = 200 gwei × 가스 ≈ 0.08 ETH/클레임
+- 차이: 동적 본드가 200배 저렴!
+```
 
-#### 5. **Game Theory Stability**
+**실제 영향 (테스트 데이터 기반)**
+- 고정 본드(200 gwei): 총 본드 483.18 ETH ≈ 공격 비용 140만 달러
+- 동적 본드(0.7656 gwei): 총 본드 1.85 ETH ≈ 공격 비용 5,500달러
+- 동적 본드를 쓰면 **261배** 보안이 약화
 
-**Dynamic Pricing Issues**:
+**고정 본드가 보장하는 것**
+- 가스 가격과 무관한 최소 담보 (140만 달러 수준)
+- L1 혼잡도가 낮아도 공격 비용은 비싸게 유지
+- 가스 가격이 떨어져도 보안 수준이 유지
+
+#### 3. **가스 가격 조작 방지**
+
+**동적 가격 공격 시나리오**
+1. 공격자가 가치 있는 분쟁(예: 100 ETH)을 발견
+2. L1에 스팸 트랜잭션을 보내 가스 가격을 낮춤
+3. 가스가 싸지면 낮은 본드로 분쟁을 시작
+4. 분쟁이 진짜로 틀려도 이익을 얻을 수 있음
+
+**고정 값의 효과**
+- 본드 비용이 가스 가격 조작에 영향받지 않음
+- 공격자는 혼잡도 조절로 본드 부담을 줄일 수 없음
+- 분쟁 게임 보안이 L1 시장 상황과 분리됨
+
+#### 4. **크로스체인 일관성**
+
+**L1/L2 통합 시 어려움**
+- L1 분쟁 게임이 L2 상태를 보호
+- L1 가스 가격은 1 gwei → 100 gwei 이상까지 100배 이상 변동
+- L2 가치가 L1 가스 시장 변동에 좌우되어서는 안 됨
+
+**고정 본드의 장점**
+- L1 환경 변화와 무관하게 일정한 보안 레벨 보장
+- L2 참여자가 비용을 예측 가능
+- 브리지 등 상호 운용성 구성 요소도 안정적인 경제 모델을 기대 가능
+
+#### 5. **게임 이론 안정성**
+
+**동적 본드의 문제**
 ```solidity
-// Hypothetical dynamic version (NOT used)
+// 가상의 동적 구현 (사용되지 않음)
 function getRequiredBond(Position _position) public view returns (uint256) {
-    uint256 currentGasPrice = tx.gasprice;  // ❌ Manipulable!
+    uint256 currentGasPrice = tx.gasprice;  // ❌ 조작 가능
     return currentGasPrice * calculatedGas;
 }
 ```
 
-Problems:
-- Defender response time depends on gas price monitoring
-- Rational strategy becomes "wait for gas to drop"
-- Game deadlocks during high gas periods (nobody wants to pay)
-- Winner determined partly by gas price timing luck
+문제점:
+- 방어 측의 응답 시간이 가스 가격에 좌우됨
+- “가스가 더 내려갈 때까지 기다리자”는 전략이 우세
+- 가스가 비싼 구간에는 아무도 행동하지 않아 게임이 정체
+- 승패가 진실 여부보다 타이밍 운에 좌우될 수 있음
 
-**Fixed Bonds Enable**:
-- Pure game theory: winning depends on correctness, not gas timing
-- No advantage to waiting or rushing based on gas prices
-- Symmetric costs for both parties
-- Cleaner mechanism design
+**고정 본드의 효과**
+- 순수하게 클레임의 진위 여부로 승패 결정
+- 가스 가격에 따라 기다리거나 서두를 필요 없음
+- 양측 모두 대칭적인 비용 구조
+- 더 깔끔한 메커니즘 설계
 
-#### 6. **Insurance Against Future Uncertainty**
+#### 6. **미래 불확실성에 대한 보험**
 
-**Long-term Considerations**:
-- Ethereum gas prices could drop significantly with:
-  - Better scaling solutions
-  - Alternative execution environments
-  - Future protocol upgrades
-- If bonds scaled with gas, security could erode over time
+**장기적 고려 사항**
+- 이더리움 가스 비용은 다음 요인으로 크게 하락할 수 있음
+  - 더 나은 확장 솔루션
+  - 대체 실행 환경
+  - 향후 프로토콜 업그레이드
+- 본드가 가스에 연동된다면 시간이 지날수록 보안 수준이 저하될 수 있음
 
-**Fixed Values Provide**:
-- Security that doesn't degrade with L1 improvements
-- Predictable economics over multi-year horizons
-- No need for governance updates when gas markets change
+**고정 값의 장점**
+- L1 개선이 있어도 보안 수준 유지
+- 수년에 걸쳐 예측 가능한 경제 구조
+- 가스 시장이 변해도 거버넌스 개입 없이 동작 가능
 
-#### 7. **Actual Cost Recovery Still Works**
+#### 7. **실제 비용 회수는 여전히 가능**
 
-**Common Misconception**: "Bonds should cover actual costs"
+**오해**: “본드는 실제 사용한 가스를 보전해야 한다”
 
-**Reality**:
-- Honest participants who WIN disputes get bonds from losers
-- Winners recover their bonds PLUS losers' bonds
-- Total recovered > actual gas spent (in most cases)
-- Dishonest participants LOSE their bonds (punishment)
+**현실**
+- 분쟁에서 승리한 정직한 참여자는 상대방 본드까지 회수
+- 승자는 자신의 본드 + 상대 본드를 가져가므로 대부분의 경우 실가스비를 초과 회수
+- 부정행위를 한 참여자는 본드를 잃음
 
-**Example**:
+**예시**
 ```
-Honest challenger's costs:
-- 25 claims × actual gas cost ≈ 25 × (0.7656 gwei × 200k gas) ≈ 0.004 ETH
-- Total bonds locked: 225.62 ETH
-- Bonds recovered after winning: 225.62 ETH (own) + portion of 257.56 ETH (dishonest proposer's)
-- Net profit: > 220 ETH (far exceeds actual costs!)
-```
-
-### The "Big Bonds v1.5" Philosophy
-
-The "Big Bonds" naming reflects the intentional design choice:
-- Bonds are deliberately **much larger** than gas costs
-- This creates strong economic incentives for honesty
-- The "v1.5" indicates this is an evolved, battle-tested approach
-- Alternative considered: "EIP-1559-like dynamic bonds" → Rejected for above reasons
-
-### Trade-offs Accepted
-
-**Downsides of Fixed Values**:
-1. **High barrier to entry** in low-value disputes
-   - 0.08 ETH minimum bond might be expensive for small claims
-   - But: Optimism dispute games protect billions in TVL, not small claims
-
-2. **Over-collateralization** in cheap gas environments
-   - Test environment: 261x more than needed for gas
-   - But: This is the security premium, not a bug
-
-3. **No automatic adjustment** to ETH price changes
-   - If ETH price 10x, bonds become 10x more expensive in USD terms
-   - But: This is true for all ETH-denominated contracts
-   - Would require governance to update if needed
-
-### Conclusion
-
-The hardcoded bond values are a **deliberate security design choice**, not an oversight. They prioritize:
-1. ✅ Predictable costs
-2. ✅ Security floor that doesn't depend on gas markets
-3. ✅ Protection against gas price manipulation
-4. ✅ Long-term stability
-5. ✅ Clean game theory
-
-Over:
-1. ❌ Minimizing collateral requirements
-2. ❌ Tight coupling to actual gas costs
-3. ❌ Dynamic market-based pricing
-
-For a system protecting billions of dollars in L2 assets, the conservative approach of over-collateralization through fixed bonds is the right trade-off.
-
----
-
-## Impact Analysis: Hardcoded vs Dynamic Gas Pricing
-
-### Bond Reduction with Dynamic Pricing
-
-If the system used actual gas prices instead of hardcoded values, here's what would happen in the test environment:
-
-#### Current Test Environment Comparison
-
-**Test Parameters**:
-- Hardcoded: 200 gwei (fixed)
-- Actual: 0.7656 gwei (261x lower!)
-
-**Bond Costs by Depth**:
-
-| Depth | Hardcoded (ETH) | Dynamic (ETH) | Reduction | Savings (ETH) |
-|------:|----------------:|--------------:|----------:|--------------:|
-| 1 | 0.091325 | 0.000350 | 99.62% | 0.090976 |
-| 5 | 0.155094 | 0.000594 | 99.62% | 0.154501 |
-| 10 | 0.300678 | 0.001151 | 99.62% | 0.299527 |
-| 14 | 0.510631 | 0.001955 | 99.62% | 0.508676 |
-| 15 | 0.582919 | 0.002231 | 99.62% | 0.580688 |
-| 20 | 1.130094 | 0.004326 | 99.62% | 1.125768 |
-| 30 | 4.247435 | 0.016259 | 99.62% | 4.231176 |
-| 40 | 15.963900 | 0.061110 | 99.62% | 15.902790 |
-| 50 | 60.000000 | 0.229680 | 99.62% | 59.770320 |
-
-#### Total Game Cost Comparison
-
-**Current (Hardcoded 200 gwei)**:
-- Challenger total: 225.62 ETH
-- Proposer total: 257.56 ETH
-- **Grand total: 483.18 ETH**
-
-**With Dynamic Pricing (0.7656 gwei)**:
-- Challenger total: 0.86 ETH
-- Proposer total: 0.99 ETH
-- **Grand total: 1.85 ETH**
-
-**Reduction**:
-- **481.33 ETH saved (99.62% reduction)**
-- **261x cheaper with dynamic pricing**
-
-### Security Impact Analysis
-
-#### Attack Cost Comparison
-
-In this test environment:
-
-**Hardcoded Bonds**:
-- Attack cost: 483.18 ETH ≈ $1,449,552 (@$3000/ETH)
-- For L2 TVL of $100M: Attack cost = 1.45% of TVL
-
-**Dynamic Bonds** (if used):
-- Attack cost: 1.85 ETH ≈ $5,549 (@$3000/ETH)
-- For L2 TVL of $100M: Attack cost = 0.0055% of TVL
-
-**Security Strength Difference: 261x weaker with dynamic pricing!**
-
-#### Extreme Scenario Analysis
-
-What happens at different gas prices?
-
-| Gas Price (gwei) | Total Bonds (ETH) | Attack Cost ($) | vs Hardcoded |
-|-----------------:|------------------:|----------------:|-------------:|
-| 0.1 | 0.24 | $725 | 2000x cheaper |
-| 1.0 | 2.42 | $7,248 | 200x cheaper |
-| 10.0 | 24.16 | $72,478 | 20x cheaper |
-| 50.0 | 120.80 | $362,388 | 4x cheaper |
-| 100.0 | 241.59 | $724,776 | 2x cheaper |
-| **200.0** | **483.18** | **$1,449,552** | **1x (baseline)** |
-| 500.0 | 1,207.96 | $3,623,879 | 2.5x more expensive |
-
-### Why This Matters
-
-#### 1. **$5,549 Attack on $100M TVL**
-
-With dynamic pricing at test gas levels:
-- An attacker could spam the entire dispute game for ~$5,500
-- Compare this to protecting $100M+ in L2 assets
-- The economic security would be **completely broken**
-
-#### 2. **Weekend/Night Attack Vectors**
-
-Real-world gas price patterns:
-- Weekday peak: 50-200 gwei
-- Weekend/night: 1-10 gwei (100-200x cheaper!)
-- An attacker could simply **wait for low gas periods**
-
-Example attack:
-```
-1. Wait for Sunday 3 AM UTC (typical low gas time)
-2. Gas drops to ~2 gwei (100x cheaper than 200 gwei)
-3. Launch attack: Cost drops from $1.4M to $14,000
-4. For any dispute worth > $14,000, attack is profitable!
+정직한 챌린저의 비용:
+- 25개 클레임 × 실제 가스 ≈ 25 × (0.7656 gwei × 200k gas) ≈ 0.004 ETH
+- 잠긴 총 본드: 225.62 ETH
+- 승리 후 회수: 225.62 ETH (자기 본드) + 257.56 ETH 중 일부 (프로포저 본드)
+- 순이익: 220 ETH 이상 (실제 가스비를 크게 상회)
 ```
 
-#### 3. **L2 Scaling Paradox**
+### “Big Bonds v1.5” 철학
 
-As Ethereum scales better:
-- Gas prices DROP (good for users)
-- Dynamic bond costs DROP (bad for security)
-- L2 TVL INCREASES (more value at risk)
+“Big Bonds”라는 이름 자체가 의도적인 설계를 반영합니다.
+- 본드가 실제 가스 비용보다 훨씬 큼
+- 정직한 행동을 강하게 유도
+- “v1.5”는 여러 차례 개선된 결과임을 의미
+- “EIP-1559 스타일의 동적 본드”도 검토했으나 위 이유로 채택하지 않음
 
-This creates a **dangerous inverse relationship**:
-- More value to protect → Cheaper to attack
-- Hardcoded bonds avoid this paradox
+### 감수한 트레이드오프
 
-#### 4. **Actual Numbers from Production**
+**고정 값을 선택하면서 감수한 단점**
+1. **저금액 분쟁에 대한 진입 장벽** 상승
+   - 최소 0.08 ETH 본드는 소규모 분쟁에 부담
+   - 다만 Optimism 분쟁 게임은 수십억 달러 규모의 TVL을 보호하는 용도
 
-Historical Ethereum gas prices (2023-2024):
-- Low: 1-5 gwei (common during L2 scaling improvements)
-- Medium: 20-50 gwei (normal activity)
-- High: 100-500 gwei (during congestion)
-- Extreme: 1000+ gwei (during NFT mints, major events)
+2. **저가 가스 환경에서의 과잉 담보**
+   - 테스트 환경 기준 실제 가스 대비 261배 초과
+   - 그러나 이는 보안을 위한 보험료에 해당
 
-If bonds were dynamic:
-- Same attack costs 1000x more during NFT mint vs quiet Sunday
-- Rational attackers would **always wait for low gas**
-- System security becomes **unpredictable**
+3. **ETH 가격 변동에 대한 자동 대응 부재**
+   - ETH 가격이 10배 상승하면 본드의 USD 가치도 10배 상승
+   - 모든 ETH 기반 계약이 가지는 공통 이슈이며, 필요 시 거버넌스 조정 가능
 
-### Cost-Benefit Analysis
+### 마무리
 
-**For Honest Participants**:
+하드코딩된 본드 값은 우연이 아니라 **의도적인 보안 설계**입니다. 다음을 우선시합니다.
+1. ✅ 예측 가능한 비용
+2. ✅ 가스 시장과 무관한 보안 하한선
+3. ✅ 가스 가격 조작에 대한 내성
+4. ✅ 장기적인 안정성
+5. ✅ 깔끔한 게임 이론 구조
 
-With Hardcoded (Current):
-- Cost to make claim: Based on 200 gwei constant
-- **Predictable**: Always know cost upfront
-- **Recoverable**: Win dispute → Get all bonds back + opponent's bonds
-- Net gain if win: Massive (225+ ETH recovered vs ~0.004 ETH actual gas cost)
+대신 다음을 희생합니다.
+1. ❌ 담보 요구의 최소화
+2. ❌ 실제 가스 비용과의 긴밀한 연동
+3. ❌ 동적 시장 기반 가격 결정
 
-With Dynamic (Hypothetical):
-- Cost to make claim: Varies 100-1000x based on time of day
-- **Unpredictable**: Must monitor gas prices
-- **Race conditions**: Rush during low gas, wait during high gas
-- Net gain if win: Small (1.85 ETH recovered vs ~0.004 ETH actual gas cost)
-
-**For System Security**:
-
-Hardcoded:
-- ✅ Constant security floor ($1.4M attack cost)
-- ✅ No timing games
-- ✅ Predictable economics
-- ✅ Scales with ETH price, not gas price
-
-Dynamic:
-- ❌ Variable security ($7K - $3.6M attack cost)
-- ❌ Attacker advantage (choose optimal timing)
-- ❌ Unpredictable economics
-- ❌ Security degrades with gas optimization
-
-### Conclusion
-
-The **99.62% reduction** in bonds with dynamic pricing demonstrates exactly why hardcoded values are necessary:
-
-1. **$1.4M → $5.5K**: Attack cost drops by 261x
-2. **Security floor disappears**: No minimum economic commitment
-3. **Timing attacks enabled**: Wait for gas to drop, then attack
-4. **Scaling paradox**: Better L2 scaling = worse security
-
-The "over-collateralization" of 261x in this test is not a bug—it's the entire point of the design. It ensures that even in the most favorable conditions for an attacker (ultra-low gas), the economic cost of a malicious dispute remains prohibitively high relative to the value being protected.
+수십억 달러 규모의 L2 자산을 보호하는 시스템에는, 과잉 담보를 통한 보수적인 접근이 가장 합리적인 선택입니다.

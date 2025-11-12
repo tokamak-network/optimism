@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document captures the manual execution results for the `op-e2e/faultproofs` Go test suite run on 11 November 2025. Each entry lists:
+This document captures the manual execution results for the `op-e2e/faultproofs` Go test suite. Each entry lists:
 
 - **Purpose**: what the test validates
 - **Command**: the exact invocation that was used
@@ -115,7 +115,7 @@ All commands were executed from the repository root (`/Users/zena/tokamak-projec
 - **Command:** `go test -v ./op-e2e/faultproofs -run "TestOutputCannonBondCostMeasurement"`
 - **Result & Duration:** PASS, 361.41 seconds (~6 minutes).
 - **Notes:** demonstrates exponential bond escalation from depth 0 to 50, requiring ~483.18 ETH total bonds from both parties.
-- **Related Documentation:** [Bond Cost Measurement Report](./bond-cost-measurement-report.md)
+- **Related Documentation:** [Bond Cost Measurement Report](./bond-cost-measurement-report-en.md)
 
 **Execution Flow:**
 1. **First Game (Cold Start):** creates invalid root claim to establish initial game state and prestate.
@@ -150,5 +150,5 @@ All commands were executed from the repository root (`/Users/zena/tokamak-projec
 
 All Cannon + large-preimage regression tests completed successfully. The benchmark remains intentionally skipped until the associated TODO is implemented. Re-run any scenario by invoking the listed command from the repo root. No additional configuration is required as long as the standard devnet environment is available.
 
-For detailed bond cost analysis and game mechanics, see the [Bond Cost Measurement Report](./bond-cost-measurement-report.md).
+For detailed bond cost analysis and game mechanics, see the [Bond Cost Measurement Report](./bond-cost-measurement-report-en.md).
 
