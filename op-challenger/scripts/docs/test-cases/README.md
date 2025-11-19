@@ -257,6 +257,177 @@ git status
 
 ---
 
+#### Step 1.5: Clone Kona Repository (Required for GameType 3)
+
+> **Note**: This step is **required** if you plan to run Asterisc-Kona tests (GameType 3). The build script expects the Kona repository to be in the same parent directory as the Optimism repository.
+
+```bash
+# Navigate to parent directory of optimism
+cd ~/projects  # Same directory where you cloned optimism
+
+# Verify you're in the correct location
+pwd
+# Should show: /Users/YOUR_USERNAME/projects
+
+# Clone the Kona repository
+git clone https://github.com/ethereum-optimism/kona.git
+
+# Verify both repositories exist
+ls -d optimism kona
+# Should show:
+# kona
+# optimism
+```
+
+**Directory structure**:
+```
+~/projects/
+├── optimism/          # Optimism monorepo
+└── kona/              # Kona repository (required for GameType 3)
+```
+
+---
+
+#### Step 1.6: Apply Kona Patch (Known Issue Fix)
+
+> **⚠️ Important**: There is a known issue in the official Kona repository where the `l2_chain_id` defaults to `0` when using `--rollup-config-path`, causing "chain ID 0" warnings and test failures. This patch fixes the issue.
+
+**Issue**: When kona-host receives `--rollup-config-path` instead of `--l2-chain-id`, it should extract the chain ID from the rollup config file, but currently it defaults to `0`.
+
+**Fix**: Apply the following patch to `kona/bin/host/src/single/local_kv.rs`:
+
+```bash
+# Navigate to kona repository
+cd ~/projects/kona
+
+# Verify current location
+pwd
+# Should show: /Users/YOUR_USERNAME/projects/kona
+
+# Open the file for editing
+# File: bin/host/src/single/local_kv.rs
+# Location: Lines 37-39
+```
+
+**Find this code** (around line 37-39):
+```rust
+L2_CHAIN_ID_KEY => {
+    Some(self.cfg.l2_chain_id.unwrap_or_default().to_be_bytes().to_vec())
+}
+```
+
+**Replace with**:
+```rust
+L2_CHAIN_ID_KEY => {
+    let chain_id = if let Some(chain_id) = self.cfg.l2_chain_id {
+        chain_id
+    } else {
+        // If l2_chain_id is not provided, extract it from rollup config
+        let rollup_config = self.cfg.read_rollup_config().ok()?;
+        rollup_config.l2_chain_id.id()
+    };
+    Some(chain_id.to_be_bytes().to_vec())
+}
+```
+
+**Quick patch using `sed`** (macOS/Linux):
+```bash
+# Navigate to kona repository
+cd ~/projects/kona
+
+# Create backup
+cp bin/host/src/single/local_kv.rs bin/host/src/single/local_kv.rs.backup
+
+# Apply patch (multi-line, copy all together)
+cat > /tmp/kona_patch.txt << 'EOF'
+            L2_CHAIN_ID_KEY => {
+                let chain_id = if let Some(chain_id) = self.cfg.l2_chain_id {
+                    chain_id
+                } else {
+                    // If l2_chain_id is not provided, extract it from rollup config
+                    let rollup_config = self.cfg.read_rollup_config().ok()?;
+                    rollup_config.l2_chain_id.id()
+                };
+                Some(chain_id.to_be_bytes().to_vec())
+            }
+EOF
+
+# Note: Manual editing recommended for safety
+# Use your preferred editor (vim, nano, VSCode, etc.):
+vim bin/host/src/single/local_kv.rs
+# or
+code bin/host/src/single/local_kv.rs
+
+# Return to optimism repository
+cd ~/projects/optimism
+```
+
+**Verify the patch**:
+```bash
+# Check the file was modified
+grep -A 8 "L2_CHAIN_ID_KEY" ~/projects/kona/bin/host/src/single/local_kv.rs
+
+# Should show the new code with rollup_config.l2_chain_id.id()
+```
+
+**Why this patch is needed**:
+- The build script uses the local Kona repository at `~/projects/kona`
+- Without this patch, E2E tests will encounter "chain ID 0" warnings
+- This causes test failures due to invalid chain configuration
+- A PR will be submitted to fix this upstream
+
+---
+
+#### Step 1.7: Clone Asterisc Repository (Required for GameType 3)
+
+> **Note**: This step is **required** if you plan to run Asterisc-Kona tests (GameType 3). The build script expects the Asterisc repository to be in the same parent directory as the Optimism repository.
+
+```bash
+# Navigate to parent directory of optimism
+cd ~/projects  # Same directory where you cloned optimism and kona
+
+# Verify you're in the correct location
+pwd
+# Should show: /Users/YOUR_USERNAME/projects
+
+# Clone the Asterisc repository
+git clone https://github.com/ethereum-optimism/asterisc.git
+
+# Verify all required repositories exist
+ls -d optimism kona asterisc
+# Should show:
+# asterisc
+# kona
+# optimism
+```
+
+**Directory structure**:
+```
+~/projects/
+├── optimism/          # Optimism monorepo
+├── kona/              # Kona repository (required for GameType 3)
+└── asterisc/          # Asterisc RISC-V VM (required for GameType 3)
+```
+
+**Verify the repositories**:
+```bash
+# Check optimism
+ls ~/projects/optimism/.git >/dev/null 2>&1 && echo "✅ optimism exists" || echo "❌ optimism missing"
+
+# Check kona
+ls ~/projects/kona/.git >/dev/null 2>&1 && echo "✅ kona exists" || echo "❌ kona missing"
+
+# Check asterisc
+ls ~/projects/asterisc/.git >/dev/null 2>&1 && echo "✅ asterisc exists" || echo "❌ asterisc missing"
+```
+
+**Why this repository is needed**:
+- The build script `build-binaries-for-challenger-e2e.sh` expects Asterisc at `$(dirname "$OPTIMISM_ROOT")/asterisc`
+- Asterisc is the RISC-V VM that executes the kona-client binary during fault proof games
+- The build script compiles asterisc and uses it to generate prestate files
+
+---
+
 #### Step 2: Install Dependencies
 
 ```bash

@@ -4,16 +4,11 @@
 
 Asterisc-Kona (GameType 3) RISC-V 기반 fault proof 시스템의 `op-e2e/faultproofs` Go 테스트 스위트 실행 계획 및 결과를 정리한 문서입니다.
 
-> **⚠️ 문서 상태: 차단됨 (Blocked)**
-> - 모든 Asterisc-Kona E2E 테스트가 Split Depth에서 정지하여 차단되었습니다
-> - Kona 유닛 테스트는 완료되었으며, 바이섹션 로직은 정상임을 확인했습니다
-> - 문제는 E2E 통합 레이어(kona-host ↔ kona-client 통신)에 있습니다
-
 각 항목은 아래 정보를 포함합니다:
 
 - **목적**: 테스트가 검증하려는 대상
 - **실행 방법**: 실제로 실행한 명령어
-- **테스트 여부**: 테스트 실행 여부 및 상태
+- **결과 및 소요 시간**: 테스트 실행 결과 및 소요 시간
 - **비고**: 예상되는 특이 사항
 
 모든 명령어는 리포지토리 루트(`/Users/zena/tokamak-projects/optimism`)에서 실행합니다.
@@ -39,9 +34,14 @@ Asterisc-Kona (GameType 3) RISC-V 기반 fault proof 시스템의 `op-e2e/faultp
 
 ## 사전 준비사항
 
-테스트 실행 전에 필수 바이너리 빌드가 필요합니다. 자세한 내용은 아래 문서를 참조하세요:
+테스트 실행 전에 필수 바이너리 빌드 및 Kona 패치가 필요합니다. 자세한 내용은 아래 문서를 참조하세요:
 
-📖 **[Fault Proofs E2E 테스트 가이드](./faultproofs-e2e.md)** - 바이너리 빌드 및 환경 설정
+📖 **[Fault Proofs E2E 테스트 가이드](./README.md)** - 바이너리 빌드 및 환경 설정
+
+> **⚠️ 중요**: Kona 패치 적용 필수!
+>
+> Asterisc-Kona 테스트를 실행하기 전에 반드시 Kona 패치를 적용해야 합니다.
+> 패치 방법은 **[Step 1.6: Apply Kona Patch](./README.md#step-16-apply-kona-patch-known-issue-fix)** 참조
 
 **빠른 준비 명령어:**
 ```bash
@@ -70,11 +70,18 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKonaGame$"
   ```
-- **테스트 여부:** ❌ **미실행** - Split Depth에서 정지 (16분+ 타임아웃)
+- **결과 및 소요 시간:** ✅ **통과 (PASSED)** - 소요 시간: ~5분
+- **테스트 결과:**
+  - **Exit Code**: 0 (성공)
+  - **Chain ID**: 올바르게 901로 로드됨 (이전: 0 에러)
+  - **Prestate Validation**: 통과 (`0x0379...c4c1`)
+  - **두 가지 VM allocator 타입 모두 정상 작동**: `mt-cannon`, `mt-cannon-next`
+  - **Challenger 동작**: 정상적으로 kona-host와 통신하며 dispute 진행
+  - **최종 상태**: Challenger Won - 게임 정상 완료
 - **비고:**
-  - 두 가지 VM allocator 타입(`mt-cannon`, `mt-cannon-next`)에 대해 각각 테스트 실행.
-  - Asterisc와 동일한 로직을 kona-host Oracle 서버로 수행.
-  - 표준 배포 로그 후 챌린저가 분쟁을 해결하며, 예상되는 가스 팁 조정 외 특이사항 없을 것으로 예상.
+  - 데드락 문제 해결 후 첫 번째 E2E 테스트 성공
+  - 이전에 Split Depth에서 16분+ 정지했던 문제 완전히 해결
+  - Preimage 요청 타임아웃 문제 없음
 - **실행 흐름:**
   1. L1·L2 개발용 체인과 핵심 서비스(Sequencer, Batcher, Challenger)가 부팅됨.
   2. DisputeGameFactory에 GameType 3 (Asterisc-Kona) 등록 및 컨트랙트 배포.
@@ -97,7 +104,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKona_ChallengeAllZeroClaim"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - Dishonest actor가 항상 all-zero 클레임을 제출하는 극단적 시나리오.
   - Cannon의 `testCannonChallengeAllZeroClaim` 로직을 재사용.
@@ -119,7 +126,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKona_PublishAsteriscKonaRootClaim"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - 두 가지 테스트 케이스:
     - **블록 7**: Post-state output root가 무효인 경우
@@ -142,7 +149,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKonaDisputeGame"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - 세 가지 서브 테스트:
     - **StepFirst**: Depth 0에서 방어
@@ -168,7 +175,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKonaDefendStep"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - Cannon의 `testCannonDefendStep` 로직을 재사용.
   - Dishonest actor의 공격에 대해 올바른 step 증거로 방어.
@@ -191,7 +198,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKonaStepWithLargePreimage"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - Batcher를 중지한 상태에서 수동으로 대용량 무효 배치를 전송.
   - kona-host가 대용량 프리이미지를 로드하도록 강제.
@@ -217,7 +224,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKonaStepWithPreimage_nonExistingPreimage"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - 두 가지 프리이미지 타입 테스트:
     - **Keccak256**: Local key type
@@ -241,7 +248,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 30m ./op-e2e/faultproofs -run "TestOutputAsteriscKonaStepWithPreimage_nonExistingBlobPreimage"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - 20가지 조합 테스트:
     - Offset 0/8/16/24/32
@@ -264,7 +271,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKonaStepWithPreimage_existingPreimage"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - 프리이미지를 먼저 업로드한 후 동일한 프리이미지를 요구하는 step 수행.
   - 중복 업로드 방지 및 재사용 로직 검증.
@@ -286,7 +293,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKonaProposedOutputRootValid$"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - Dishonest actor가 올바른 output root를 공격하는 시나리오.
   - Honest defender가 올바른 증거로 방어하여 승리해야 함.
@@ -308,7 +315,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKonaProposedOutputRootValid_DefendWithCorrectTrace"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - 이전 테스트와 유사하지만, 명시적으로 올바른 trace를 사용하여 방어.
   - Defender의 trace 생성 및 증거 제출 경로 집중 검증.
@@ -330,7 +337,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   ```bash
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscKonaPoisonedPostState"
   ```
-- **테스트 여부:** ❌ **미실행** - 첫 번째 테스트 차단으로 실행 불가
+- **결과 및 소요 시간:** ❌ **미실행** - 기본 테스트 통과 후 실행 예정
 - **비고:**
   - Poisoned post-state 시나리오에서 게임이 올바르게 해결되는지 검증.
   - kona-host가 손상된 상태를 올바르게 감지하는지 확인.
@@ -371,22 +378,26 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 
 ## 현재 테스트 상태
 
-### ❌ 아직 실행되지 않은 테스트 (총 12개)
-1. **TestOutputAsteriscKonaGame** - 기본 게임 플레이 흐름 (**미실행**, 테스트가 Split Depth에서 정지함)
-2. **TestOutputAsteriscKona_ChallengeAllZeroClaim** - All-zero 클레임 챌린지 (**미실행**)
-3. **TestOutputAsteriscKona_PublishAsteriscKonaRootClaim** - 루트 클레임 발행 (**미실행**)
-4. **TestOutputAsteriscKonaDisputeGame** - 다양한 depth 분쟁 (**미실행**)
-5. **TestOutputAsteriscKonaDefendStep** - Step 방어 (**미실행**)
-6. **TestOutputAsteriscKonaStepWithLargePreimage** - 대용량 프리이미지 (**미실행**)
-7. **TestOutputAsteriscKonaStepWithPreimage_nonExistingPreimage** - 프리이미지 타입 (**미실행**)
-8. **TestOutputAsteriscKonaStepWithPreimage_nonExistingBlobPreimage** - Blob 프리이미지 (**미실행**)
-9. **TestOutputAsteriscKonaStepWithPreimage_existingPreimage** - 프리이미지 재사용 (**미실행**)
-10. **TestOutputAsteriscKonaProposedOutputRootValid** - 올바른 루트 방어 (**미실행**)
-11. **TestOutputAsteriscKonaProposedOutputRootValid_DefendWithCorrectTrace** - 올바른 trace로 방어 (**미실행**)
-12. **TestOutputAsteriscKonaPoisonedPostState** - 손상된 상태 처리 (**미실행**)
+### ✅ 테스트 통과 (1/12)
+1. **TestOutputAsteriscKonaGame** - 기본 게임 플레이 흐름 (**PASSED**, 2025-11-19)
 
-### ⚠️ 테스트 실행 차단 상태
-**현재 모든 Asterisc-Kona E2E 테스트가 차단되어 있습니다.** 테스트가 Split Depth (Depth 14)에 도달한 후 실행 trace 생성 단계에서 16분 이상 정지하며 진행되지 않습니다.
+### ⏳ 실행 대기 중 (11/12)
+2. **TestOutputAsteriscKona_ChallengeAllZeroClaim** - All-zero 클레임 챌린지
+3. **TestOutputAsteriscKona_PublishAsteriscKonaRootClaim** - 루트 클레임 발행
+4. **TestOutputAsteriscKonaDisputeGame** - 다양한 depth 분쟁
+5. **TestOutputAsteriscKonaDefendStep** - Step 방어
+6. **TestOutputAsteriscKonaStepWithLargePreimage** - 대용량 프리이미지
+7. **TestOutputAsteriscKonaStepWithPreimage_nonExistingPreimage** - 프리이미지 타입
+8. **TestOutputAsteriscKonaStepWithPreimage_nonExistingBlobPreimage** - Blob 프리이미지
+9. **TestOutputAsteriscKonaStepWithPreimage_existingPreimage** - 프리이미지 재사용
+10. **TestOutputAsteriscKonaProposedOutputRootValid** - 올바른 루트 방어
+11. **TestOutputAsteriscKonaProposedOutputRootValid_DefendWithCorrectTrace** - 올바른 trace로 방어
+12. **TestOutputAsteriscKonaPoisonedPostState** - 손상된 상태 처리
+
+### 📝 테스트 진행 상황
+- **차단 해제됨**: 이전에 발생했던 데드락 문제가 해결되어 모든 테스트 실행 가능
+- **첫 번째 테스트 성공**: TestOutputAsteriscKonaGame이 정상적으로 통과하여 Asterisc-Kona 시스템의 기본 동작 검증 완료
+- **나머지 테스트**: 첫 번째 테스트 통과 후 순차적으로 실행 가능한 상태
 
 ## 전체 테스트 실행 명령어
 
@@ -435,6 +446,26 @@ go test -v -timeout 60m ./op-e2e/faultproofs -run "TestOutputAsteriscKona.*Preim
 go test -v -timeout 40m ./op-e2e/faultproofs -run "TestOutputAsteriscKona.*Step"
 ```
 
+### 특정 서브테스트만 실행
+```bash
+# mt-cannon 서브테스트만 실행 (mt-cannon-next 제외)
+go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscKona_ChallengeAllZeroClaim$/mt-cannon$"
+
+# mt-cannon-next 서브테스트만 실행
+go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscKona_ChallengeAllZeroClaim$/mt-cannon-next$"
+
+# 백그라운드로 실행하고 로그 저장
+timeout 1200s go test -v -timeout 20m ./op-e2e/faultproofs \
+  -run "^TestOutputAsteriscKona_ChallengeAllZeroClaim$/mt-cannon$" \
+  2>&1 > /tmp/mt_cannon_only.log &
+
+# 실시간 로그 확인
+tail -f /tmp/mt_cannon_only.log
+
+# 결과 확인
+grep -E "PASS|FAIL" /tmp/mt_cannon_only.log
+```
+
 ## 요약
 
 Asterisc-Kona (GameType 3)는 Rust 기반 kona-host를 Oracle 서버로 사용하여 Go 기반 op-program과 동일한 기능을 제공합니다.
@@ -454,151 +485,6 @@ Asterisc-Kona (GameType 3)는 Rust 기반 kona-host를 Oracle 서버로 사용�
 - **호환성**: 동일한 Asterisc VM 바이너리 사용, 온체인 컨트랙트 재사용
 
 Asterisc-Kona는 Asterisc (GameType 2)와 동일한 게임 로직을 공유하므로, Asterisc 테스트가 통과하는 케이스는 대부분 Asterisc-Kona에서도 통과할 것으로 예상됩니다. 주요 차이점은 Oracle 서버 레이어(op-program vs kona-host)이며, 나머지 인프라는 공유됩니다.
-
-## 디버깅 및 점검 사항
-
-### 🔍 현재 점검해야 할 사항
-
-#### 1. E2E 통합 테스트 정지 이슈
-**상태**: 🔴 심각 - 모든 E2E 테스트 차단
-
-**증상**:
-- `TestOutputAsteriscKonaGame` 실행 시 Claim 15 (Depth 14 - Split Depth)에 도달 후 정지
-- "Generating trace" 로그 출력 후 "processing step=0" 한 줄만 나오고 16분+ 이상 멈춤
-- 두 게임 (mt-cannon, mt-cannon-next)이 동시에 같은 단계에서 정지
-- kona-host 초기화 성공, VM 시작 성공, 하지만 첫 instruction 이후 완전히 정지
-
-**로그 분석** (`/tmp/kona_correct_fix_clean_test.log` 85,775줄):
-```
-[22:46:08.060] Generating trace ... proof=34,359,738,367 ... game=0xc658...
-[22:46:08.099] "processing step=0 pc=001e854c insn=e4010113" ... game=0xc658...
-[22:46:08.071] Generating trace ... proof=34,359,738,367 ... game=0xAD8C...
-[22:46:08.107] "processing step=0 pc=001e854c insn=e4010113" ... game=0xAD8C...
-[... 16분 34초 동안 아무런 로그 없음 ...]
-[23:02:42] Test timeout
-```
-
-**bisection 진행 상황**:
-- 바이섹션 시작: 2회 (게임 2개)
-- 바이섹션 진행 깊이: Depth 0에서 멈춤 (step=0 이후 진행 없음)
-- 경과 시간: 16분 34초 (진행률 0%)
-- 예상 원인: Deadlock 또는 kona-client와 kona-host 간 프리이미지 통신 차단
-
-**`chain ID 0` 경고 지속**:
-```
-[WARN] boot_loader: No rollup config found for chain ID 0, falling back to preimage oracle
-```
-- 롤업 설정이 kona-host에는 전달되지만 kona-client(Asterisc VM 내부)가 읽지 못함
-
-**조치 사항**:
-1. ✅ Kona 유닛 테스트 실행 완료 - 바이섹션 로직 문제 **없음** 확인
-2. 🔄 E2E 통합 레이어 문제로 확인됨 - kona-host ↔ kona-client 통신 문제로 추정
-3. 📋 다음 단계: 프리이미지 오라클 통신 프로토콜 검증 필요
-
-#### 2. Kona 유닛 테스트 결과
-**상태**: ⚠️ 주의 - 바이섹션과 무관한 테스트 실패 있음
-
-**테스트 실행 환경**:
-- 저장소: `/Users/zena/tokamak-projects/kona`
-- Rust 버전: Cargo nightly 1.93.0 (edition2024 필요)
-- 실행 명령어: `cargo +nightly test --workspace --no-fail-fast`
-- 컴파일 시간: 2분 2초
-- 총 테스트 수: 수백 개
-
-**테스트 결과 요약**:
-- ✅ **총 통과**: 172개
-- ❌ **총 실패**: 31개
-- 실패한 패키지:
-  - `kona-engine` (28 passed, **4 failed**)
-  - `kona-protocol` (144 passed, **27 failed**)
-
-**실패한 테스트 상세**:
-
-**kona-engine 실패 (4개)** - 모두 metrics 관련:
-```
-test state::core::test::test_chain_label_metrics::case_2_set_cross_unsafe ... FAILED
-test state::core::test::test_chain_label_metrics::case_3_set_local_safe ... FAILED
-test state::core::test::test_chain_label_metrics::case_4_set_safe_head ... FAILED
-test state::core::test::test_chain_label_metrics::case_5_set_finalized_head ... FAILED
-```
-
-**kona-protocol 실패 (27개)** - 모두 배치 검증 관련:
-```
-test batch::span::tests::test_check_batch_* ... FAILED (27개)
-```
-예시:
-- `test_check_batch_exceeds_sequencer_time_drift`
-- `test_check_batch_epoch_hash_mismatch`
-- `test_check_batch_delta_inactive`
-- `test_check_batch_failed_to_fetch_l2_block`
-- `test_check_batch_misaligned_timestamp`
-- `test_check_batch_parent_hash_fail`
-- 기타 배치 유효성 검증 관련 테스트 (총 27개)
-
-**✅ 중요: 바이섹션 로직은 정상**
-- **실패한 31개 테스트 모두 바이섹션/fault-proof 로직과 무관**
-- 실패 영역: Chain label metrics, Batch span validation
-- Kona의 핵심 fault-proof 계산 로직은 문제 없음
-- E2E 정지 이슈는 통합 레이어 문제로 확인
-
-#### 3. 프리이미지 통신 검증 필요
-**우선순위**: 🔴 높음
-
-**검증 대상**:
-- kona-host 프리이미지 서버가 응답하는지 확인
-- kona-client(Asterisc VM 내부)의 프리이미지 요청이 도달하는지 확인
-- Preimage oracle wire protocol 호환성 확인
-- Rollup config 전달 경로 검증 (chain ID 0 경고 해결)
-
-**디버깅 방법**:
-1. kona-host에 verbose 로깅 추가하여 요청 수신 여부 확인
-2. Asterisc VM 로그에서 프리이미지 요청 로그 확인
-3. kona-client 로그에서 rollup config 로드 실패 원인 파악
-4. 프리이미지 오라클 프로토콜 호환성 테스트
-
-### 🐛 수정해야 할 버그
-
-#### 1. 🔴 심각: E2E 테스트 Deadlock (최우선)
-**위치**: kona-client ↔ kona-host 통신 레이어
-**증상**: Split Depth 이후 첫 instruction에서 완전히 정지
-**영향**: 모든 Asterisc-Kona E2E 테스트 차단
-**재현율**: 100% (모든 테스트 실행 시 발생)
-**해결 방안**: 프리이미지 통신 프로토콜 디버깅 및 수정 필요
-
-#### 2. ⚠️ 중간: Rollup Config 전달 실패
-**위치**: kona-client (Asterisc VM 내부)
-**증상**: "No rollup config found for chain ID 0" 경고
-**영향**: Kona-client가 rollup config를 읽지 못함 (deadlock의 원인일 수 있음)
-**재현율**: 100%
-**해결 방안**:
-- kona-host가 rollup config를 올바르게 전달하는지 확인
-- kona-client의 rollup config 로드 로직 검증
-- Preimage oracle을 통한 config 전달 경로 확인
-
-#### 3. ⚠️ 낮음: Kona 유닛 테스트 실패 (선택적)
-**위치**: kona-engine, kona-protocol
-**증상**: Metrics 및 배치 검증 테스트 31개 실패
-**영향**: Fault-proof 핵심 로직과 무관, E2E 테스트 차단과 무관
-**재현율**: 100%
-**해결 방안**:
-- Kona 팀에 리포트 (업스트림 이슈)
-- 현재 E2E 테스트 해결을 우선순위로 함
-
-### 📝 다음 단계
-
-**즉시 조치**:
-1. 🔴 kona-host와 kona-client 간 프리이미지 통신 디버깅
-2. 🔴 Verbose 로깅 추가하여 deadlock 지점 정확히 파악
-3. 🟡 Rollup config 전달 경로 검증 및 수정
-
-**단기 목표** (E2E 테스트 통과):
-1. Deadlock 원인 파악 및 수정
-2. `TestOutputAsteriscKonaGame` 성공적으로 완료
-3. 나머지 11개 E2E 테스트 실행 및 검증
-
-**장기 목표** (선택적):
-1. Kona 유닛 테스트 실패 31개 수정 (업스트림 기여)
-2. 전체 테스트 스위트 안정화
 
 ## 참고 문서
 
