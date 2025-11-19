@@ -450,21 +450,29 @@ build_kona() {
     # Generate prestate.json with state hash
     local prestate_json="$KONA_TARGET_DIR/prestate.json"
     log_info "Generating prestate.json..."
-    if ! "$asterisc_bin" witness --input "$prestate_bin" --output "" --proof-at never --snapshot-at never 2>&1 | grep -q "final state:"; then
-        # If witness doesn't work, try computing hash from the binary
-        if command -v sha256sum >/dev/null 2>&1; then
-            state_hash=$(gunzip -c "$prestate_bin" | sha256sum | awk '{print "0x" $1}')
+
+    # Extract state hash from asterisc witness JSON output
+    local witness_output
+    witness_output=$("$asterisc_bin" witness --input "$prestate_bin" 2>&1)
+
+    if [ $? -eq 0 ]; then
+        # Extract stateHash from JSON output using jq if available, otherwise use grep
+        if command -v jq >/dev/null 2>&1; then
+            state_hash=$(echo "$witness_output" | jq -r '.stateHash')
+        else
+            state_hash=$(echo "$witness_output" | grep -o '"stateHash"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)"/\1/')
+        fi
+
+        if [ -n "$state_hash" ] && [ "$state_hash" != "null" ]; then
             printf '{\n  "pre": "%s"\n}\n' "$state_hash" > "$prestate_json"
             log_success "✅ Generated prestate.json with hash: $state_hash"
         else
-            log_error "❌ Failed to generate prestate.json - sha256sum not available"
+            log_error "❌ Failed to extract stateHash from asterisc witness output"
             return 1
         fi
     else
-        # Extract state hash from witness output
-        state_hash=$("$asterisc_bin" witness --input "$prestate_bin" --output "" --proof-at never --snapshot-at never 2>&1 | grep "final state:" | awk '{print $NF}')
-        printf '{\n  "pre": "%s"\n}\n' "$state_hash" > "$prestate_json"
-        log_success "✅ Generated prestate.json with hash: $state_hash"
+        log_error "❌ Failed to run asterisc witness command"
+        return 1
     fi
 
     # Generate prestate-proof.json (at step 0)
