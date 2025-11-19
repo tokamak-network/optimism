@@ -130,7 +130,24 @@ func (a *Agent) performAction(ctx context.Context, wg *sync.WaitGroup, action ty
 			actionLog = actionLog.New("oracleKey", common.Bytes2Hex(action.OracleData.OracleKey))
 		}
 	} else if action.Type == types.ActionTypeMove {
-		actionLog = actionLog.New("is_attack", action.IsAttack, "parent", action.ParentClaim.ContractIndex, "value", action.Value)
+		parentPos := action.ParentClaim.Position
+		attackOrDefend := "DEFEND"
+		newPos := parentPos.Defend()
+		if action.IsAttack {
+			attackOrDefend = "ATTACK"
+			newPos = parentPos.Attack()
+		}
+		traceIndex := newPos.TraceIndex(a.maxDepth)
+		actionLog = actionLog.New(
+			"move_type", attackOrDefend,
+			"is_attack", action.IsAttack,
+			"parent", action.ParentClaim.ContractIndex,
+			"parent_depth", parentPos.Depth(),
+			"new_depth", newPos.Depth(),
+			"position", newPos,
+			"trace_index", traceIndex,
+			"value", action.Value,
+		)
 	}
 
 	switch action.Type {
