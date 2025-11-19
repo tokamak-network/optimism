@@ -205,6 +205,32 @@ func RunPreimageServer(ctx context.Context, logger log.Logger, cfg *config.Confi
 		}
 	}
 
+	// Wrap hinter with logging
+	originalHinter := hinter
+	hinter = func(hint string) error {
+		logger.Info("Kona-Host -> Host: Hint request", "hint", hint)
+		err := originalHinter(hint)
+		if err != nil {
+			logger.Error("Kona-Host -> Host: Hint failed", "hint", hint, "err", err)
+		} else {
+			logger.Debug("Kona-Host -> Host: Hint processed", "hint", hint)
+		}
+		return err
+	}
+
+	// Wrap getPreimage with logging
+	originalGetPreimage := getPreimage
+	getPreimage = func(key common.Hash) ([]byte, error) {
+		logger.Info("Kona-Host -> Host: Preimage request", "key", key.Hex())
+		data, err := originalGetPreimage(key)
+		if err != nil {
+			logger.Error("Kona-Host -> Host: Preimage failed", "key", key.Hex(), "err", err)
+		} else {
+			logger.Debug("Kona-Host -> Host: Preimage response", "key", key.Hex(), "size", len(data))
+		}
+		return data, err
+	}
+
 	localPreimageSource := kvstore.NewLocalPreimageSource(cfg)
 	splitter := kvstore.NewPreimageSourceSplitter(localPreimageSource.Get, getPreimage)
 	preimageGetter := preimage.WithVerification(splitter.Get)

@@ -42,9 +42,11 @@ func (s *OpProgramServerExecutor) OracleCommand(cfg Config, dataDir string, inpu
 	if cfg.DepsetConfigPath != "" {
 		args = append(args, "--depset.config", cfg.DepsetConfigPath)
 	}
+	// Pass network name for standard chains
 	if len(cfg.Networks) != 0 {
 		args = append(args, "--network", strings.Join(cfg.Networks, ","))
 	}
+	// Pass rollup config for custom chains (loaded via preimage oracle when --l2.custom is set)
 	if len(cfg.RollupConfigPaths) != 0 {
 		args = append(args, "--rollup.config", strings.Join(cfg.RollupConfigPaths, ","))
 	}
