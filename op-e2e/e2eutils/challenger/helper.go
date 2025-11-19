@@ -194,6 +194,7 @@ func NewChallengerConfig(t *testing.T, sys EndpointProvider, l2NodeName string, 
 		cfg = config.NewConfig(common.Address{}, l1Endpoint, l1Beacon, sys.RollupEndpoint(l2NodeName).RPC(), sys.NodeEndpoint(l2NodeName).RPC(), t.TempDir())
 	}
 	cfg.Cannon.L2Custom = true
+	cfg.Asterisc.L2Custom = true
 	cfg.AsteriscKona.L2Custom = true
 	// The devnet can't set the absolute prestate output root because the contracts are deployed in L1 genesis
 	// before the L2 genesis is known.
