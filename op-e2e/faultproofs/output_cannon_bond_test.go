@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"strings"
 	"testing"
-	"time"
 
 	faultTypes "github.com/ethereum-optimism/optimism/op-challenger/game/fault/types"
 	gameTypes "github.com/ethereum-optimism/optimism/op-challenger/game/types"
@@ -73,18 +72,30 @@ func TestOutputCannonBondCostMeasurement(t *testing.T) {
 
 	// Challenger already resolves claims and game automatically, so we skip manual resolve
 	/*
-	// Properly resolve the first game to update the absolute prestate
-	// Must do this BEFORE WaitForGameStatus, otherwise game will already be resolved
-	t.Logf("Resolving root claim...")
-	game1.ResolveClaim(ctx, 0)
+		// Properly resolve the first game to update the absolute prestate
+		// Must do this BEFORE WaitForGameStatus, otherwise game will already be resolved
+		t.Logf("Resolving root claim...")
+		game1.ResolveClaim(ctx, 0)
 
-	t.Logf("Resolving entire first game...")
-	game1.Resolve(ctx)
+		t.Logf("Resolving entire first game...")
+		game1.Resolve(ctx)
 	*/
+
+	// Wait for the finality delay to pass before closing the game
+	// Create 10 L1 blocks (6 seconds each = 60 seconds total) to ensure finalization is complete
+	// This ensures block.timestamp - resolvedAt > DISPUTE_GAME_FINALITY_DELAY_SECONDS (6 seconds)
+	t.Logf("Creating L1 blocks for finality delay...")
+	for i := 0; i < 10; i++ {
+		require.NoError(t, wait.ForNextBlock(ctx, l1Client))
+	}
 
 	// Wait for challenger to complete resolve
 	t.Logf("Waiting for challenger to complete resolve...")
-	time.Sleep(5 * time.Second)
+	game1.WaitForGameResolved(ctx)
+
+	for i := 0; i < 10; i++ {
+		require.NoError(t, wait.ForNextBlock(ctx, l1Client))
+	}
 
 	// Close the game (this changes the game status)
 	t.Logf("Closing game...")
@@ -180,9 +191,21 @@ func TestOutputCannonBondCostMeasurement(t *testing.T) {
 	t.Logf("Waiting for challenger to finish...")
 	game2.WaitForInactivity(ctx, 2, false)
 
+	// Wait for the finality delay to pass before closing the game
+	// Create 10 L1 blocks (6 seconds each = 60 seconds total) to ensure finalization is complete
+	// This ensures block.timestamp - resolvedAt > DISPUTE_GAME_FINALITY_DELAY_SECONDS (6 seconds)
+	t.Logf("Creating L1 blocks for finality delay...")
+	for i := 0; i < 10; i++ {
+		require.NoError(t, wait.ForNextBlock(ctx, l1Client))
+	}
+
 	// Wait for challenger to complete resolve
 	t.Logf("Waiting for challenger to complete resolve...")
-	time.Sleep(5 * time.Second)
+	game2.WaitForGameResolved(ctx)
+
+	for i := 0; i < 10; i++ {
+		require.NoError(t, wait.ForNextBlock(ctx, l1Client))
+	}
 
 	// Close the second game
 	t.Logf("Closing second game...")

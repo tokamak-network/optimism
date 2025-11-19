@@ -58,9 +58,21 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - **목적:** 모든 클레임이 제로(0x00...)인 경우 Asterisc 챌린저가 정상적으로 반박하는지 검증.
 - **실행 방법:**
   ```bash
+  # 전체 테스트 (mt-cannon, mt-cannon-next 두 VM 타입 모두 실행)
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsterisc_ChallengeAllZeroClaim"
+
+  # mt-cannon 서브테스트만 실행 (단일 VM)
+  go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/mt-cannon$"
+
+  # 백그라운드로 실행하고 로그 저장
+  timeout 1200s go test -v -timeout 20m ./op-e2e/faultproofs \
+    -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/mt-cannon$" \
+    2>&1 > /tmp/gametype2_mt_cannon_only.log &
+
+  # 로그 확인
+  tail -f /tmp/gametype2_mt_cannon_only.log
   ```
-- **결과 및 소요 시간:** ✅ PASS, 약 230초 (~3.8분).
+- **결과 및 소요 시간:** ✅ PASS, 약 265초 (~4.4분).
 - **비고:**
   - Dishonest actor가 항상 all-zero 클레임을 제출하는 극단적 시나리오.
   - Cannon의 `testCannonChallengeAllZeroClaim` 로직을 재사용.
@@ -339,7 +351,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 
 ### ✅ 성공한 테스트 (총 13개)
 1. **TestOutputAsteriscGame** - 기본 게임 플레이 흐름 (PASS, ~227초)
-2. **TestOutputAsterisc_ChallengeAllZeroClaim** - All-zero 클레임 챌린지 (PASS, ~230초)
+2. **TestOutputAsterisc_ChallengeAllZeroClaim** - All-zero 클레임 챌린지 (PASS, ~265초)
 3. **TestOutputAsterisc_PublishAsteriscRootClaim** - 루트 클레임 발행 (PASS, ~230초)
 4. **TestOutputAsteriscDisputeGame** - 다양한 depth 분쟁 (PASS, ~250초)
 5. **TestOutputAsteriscDefendStep** - Step 방어 (PASS, ~332초) ✨ 수정 후 성공
@@ -440,6 +452,26 @@ go test -v -timeout 60m ./op-e2e/faultproofs -run "TestOutputAsterisc.*Preimage"
 
 # Step 관련 모든 테스트
 go test -v -timeout 40m ./op-e2e/faultproofs -run "TestOutputAsterisc.*Step"
+```
+
+### 특정 서브테스트만 실행
+```bash
+# mt-cannon 서브테스트만 실행 (mt-cannon-next 제외)
+go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/mt-cannon$"
+
+# mt-cannon-next 서브테스트만 실행
+go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/mt-cannon-next$"
+
+# 백그라운드로 실행하고 로그 저장
+timeout 1200s go test -v -timeout 20m ./op-e2e/faultproofs \
+  -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/mt-cannon$" \
+  2>&1 > /tmp/mt_cannon_only.log &
+
+# 실시간 로그 확인
+tail -f /tmp/mt_cannon_only.log
+
+# 결과 확인
+grep -E "PASS|FAIL" /tmp/mt_cannon_only.log
 ```
 
 ## 요약

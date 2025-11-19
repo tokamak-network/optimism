@@ -3,7 +3,6 @@ package faultproofs
 import (
 	"context"
 	"testing"
-	"time"
 
 	gameTypes "github.com/ethereum-optimism/optimism/op-challenger/game/types"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/disputegame"
@@ -60,8 +59,19 @@ func testCannonGame(t *testing.T, ctx context.Context, arena gameArena, game *di
 	// Wait for challenger to finish making moves after time advance
 	game.WaitForInactivity(ctx, 2, false)
 
+	// Wait for the finality delay to pass before closing the game
+	// Create 10 L1 blocks (6 seconds each = 60 seconds total) to ensure finalization is complete
+	// This ensures block.timestamp - resolvedAt > DISPUTE_GAME_FINALITY_DELAY_SECONDS (6 seconds)
+	for i := 0; i < 10; i++ {
+		require.NoError(t, wait.ForNextBlock(ctx, arena.L1Client()))
+	}
+
 	// Wait for challenger to complete resolve
-	time.Sleep(5 * time.Second)
+	game.WaitForGameResolved(ctx)
+
+	for i := 0; i < 10; i++ {
+		require.NoError(t, wait.ForNextBlock(ctx, arena.L1Client()))
+	}
 
 	// Close the game to change the game status
 	game.CloseGame(ctx)
@@ -86,6 +96,24 @@ func testCannonChallengeAllZeroClaim(t *testing.T, ctx context.Context, arena ga
 
 	arena.AdvanceTime(game.MaxClockDuration(ctx))
 	require.NoError(t, wait.ForNextBlock(ctx, arena.L1Client()))
+
+	// Wait for the finality delay to pass before closing the game
+	// Create 6 L1 blocks (6 seconds each = 36 seconds total) to ensure finalization is complete
+	// This ensures block.timestamp - resolvedAt > DISPUTE_GAME_FINALITY_DELAY_SECONDS (6 seconds)
+	for i := 0; i < 10; i++ {
+		require.NoError(t, wait.ForNextBlock(ctx, arena.L1Client()))
+	}
+
+	// Wait for challenger to complete resolve
+	game.WaitForGameResolved(ctx)
+
+	for i := 0; i < 10; i++ {
+		require.NoError(t, wait.ForNextBlock(ctx, arena.L1Client()))
+	}
+
+	// Close the game to change the game status
+	game.CloseGame(ctx)
+
 	game.WaitForGameStatus(ctx, gameTypes.GameStatusChallengerWon)
 	game.LogGameData(ctx)
 }
@@ -111,6 +139,24 @@ func testCannonDefendStep(t *testing.T, ctx context.Context, arena gameArena, ga
 
 	arena.AdvanceTime(game.MaxClockDuration(ctx))
 	require.NoError(t, wait.ForNextBlock(ctx, arena.L1Client()))
+
+	// Wait for the finality delay to pass before closing the game
+	// Create 10 L1 blocks (6 seconds each = 60 seconds total) to ensure finalization is complete
+	// This ensures block.timestamp - resolvedAt > DISPUTE_GAME_FINALITY_DELAY_SECONDS (6 seconds)
+	for i := 0; i < 10; i++ {
+		require.NoError(t, wait.ForNextBlock(ctx, arena.L1Client()))
+	}
+
+	// Wait for challenger to complete resolve
+	game.WaitForGameResolved(ctx)
+
+	for i := 0; i < 10; i++ {
+		require.NoError(t, wait.ForNextBlock(ctx, arena.L1Client()))
+	}
+
+	// Close the game to change the game status
+	game.CloseGame(ctx)
+
 	game.WaitForGameStatus(ctx, gameTypes.GameStatusChallengerWon)
 }
 
