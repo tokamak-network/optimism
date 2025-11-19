@@ -306,6 +306,20 @@ func (g *SplitGameHelper) CloseGame(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
+	// Log L1 block timestamp and resolvedAt before closing the game
+	l1Block, err := g.Client.BlockByNumber(ctx, nil)
+	if err == nil && l1Block != nil {
+		resolvedAt, err := g.Game.GetResolvedAt(ctx, rpcblock.Latest)
+		if err == nil {
+			timeDiff := l1Block.Time() - uint64(resolvedAt.Unix())
+			g.T.Logf("CloseGame: L1 block timestamp: %d (Unix: %d), resolvedAt: %d (Unix: %d), timeDiff: %d seconds, finalityDelay: 6 seconds",
+				l1Block.Time(), l1Block.Time(), resolvedAt.Unix(), resolvedAt.Unix(), timeDiff)
+		} else {
+			g.T.Logf("CloseGame: L1 block timestamp: %d (Unix: %d), failed to get resolvedAt: %v",
+				l1Block.Time(), l1Block.Time(), err)
+		}
+	}
+
 	// Create transaction to call closeGame on the contract
 	gameAbi := snapshots.LoadFaultDisputeGameABI()
 	txData, err := gameAbi.Pack("closeGame")
@@ -336,6 +350,35 @@ func (g *SplitGameHelper) WaitForBondModeDecided(ctx context.Context) {
 		return bondMode != types.UndecidedDistributionMode, nil
 	})
 	g.Require.NoError(err, "Failed to wait for bond mode to be set")
+}
+
+func (g *SplitGameHelper) WaitForGameResolved(ctx context.Context) {
+	g.T.Logf("Waiting for game %v to be resolved", g.Addr)
+	timedCtx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+	err := wait.For(timedCtx, time.Second, func() (bool, error) {
+		ctx, cancel := context.WithTimeout(timedCtx, 30*time.Second)
+		defer cancel()
+		resolvedAt, err := g.Game.GetResolvedAt(ctx, rpcblock.Latest)
+		if err != nil {
+			return false, fmt.Errorf("failed to get resolvedAt: %w", err)
+		}
+		isResolved := resolvedAt.Unix() != 0
+		g.T.Logf("Game %v resolvedAt: %v (Unix: %d), isResolved: %v", g.Addr, resolvedAt, resolvedAt.Unix(), isResolved)
+
+		// Get L1 block timestamp for finality check
+		if isResolved {
+			l1Block, err := g.Client.BlockByNumber(ctx, nil)
+			if err == nil && l1Block != nil {
+				timeDiff := l1Block.Time() - uint64(resolvedAt.Unix())
+				g.T.Logf("L1 block timestamp: %d (Unix: %d), timeDiff: %d seconds (resolvedAt: %d)",
+					l1Block.Time(), l1Block.Time(), timeDiff, resolvedAt.Unix())
+			}
+		}
+
+		return isResolved, nil
+	})
+	g.Require.NoErrorf(err, "wait for Game to be resolved. Game state: \n%v", g.GameData(ctx))
 }
 
 func (g *SplitGameHelper) WaitForGameStatus(ctx context.Context, expected gameTypes.GameStatus) {
@@ -568,6 +611,12 @@ func (g *SplitGameHelper) Attack(ctx context.Context, claimIdx int64, claim comm
 		}
 		g.Require.NoErrorf(err, "Defend transaction failed. Game state: \n%v", g.GameData(ctx))
 	}
+
+	// Log the new claim details
+	maxDepth := g.MaxDepth(ctx)
+	splitDepth := g.SplitDepth(ctx)
+	g.T.Logf("Created ATTACK claim - Parent: %v, Depth: %v, Position: %v (gindex: %v), Trace Index: %v, Split Depth: %v, Max Depth: %v",
+		claimIdx, attackPos.Depth(), attackPos, attackPos.ToGIndex(), attackPos.TraceIndex(maxDepth), splitDepth, maxDepth)
 }
 
 func (g *SplitGameHelper) Defend(ctx context.Context, claimIdx int64, claim common.Hash, Opts ...MoveOpt) {
@@ -587,6 +636,12 @@ func (g *SplitGameHelper) Defend(ctx context.Context, claimIdx int64, claim comm
 		}
 		g.Require.NoErrorf(err, "Defend transaction failed. Game state: \n%v", g.GameData(ctx))
 	}
+
+	// Log the new claim details
+	maxDepth := g.MaxDepth(ctx)
+	splitDepth := g.SplitDepth(ctx)
+	g.T.Logf("Created DEFEND claim - Parent: %v, Depth: %v, Position: %v (gindex: %v), Trace Index: %v, Split Depth: %v, Max Depth: %v",
+		claimIdx, defendPos.Depth(), defendPos, defendPos.ToGIndex(), defendPos.TraceIndex(maxDepth), splitDepth, maxDepth)
 }
 
 func (g *SplitGameHelper) hasClaim(ctx context.Context, parentIdx int64, pos types.Position, value common.Hash) bool {

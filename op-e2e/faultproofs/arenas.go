@@ -21,6 +21,7 @@ type gameArena interface {
 	GetProposalRoot(ctx context.Context, l2SequenceNumber uint64) common.Hash
 	CreateChallenger(ctx context.Context)
 	CreateHonestActor(ctx context.Context) *disputegame.OutputHonestHelper
+	DisputeGameFinalityDelaySeconds() uint64
 }
 
 type outputGameArena struct {
@@ -49,6 +50,10 @@ func (o *outputGameArena) CreateChallenger(ctx context.Context) {
 
 func (o *outputGameArena) CreateHonestActor(ctx context.Context) *disputegame.OutputHonestHelper {
 	return o.game.CreateHonestActor(ctx, "sequencer", disputegame.WithPrivKey(o.sys.Cfg.Secrets.Mallory))
+}
+
+func (o *outputGameArena) DisputeGameFinalityDelaySeconds() uint64 {
+	return o.sys.Cfg.DeployConfig.DisputeGameFinalityDelaySeconds
 }
 
 func createOutputGameArena(t *testing.T, sys *e2esys.System, game *disputegame.OutputCannonGameHelper) gameArena {
@@ -87,6 +92,13 @@ func (s *superGameArena) CreateHonestActor(ctx context.Context) *disputegame.Out
 	return s.game.CreateHonestActor(ctx, disputegame.WithPrivKey(malloryKey(s.t)), func(c *disputegame.HonestActorConfig) {
 		c.ChallengerOpts = append(c.ChallengerOpts, challenger.WithDepset(s.t, s.sys.DependencySet()))
 	})
+}
+
+func (s *superGameArena) DisputeGameFinalityDelaySeconds() uint64 {
+	// In the interop/supersystem environment, this value is set in the recipe's
+	// SuperchainConfig.Implementations.FaultProof.DisputeGameFinalityDelaySeconds
+	// which is hardcoded to 6 seconds for the dev test environment
+	return 6
 }
 
 func createSuperGameArena(t *testing.T, sys interop.SuperSystem, game *disputegame.SuperCannonGameHelper) gameArena {
