@@ -67,6 +67,10 @@ func applyCannonConfig(c *config.Config, rollupCfgs []*rollup.Config, l2Geneses 
 	}
 	c.Cannon.SnapshotFreq = 10_000_000
 
+	// Clear existing paths to avoid duplicates
+	c.Cannon.L2GenesisPaths = nil
+	c.Cannon.RollupConfigPaths = nil
+
 	for _, l2Genesis := range l2Geneses {
 		genesisBytes, err := json.Marshal(l2Genesis)
 		if err != nil {
@@ -103,9 +107,14 @@ func applyAsteriscConfig(c *config.Config, rollupCfgs []*rollup.Config, l2Genese
 	// E2E tests use bin-e2e for Mac-native binaries
 	c.Asterisc.VmBin = root + "asterisc/bin-e2e/asterisc"
 	c.Asterisc.Server = root + "op-program/bin-e2e/op-program"
-	// Asterisc uses binary archive prestate format (.bin.gz)
+	// Asterisc VM is RISC-V based, so always use the asterisc prestate regardless of variant
+	// MT-Cannon variants refer to MIPS64 multi-threaded Cannon, not applicable to Asterisc
 	c.AsteriscAbsolutePreState = root + "op-program/bin-e2e/prestate-asterisc.bin.gz"
 	c.Asterisc.SnapshotFreq = 10_000_000
+
+	// Clear existing paths to avoid duplicates
+	c.Asterisc.L2GenesisPaths = nil
+	c.Asterisc.RollupConfigPaths = nil
 
 	for _, l2Genesis := range l2Geneses {
 		genesisBytes, err := json.Marshal(l2Genesis)
@@ -146,6 +155,10 @@ func applyAsteriscKonaConfig(c *config.Config, rollupCfgs []*rollup.Config, l2Ge
 	// Kona uses a single universal prestate file regardless of variant
 	c.AsteriscKonaAbsolutePreState = root + "kona/bin-e2e/prestate.bin.gz"
 	c.AsteriscKona.SnapshotFreq = 10_000_000
+
+	// Clear existing paths to avoid duplicates
+	c.AsteriscKona.L2GenesisPaths = nil
+	c.AsteriscKona.RollupConfigPaths = nil
 
 	for _, l2Genesis := range l2Geneses {
 		genesisBytes, err := json.Marshal(l2Genesis)
@@ -267,6 +280,8 @@ func NewPreInteropChallengerConfig(dir string, l1Endpoint string, l1Beacon strin
 
 func applyCommonChallengerOpts(cfg *config.Config, options ...Option) error {
 	cfg.Cannon.L2Custom = true
+	cfg.Asterisc.L2Custom = true
+	cfg.AsteriscKona.L2Custom = true
 	// The devnet can't set the absolute prestate output root because the contracts are deployed in L1 genesis
 	// before the L2 genesis is known.
 	cfg.AllowInvalidPrestate = true
