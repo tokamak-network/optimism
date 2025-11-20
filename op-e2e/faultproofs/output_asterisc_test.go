@@ -185,8 +185,8 @@ func testOutputAsteriscStepWithLargePreimage(t *testing.T, allocType config.Allo
 	// execution game. We then move to challenge it to induce a large preimage load.
 	sender := sys.Cfg.Secrets.Addresses().Alice
 	preimageLoadCheck := game.CreateStepLargePreimageLoadCheck(ctx, sender)
-	providerFunc := game.NewMemoizedCannonTraceProvider(ctx, "sequencer", outputRootClaim, challenger.WithPrivKey(sys.Cfg.Secrets.Alice))
-	game.ChallengeToPreimageLoad(ctx, providerFunc, utils.PreimageLargerThan(preimage.MinPreimageSize), preimageLoadCheck, false)
+	providerFunc := game.NewMemoizedAsteriscTraceProvider(ctx, "sequencer", outputRootClaim, challenger.WithPrivKey(sys.Cfg.Secrets.Alice))
+	game.ChallengeToAsteriscPreimageLoad(ctx, providerFunc, utils.PreimageLargerThan(preimage.MinPreimageSize), preimageLoadCheck, false)
 	// The above method already verified the image was uploaded and step called successfully
 	// So we don't waste time resolving the game - that's tested elsewhere.
 }
