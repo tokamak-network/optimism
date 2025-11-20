@@ -149,14 +149,12 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - **목적:** Honest challenger가 Asterisc VM을 사용하여 올바른 증거로 방어 스텝을 수행하는지 검증.
 - **실행 방법:**
   ```bash
-  go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscDefendStep$/mt-cannon$"
+  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscDefendStep$/mt-cannon$"
   ```
-- **결과 및 소요 시간:** ✅ PASS, 약 332초 (~5.5분).
+- **결과 및 소요 시간:** ✅ PASS, 약 330초 (~5.5분).
 - **비고:**
   - Cannon의 `testCannonDefendStep` 로직을 재사용.
   - Dishonest actor의 공격에 대해 올바른 step 증거로 방어.
-  - **이전 실패 원인:** CreateHonestActor가 항상 Cannon VM을 사용하도록 하드코딩됨.
-  - **수정 사항:** CreateHonestActor에서 cfg.TraceTypes 기반 VM 선택 로직 추가 (op-e2e/e2eutils/disputegame/output_cannon_helper.go:96-134).
 - **실행 흐름:**
   1. 잘못된 루트 클레임으로 Asterisc 게임 생성.
   2. Honest challenger가 Asterisc VM으로 올바른 trace 생성.
@@ -173,9 +171,12 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - **목적:** 대용량 프리이미지(preimage)를 포함하는 L1 배치(batch)에 대한 Asterisc 증거 생성 및 검증.
 - **실행 방법:**
   ```bash
-  go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscStepWithLargePreimage$/mt-cannon$"
+  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscStepWithLargePreimage$/mt-cannon$"
+
+  # 백그라운드 실행 및 로그 저장
+  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscStepWithLargePreimage$/mt-cannon$" 2>&1 | tee /tmp/test_large_preimage_asterisc.log &
   ```
-- **결과 및 소요 시간:** ✅ PASS, 약 280초 (~4.7분).
+- **결과 및 소요 시간:** ✅ PASS, 약 340초 (~5.7분).
 - **비고:**
   - Batcher를 중지한 상태에서 수동으로 대용량 무효 배치를 전송.
   - op-program이 대용량 프리이미지를 로드하도록 강제.
@@ -186,7 +187,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   3. Batcher 재시작 후 유효한 배치 제출 재개.
   4. Safe head가 진행되면 해당 L2 블록에 대한 Asterisc 게임 생성.
   5. Honest challenger가 실행 게임의 root를 반박.
-  6. `ChallengeToPreimageLoad`로 대용량 프리이미지 로드를 유도.
+  6. `ChallengeToAsteriscPreimageLoad`로 대용량 프리이미지 로드를 유도.
   7. 프리이미지가 성공적으로 업로드되고 step이 호출되는지 확인.
 - **주요 기능 검증:**
   - Asterisc VM이 대용량 프리이미지를 처리할 수 있는지 확인.
@@ -362,7 +363,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 2. **TestOutputAsterisc_ChallengeAllZeroClaim** - All-zero 클레임 챌린지 (PASS, ~265초)
 3. **TestOutputAsterisc_PublishAsteriscRootClaim** - 루트 클레임 발행 (PASS, ~128초)
 4. **TestOutputAsteriscDisputeGame** - 다양한 depth 분쟁 (PASS, ~922초)
-5. **TestOutputAsteriscDefendStep** - Step 방어 (PASS, ~332초)
+5. **TestOutputAsteriscDefendStep** - Step 방어 (PASS, ~330초)
 6. **TestOutputAsteriscStepWithLargePreimage** - 대용량 프리이미지 (PASS, ~280초)
 7. **TestOutputAsteriscStepWithPreimage_nonExistingPreimage** - 프리이미지 타입 (PASS, ~380초)
 8. **TestOutputAsteriscStepWithPreimage_nonExistingBlobPreimage** - Blob 프리이미지 (PASS, ~580초)
