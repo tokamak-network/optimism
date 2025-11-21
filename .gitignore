@@ -94,6 +94,7 @@ tmp/
 asterisc/bin/
 asterisc/bin-e2e/
 op-program/bin-e2e/
+op-program/bin-riscv/
 cannon/bin-e2e/
 kona/bin-e2e/
 kona/bin/
@@ -114,3 +115,14 @@ simple-devnet--*/
 # Script backup files
 op-challenger/scripts/README-v1.md.backup
 op-challenger/scripts/build-devnet copy.sh
+
+# Test artifacts and logs
+*.test
+test_*.json
+test_*.bin.gz
+test_*.log
+*_test_log.txt
+tmp/testlogs/
+tmp/test-results/
+gas_report.txt
+*.gz
