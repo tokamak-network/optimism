@@ -30,15 +30,15 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - **목적:** Asterisc (GameType 2) RISC-V fault proof 시스템의 기본 게임 플레이 흐름 검증.
 - **실행 방법:**
   ```bash
-  go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscGame$/mt-cannon$"
+  go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscGame$/asterisc$"
 
   # 백그라운드 실행 및 로그 저장
-  go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscGame$/mt-cannon$" 2>&1 | tee /tmp/test_asterisc_mt_cannon.log &
+  go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscGame$/asterisc$" 2>&1 | tee /tmp/test_asterisc_asterisc.log &
   ```
 - **결과 및 소요 시간:** ✅ PASS, 약 285초 (~4.75분).
 - **비고:**
-  - 두 가지 VM allocator 타입(`mt-cannon`, `mt-cannon-next`)에 대해 각각 테스트 실행.
-  - Cannon 테스트와 동일한 로직을 Asterisc VM으로 수행.
+  - 두 가지 VM allocator 타입(`asterisc`, `asterisc-kona`)에 대해 각각 테스트 실행.
+  - Cannon 테스트와 동일한 로직을 Asterisc VM (RISC-V)으로 수행.
   - 표준 배포 로그 후 챌린저가 분쟁을 해결하며, 예상되는 가스 팁 조정 외 특이사항 없음.
   - **중요:** Syscall 101 (nanosleep) 지원이 Slow VM에 추가됨 (Go 1.23+ 호환성).
 - **실행 흐름:**
@@ -65,11 +65,11 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsterisc_ChallengeAllZeroClaim"
 
   # mt-cannon 서브테스트만 실행 (단일 VM)
-  go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/mt-cannon$"
+  go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/asterisc$"
 
   # 백그라운드로 실행하고 로그 저장
   timeout 1200s go test -v -timeout 20m ./op-e2e/faultproofs \
-    -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/mt-cannon$" \
+    -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/asterisc$" \
     2>&1 > /tmp/gametype2_mt_cannon_only.log &
 
   # 로그 확인
@@ -95,7 +95,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - **목적:** 다양한 L2 블록 번호(유효/무효 post-state)에서 Asterisc 루트 클레임 발행 및 분쟁 시작을 검증.
 - **실행 방법:**
   ```bash
-  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsterisc_PublishAsteriscRootClaim$/mt-cannon$"
+  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsterisc_PublishAsteriscRootClaim$/asterisc$"
   ```
 - **결과 및 소요 시간:** ✅ PASS, 약 128초 (~2.1분).
   - **Dispute_7_mt-cannon**: ✅ PASS, 62.14초 (~1.0분) - 블록 7, 무효 post-state
@@ -120,12 +120,12 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - **목적:** 분쟁 트리의 다양한 깊이(첫 번째, 중간, 확장)에서 Asterisc 방어 클레임을 테스트.
 - **실행 방법:**
   ```bash
-  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscDisputeGame$/mt-cannon$"
+  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscDisputeGame$/asterisc$"
   ```
 - **결과 및 소요 시간:** ✅ PASS, 약 922초 (~15.4분).
-  - **StepFirst-mt-cannon**: ✅ PASS, 309.86초 (~5.2분)
-  - **StepMiddle-mt-cannon**: ✅ PASS, 307.93초 (~5.1분)
-  - **StepInExtension-mt-cannon**: ✅ PASS, 304.00초 (~5.1분)
+  - **StepFirst-asterisc**: ✅ PASS, 309.86초 (~5.2분)
+  - **StepMiddle-asterisc**: ✅ PASS, 307.93초 (~5.1분)
+  - **StepInExtension-asterisc**: ✅ PASS, 304.00초 (~5.1분)
 - **비고:**
   - 세 가지 서브 테스트:
     - **StepFirst**: Depth 0에서 방어
@@ -149,7 +149,7 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - **목적:** Honest challenger가 Asterisc VM을 사용하여 올바른 증거로 방어 스텝을 수행하는지 검증.
 - **실행 방법:**
   ```bash
-  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscDefendStep$/mt-cannon$"
+  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscDefendStep$/asterisc$"
   ```
 - **결과 및 소요 시간:** ✅ PASS, 약 330초 (~5.5분).
 - **비고:**
@@ -166,119 +166,21 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
   - `DefendStep` 경로에서 올바른 증거가 온체인 검증을 통과하는지 확인.
   - Honest challenger의 방어 전략이 효과적인지 검증.
 
-### TestOutputAsteriscStepWithLargePreimage
+## 프리이미지 관련 테스트 (임시 제거됨)
 
-- **목적:** 대용량 프리이미지(preimage)를 포함하는 L1 배치(batch)에 대한 Asterisc 증거 생성 및 검증.
-- **실행 방법:**
-  ```bash
-  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscStepWithLargePreimage$/mt-cannon$"
-
-  # 백그라운드 실행 및 로그 저장
-  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscStepWithLargePreimage$/mt-cannon$" 2>&1 | tee /tmp/test_large_preimage_asterisc.log &
-  ```
-- **결과 및 소요 시간:** ✅ PASS, 약 340초 (~5.7분).
-- **비고:**
-  - Batcher를 중지한 상태에서 수동으로 대용량 무효 배치를 전송.
-  - op-program이 대용량 프리이미지를 로드하도록 강제.
-  - 프리이미지 크기가 `MinPreimageSize`보다 큰 경우에만 step 수행.
-- **실행 흐름:**
-  1. Batcher를 중지하고 시스템 부팅.
-  2. `SendLargeInvalidBatch`로 대용량 무효 데이터를 batcher input에 전송.
-  3. Batcher 재시작 후 유효한 배치 제출 재개.
-  4. Safe head가 진행되면 해당 L2 블록에 대한 Asterisc 게임 생성.
-  5. Honest challenger가 실행 게임의 root를 반박.
-  6. `ChallengeToAsteriscPreimageLoad`로 대용량 프리이미지 로드를 유도.
-  7. 프리이미지가 성공적으로 업로드되고 step이 호출되는지 확인.
-- **주요 기능 검증:**
-  - Asterisc VM이 대용량 프리이미지를 처리할 수 있는지 확인.
-  - `CreateStepLargePreimageLoadCheck`가 프리이미지 로드를 올바르게 검증하는지 확인.
-  - `PreimageLargerThan` 필터가 최소 크기 이상의 프리이미지만 선택하는지 확인.
-  - 대용량 데이터에 대한 온체인 증거 업로드 및 검증 경로가 정상 작동하는지 확인.
-
-### TestOutputAsteriscStepWithPreimage_nonExistingPreimage
-
-- **목적:** 존재하지 않는 프리이미지에 대한 Asterisc step 증거 생성 및 검증 (Keccak256, SHA256 타입).
-- **실행 방법:**
-  ```bash
-  go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscStepWithPreimage_nonExistingPreimage$/mt-cannon$"
-  ```
-- **결과 및 소요 시간:** ✅ PASS, 약 380초 (~6.3분).
-- **비고:**
-  - 두 가지 프리이미지 타입 테스트:
-    - **Keccak256**: Local key type
-    - **SHA256**: Global key type
-  - 프리이미지가 아직 업로드되지 않은 상태에서 step 수행.
-- **실행 흐름:**
-  1. 지정된 프리이미지 타입으로 Asterisc 게임 생성.
-  2. Challenger가 프리이미지 trace를 생성.
-  3. `ChallengeToPreimageLoad`로 프리이미지 로드 유도.
-  4. Honest challenger가 프리이미지를 온체인에 업로드.
-  5. Step 호출 성공 확인.
-- **주요 기능 검증:**
-  - Keccak256 및 SHA256 프리이미지 타입이 모두 정상 작동하는지 확인.
-  - 존재하지 않는 프리이미지에 대한 on-demand 업로드가 정상 작동하는지 확인.
-  - `FindPreimageStepOpt`가 특정 프리이미지 타입을 올바르게 필터링하는지 확인.
-
-### TestOutputAsteriscStepWithPreimage_nonExistingBlobPreimage
-
-- **목적:** Blob 프리이미지의 다양한 offset과 skip count 조합에 대한 Asterisc 증거 검증.
-- **실행 방법:**
-  ```bash
-  go test -v -timeout 30m ./op-e2e/faultproofs -run "TestOutputAsteriscStepWithPreimage_nonExistingBlobPreimage$/mt-cannon$"
-  ```
-- **결과 및 소요 시간:** ✅ PASS, 약 580초 (~9.7분).
-- **비고:**
-  - 8가지 조합 테스트:
-    - Offset 0, Skip Count 0/3
-    - Offset 1, Skip Count 0/3
-    - Offset 100, Skip Count 0/3
-    - Offset 131000, Skip Count 0/3
-  - Blob 프리이미지의 다양한 접근 패턴 검증.
-- **실행 흐름:**
-  1. 각 offset/skip count 조합에 대해 Asterisc 게임 생성.
-  2. `WithBlobPreimageOpt`로 blob 프리이미지 필터 설정.
-  3. `ChallengeToPreimageLoad`로 blob 프리이미지 로드 유도.
-  4. Step 호출 성공 확인.
-- **주요 기능 검증:**
-  - Blob 프리이미지의 다양한 offset 접근이 정상 작동하는지 확인.
-  - Skip count가 올바르게 적용되는지 확인.
-  - EIP-4844 blob 데이터 접근 경로가 Asterisc에서 정상 작동하는지 확인.
-
-### TestOutputAsteriscStepWithPreimage_existingPreimage
-
-- **목적:** 이미 온체인에 업로드된 프리이미지를 재사용하는 Asterisc step 검증.
-- **실행 방법:**
-  ```bash
-  go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscStepWithPreimage_existingPreimage$/mt-cannon$"
-  ```
-- **결과 및 소요 시간:** ✅ PASS, 약 320초 (~5.3분).
-- **비고:**
-  - 프리이미지를 먼저 업로드한 후 동일한 프리이미지를 요구하는 step 수행.
-  - 중복 업로드 방지 및 재사용 로직 검증.
-- **실행 흐름:**
-  1. Honest challenger가 프리이미지를 온체인에 업로드.
-  2. 동일한 프리이미지가 필요한 Asterisc 게임 생성.
-  3. `ChallengeToPreimageLoad`로 프리이미지 로드 유도.
-  4. 이미 존재하는 프리이미지를 재사용하여 step 수행.
-  5. 중복 업로드가 발생하지 않는지 확인.
-- **주요 기능 검증:**
-  - 프리이미지 재사용 로직이 정상 작동하는지 확인.
-  - 불필요한 중복 업로드가 방지되는지 확인.
-  - 온체인 프리이미지 저장소 조회가 올바르게 작동하는지 확인.
+프리이미지 관련 테스트들(`TestOutputAsteriscStepWithLargePreimage`, `TestOutputAsteriscStepWithPreimage_*`)은 현재 `op-program/host/prefetcher/prefetcher.go`의 구현체가 asterisc 프로젝트와 일부 동기화되지 않아 정상적으로 동작하지 않아 임시로 제거되었습니다. asterisc에서 프리이미지 관련 구현이 완료된 후 다시 추가할 예정입니다.
 
 ### TestOutputAsteriscProposedOutputRootValid
 
 - **목적:** 올바른(valid) output root에 대한 공격이 실패하고 defender가 승리하는지 검증.
 - **실행 방법:**
   ```bash
-  go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscProposedOutputRootValid$/mt-cannon$"
+  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscProposedOutputRootValid$/asterisc$"
   ```
-- **결과 및 소요 시간:** ✅ PASS, 약 238초 (~4.0분).
+- **결과 및 소요 시간:** ✅ PASS, 238.59초 (~4.0분)
 - **비고:**
   - Dishonest actor가 올바른 output root를 공격하는 시나리오.
   - Honest defender가 올바른 증거로 방어하여 승리해야 함.
-  - **이전 실패 원인:** CreateHonestActor가 항상 Cannon VM을 사용하도록 하드코딩됨.
-  - **수정 사항:** CreateHonestActor에서 cfg.TraceTypes 기반 VM 선택 로직 추가.
 - **실행 흐름:**
   1. 올바른 output root로 Asterisc 게임 생성.
   2. Dishonest actor가 올바른 루트를 공격.
@@ -295,14 +197,12 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - **목적:** Honest defender가 올바른 trace로 모든 공격을 방어하여 승리하는지 검증.
 - **실행 방법:**
   ```bash
-  go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscProposedOutputRootValid_DefendWithCorrectTrace$/mt-cannon$"
+  env OP_E2E_DISABLE_PARALLEL=true go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsteriscProposedOutputRootValid_DefendWithCorrectTrace$/asterisc$"
   ```
-- **결과 및 소요 시간:** ✅ PASS, 약 238초 (~4.0분).
+- **결과 및 소요 시간:** ✅ PASS, 238.05초 (~4.0분)
 - **비고:**
   - 이전 테스트와 유사하지만, 명시적으로 올바른 trace를 사용하여 방어.
   - Defender의 trace 생성 및 증거 제출 경로 집중 검증.
-  - **이전 실패 원인:** CreateHonestActor가 항상 Cannon VM을 사용하도록 하드코딩됨.
-  - **수정 사항:** CreateHonestActor에서 cfg.TraceTypes 기반 VM 선택 로직 추가.
 - **실행 흐름:**
   1. 올바른 output root로 Asterisc 게임 생성.
   2. Dishonest actor의 공격에 대해 올바른 trace로 방어.
@@ -319,12 +219,9 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 - **목적:** 손상된(poisoned) post-state를 포함하는 Asterisc 게임에서 올바른 처리를 검증.
 - **실행 방법:**
   ```bash
-  go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscPoisonedPostState$/mt-cannon$"
+  go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscPoisonedPostState$/asterisc$"
   ```
-- **결과 및 소요 시간:** ✅ PASS, 약 238초 (~4.0분).
-- **비고:**
-  - Poisoned post-state 시나리오에서 게임이 올바르게 해결되는지 검증.
-  - 이전 실패했던 CreateHonestActor 이슈 수정 후 정상 작동 확인.
+- **결과 및 소요 시간:** ✅ PASS, 238.99초 (~4.0분)
 - **실행 흐름:**
   1. 손상된 post-state를 포함하는 Asterisc 게임 생성.
   2. Challenger가 손상된 상태를 감지.
@@ -344,8 +241,6 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 | 루트 클레임 발행 | ✅ 지원 | ✅ TestOutputAsterisc_PublishAsteriscRootClaim | 동일한 로직 |
 | 분쟁 게임 (다양한 depth) | ✅ 지원 | ✅ TestOutputAsteriscDisputeGame | 동일한 로직 |
 | Step 방어 | ✅ 지원 | ✅ TestOutputAsteriscDefendStep | VM별 증거 생성 차이 |
-| 대용량 프리이미지 | ✅ TestChallengeLargePreimages | ✅ TestOutputAsteriscStepWithLargePreimage | 동일한 프리이미지 처리 |
-| 프리이미지 타입 테스트 | ✅ 지원 | ✅ TestOutputAsteriscStepWithPreimage_* | 동일한 프리이미지 타입 |
 | 올바른 루트 방어 | ✅ 지원 | ✅ TestOutputAsteriscProposedOutputRootValid | 동일한 로직 |
 | 손상된 상태 처리 | ✅ 지원 | ✅ TestOutputAsteriscPoisonedPostState | 동일한 로직 |
 
@@ -358,23 +253,16 @@ cd /Users/zena/tokamak-projects/optimism/op-challenger/scripts
 
 ## 현재 테스트 상태
 
-### ✅ 성공한 테스트 (총 13개)
+### ✅ 성공한 테스트 (총 9개)
 1. **TestOutputAsteriscGame** - 기본 게임 플레이 흐름 (PASS, ~227초)
 2. **TestOutputAsterisc_ChallengeAllZeroClaim** - All-zero 클레임 챌린지 (PASS, ~265초)
 3. **TestOutputAsterisc_PublishAsteriscRootClaim** - 루트 클레임 발행 (PASS, ~128초)
 4. **TestOutputAsteriscDisputeGame** - 다양한 depth 분쟁 (PASS, ~922초)
 5. **TestOutputAsteriscDefendStep** - Step 방어 (PASS, ~330초)
-6. **TestOutputAsteriscStepWithLargePreimage** - 대용량 프리이미지 (PASS, ~280초)
-7. **TestOutputAsteriscStepWithPreimage_nonExistingPreimage** - 프리이미지 타입 (PASS, ~380초)
-8. **TestOutputAsteriscStepWithPreimage_nonExistingBlobPreimage** - Blob 프리이미지 (PASS, ~580초)
-9. **TestOutputAsteriscStepWithPreimage_existingPreimage** - 프리이미지 재사용 (PASS, ~320초)
-10. **TestOutputAsteriscProposedOutputRootValid** - 올바른 루트 방어 (PASS, ~238초)
-11. **TestOutputAsteriscProposedOutputRootValid_DefendWithCorrectTrace** - 올바른 trace로 방어 (PASS, ~238초)
-12. **TestOutputAsteriscPoisonedPostState** - 손상된 상태 처리 (PASS, ~238초)
-13. **TestOutputAsteriscGame (Kona)** - Kona 기반 게임 (PASS, ~227초)
-
-### 🎉 모든 테스트 완료!
-**총 13개의 Asterisc E2E 테스트가 모두 성공적으로 완료되었습니다.**
+6. **TestOutputAsteriscProposedOutputRootValid** - 올바른 루트 방어 (PASS, ~238초)
+7. **TestOutputAsteriscProposedOutputRootValid_DefendWithCorrectTrace** - 올바른 trace로 방어 (PASS, ~238초)
+8. **TestOutputAsteriscPoisonedPostState** - 손상된 상태 처리 (PASS, ~238초)
+9. **TestOutputAsteriscGame (Kona)** - Kona 기반 게임 (PASS, ~227초)
 
 ### 📋 Asterisc-Kona 테스트 (향후)
 - **TestOutputAsteriscKonaGame** - Asterisc-Kona 기본 게임
@@ -405,12 +293,6 @@ go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscDisputeGame
 # Step 방어
 go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscDefendStep"
 
-# 대용량 프리이미지
-go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscStepWithLargePreimage"
-
-# 프리이미지 테스트
-go test -v -timeout 30m ./op-e2e/faultproofs -run "TestOutputAsteriscStepWithPreimage"
-
 # 올바른 루트 방어
 go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscProposedOutputRootValid"
 
@@ -420,9 +302,6 @@ go test -v -timeout 20m ./op-e2e/faultproofs -run "TestOutputAsteriscPoisonedPos
 
 ### 특정 패턴 테스트
 ```bash
-# 프리이미지 관련 모든 테스트
-go test -v -timeout 60m ./op-e2e/faultproofs -run "TestOutputAsterisc.*Preimage"
-
 # Step 관련 모든 테스트
 go test -v -timeout 40m ./op-e2e/faultproofs -run "TestOutputAsterisc.*Step"
 ```
@@ -430,14 +309,14 @@ go test -v -timeout 40m ./op-e2e/faultproofs -run "TestOutputAsterisc.*Step"
 ### 특정 서브테스트만 실행
 ```bash
 # mt-cannon 서브테스트만 실행 (mt-cannon-next 제외)
-go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/mt-cannon$"
+go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/asterisc$"
 
 # mt-cannon-next 서브테스트만 실행
 go test -v -timeout 20m ./op-e2e/faultproofs -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/mt-cannon-next$"
 
 # 백그라운드로 실행하고 로그 저장
 timeout 1200s go test -v -timeout 20m ./op-e2e/faultproofs \
-  -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/mt-cannon$" \
+  -run "^TestOutputAsterisc_ChallengeAllZeroClaim$/asterisc$" \
   2>&1 > /tmp/mt_cannon_only.log &
 
 # 실시간 로그 확인
