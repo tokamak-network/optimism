@@ -64,7 +64,10 @@ func (d *directoryKV) Put(k common.Hash, v []byte) error {
 func (d *directoryKV) Get(k common.Hash) ([]byte, error) {
 	d.RLock()
 	defer d.RUnlock()
-	f, err := os.OpenFile(d.pathKey(k), os.O_RDONLY, filePermission)
+
+	targetFile := d.pathKey(k)
+
+	f, err := os.OpenFile(targetFile, os.O_RDONLY, filePermission)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, ErrNotFound
@@ -72,11 +75,14 @@ func (d *directoryKV) Get(k common.Hash) ([]byte, error) {
 		return nil, fmt.Errorf("failed to open pre-image file %s: %w", k, err)
 	}
 	defer f.Close() // fine to ignore closing error here
+
 	dat, err := io.ReadAll(f)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read pre-image from file %s: %w", k, err)
 	}
-	return hex.DecodeString(string(dat))
+
+	decoded, err := hex.DecodeString(string(dat))
+	return decoded, err
 }
 
 func (d *directoryKV) Close() error {
