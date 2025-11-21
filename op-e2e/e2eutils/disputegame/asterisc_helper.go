@@ -2,6 +2,8 @@ package disputegame
 
 import (
 	"context"
+	"errors"
+	"io"
 	"math/big"
 	"path/filepath"
 	"testing"
@@ -13,7 +15,10 @@ import (
 	"github.com/ethereum-optimism/optimism/op-challenger/game/fault/trace/utils"
 	"github.com/ethereum-optimism/optimism/op-challenger/game/fault/types"
 	"github.com/ethereum-optimism/optimism/op-challenger/metrics"
+	"github.com/ethereum-optimism/optimism/op-e2e/bindings"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/challenger"
+	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/transactions"
+	"github.com/ethereum-optimism/optimism/op-service/sources/batching"
 	"github.com/ethereum-optimism/optimism/op-service/sources/batching/rpcblock"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
@@ -77,6 +82,53 @@ func (g *CannonHelper) createAsteriscTraceProvider(ctx context.Context, l2Node s
 	return translatingProvider.Original().(*asterisc.AsteriscTraceProviderForTest), localContext
 }
 
+func (g *CannonHelper) FindOddStepForAsteriscPreimageLoad(ctx context.Context, asteriscTraceProviderFunc AsteriscTraceProviderFunc, poConfig utils.PreimageOptConfig, opts ...FindPreimageStepOpt) uint64 {
+	config := &FindPreimageStepConfig{}
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	provider, _, _ := asteriscTraceProviderFunc()
+
+	var preimageOpt utils.PreimageOpt
+	var lastStep uint64 = 0
+	// First, if requested, skip some number of preimage loads
+	for i := 0; i < config.skipNPreimageLoads; i++ {
+		preimageOpt = poConfig.PreimageLoad()
+		g.t.Logf("Skipping preimage load %v: %#v", i, poConfig)
+		step, err := provider.FindStep(ctx, lastStep, preimageOpt)
+		g.require.NoError(err)
+
+		lastStep = step
+		poConfig.AfterStep = step + 1
+	}
+
+	lastSkippedStep := lastStep
+	for {
+		preimageOpt = poConfig.PreimageLoad()
+		g.t.Logf("Finding step with preimage load config %#v", poConfig)
+		step, err := provider.FindStep(ctx, lastStep, preimageOpt)
+		if errors.Is(err, io.EOF) {
+			// Unlikely to happen if many preimage loads of the target type occur
+			// Can cause flakes if the target preimage type is not used often
+			if config.allowEvenFallback && lastStep > lastSkippedStep {
+				// If we have advanced the last step past the last skipped step, then the lastStep must be even.
+				// Otherwise, the last step was odd and we should have returned it.
+				g.t.Log("Unable to find odd step that matches the specified preimage load - falling back to an even step")
+				return lastStep
+			} else {
+				g.t.Fatalf("Trace does not contain an odd step that matches the specified preimage load")
+			}
+		}
+		g.require.NoError(err, "Find step failed")
+		if step%2 == 1 {
+			return step
+		}
+		lastStep = step
+		poConfig.AfterStep = step + 1
+	}
+}
+
 // ChallengeToPreimageLoad challenges the supplied execution root claim by inducing a step that requires a preimage to be loaded for Asterisc
 func (g *CannonHelper) ChallengeToAsteriscPreimageLoad(ctx context.Context, asteriscTraceProviderFunc AsteriscTraceProviderFunc, preimage utils.PreimageOpt, preimageCheck PreimageLoadCheck, preloadPreimage bool) {
 	// Identifying the first state transition that loads a global preimage
@@ -96,8 +148,10 @@ func (g *CannonHelper) ChallengeToAsteriscPreimageLoadAtTarget(ctx context.Conte
 	g.require.EqualValues(execDepth%2, 1, "execution game depth must be odd") // since we're challenging the execution root claim
 
 	if preloadPreimage {
+		g.t.Logf("🔍 Getting step data for target trace index %d (this may take several minutes)...", targetTraceIndex)
 		_, _, preimageData, err := provider.GetStepData(ctx, types.NewPosition(execDepth, big.NewInt(int64(targetTraceIndex))))
 		g.require.NoError(err)
+		g.t.Logf("✅ Step data retrieved successfully, now uploading preimage...")
 		g.UploadPreimage(ctx, preimageData)
 		g.WaitForPreimageInOracle(ctx, preimageData)
 	}
@@ -182,4 +236,48 @@ func traceBisectionAsterisc(
 			return claim.Attack(ctx, common.Hash{0xbb})
 		}
 	}
+}
+
+func (g *CannonHelper) VerifyAsteriscPreimageAtTarget(ctx context.Context, asteriscTraceProviderFunc AsteriscTraceProviderFunc, targetTraceIndex uint64, oracleDataValidator OracleDataValidator, uploadOracleData bool) {
+	execDepth := g.splitGame.ExecDepth(ctx)
+	provider, localContext, outputRootClaim := asteriscTraceProviderFunc()
+
+	pos := types.NewPosition(execDepth, new(big.Int).SetUint64(targetTraceIndex))
+	g.require.Equal(targetTraceIndex, pos.TraceIndex(execDepth).Uint64())
+
+	prestate, proof, oracleData, err := provider.GetStepData(ctx, pos)
+	g.require.NoError(err, "Failed to get step data")
+	g.require.NotNil(oracleData, "Should have had required preimage oracle data")
+	oracleDataValidator(oracleData)
+
+	if uploadOracleData {
+		txCandidate, err := g.splitGame.Game.UpdateOracleTx(ctx, uint64(outputRootClaim.Index), oracleData)
+		g.require.NoError(err, "failed to get oracle")
+		transactions.RequireSendTx(g.t, ctx, g.client, txCandidate, g.privKey)
+	}
+
+	expectedPostState, err := provider.Get(ctx, pos)
+	g.require.NoError(err, "Failed to get expected post state")
+
+	vm, err := g.splitGame.Game.Vm(ctx)
+	g.require.NoError(err, "Failed to get VM address")
+
+	// TODO: Use RISCV ABI instead of MIPS ABI once bindings are generated
+	// The step() function signature is identical between MIPS and RISCV, so this works for now
+	// but should be changed to bindings.RISCVMetaData.GetAbi() for correctness
+	abi, err := bindings.MIPSMetaData.GetAbi()
+	g.require.NoError(err, "Failed to load VM ABI")
+	caller := batching.NewMultiCaller(g.client.Client(), batching.DefaultBatchSize)
+	result, err := caller.SingleCall(ctx, rpcblock.Latest, &batching.ContractCall{
+		Abi:    abi,
+		Addr:   vm.Addr(),
+		Method: "step",
+		Args: []interface{}{
+			prestate, proof, localContext,
+		},
+		From: g.splitGame.Addr,
+	})
+	g.require.NoError(err, "Failed to call step")
+	actualPostState := result.GetBytes32(0)
+	g.require.Equal(expectedPostState, common.Hash(actualPostState))
 }

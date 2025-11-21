@@ -154,6 +154,18 @@ func WithNextVMOnly[T any]() VMTestOption[T] {
 	}
 }
 
+func WithAsteriscVMOnly[T any]() VMTestOption[T] {
+	return func(o *vmTestOptions[T]) {
+		o.allocTypes = []config.AllocType{config.AllocTypeAsterisc}
+	}
+}
+
+func WithAsteriscKonaVMOnly[T any]() VMTestOption[T] {
+	return func(o *vmTestOptions[T]) {
+		o.allocTypes = []config.AllocType{config.AllocTypeAsteriscKona}
+	}
+}
+
 func WithTestNamePrefix[T any](prefix string) VMTestOption[T] {
 	return func(o *vmTestOptions[T]) {
 		o.testNameModifier = func(vmName string, _ T) string {
