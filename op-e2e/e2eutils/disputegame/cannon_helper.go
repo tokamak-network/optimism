@@ -144,10 +144,13 @@ func (g *CannonHelper) GetPreimageAtOffset(data *types.PreimageOracleData) [32]b
 }
 
 func (g *CannonHelper) UploadPreimage(ctx context.Context, data *types.PreimageOracleData) {
+	g.t.Logf("🔄 Starting preimage upload to oracle...")
 	oracle := g.oracle(ctx)
 	tx, err := oracle.AddGlobalDataTx(data)
 	g.require.NoError(err, "Failed to create preimage upload tx")
+	g.t.Logf("📤 Sending preimage upload transaction...")
 	transactions.RequireSendTx(g.t, ctx, g.client, tx, g.privKey)
+	g.t.Logf("✅ Preimage upload completed successfully")
 }
 
 func (g *CannonHelper) oracle(ctx context.Context) contracts.PreimageOracleContract {

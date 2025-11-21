@@ -201,7 +201,7 @@ func TestOutputCannonStepWithPreimage_nonExistingPreimage(t *testing.T) {
 	}
 
 	RunTestsAcrossVmTypes(t, tests, func(t *testing.T, allocType config.AllocType, testcase TestCase) {
-		conf := utils.PreimageOptConfigForType(oppreimage.Keccak256KeyType)
+		conf := utils.PreimageOptConfigForType(testcase.preimageType)
 		testPreimageStep(t, allocType, conf, false, testcase.opts...)
 	}, WithTestName(testName))
 }
