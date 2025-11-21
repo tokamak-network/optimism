@@ -265,6 +265,14 @@ build_asterisc() {
         return 1
     fi
 
+    log_info "Running: make prestate (with MONOREPO_ROOT=$OPTIMISM_ROOT)"
+    cd "$ASTERISC_SOURCE_DIR"
+    if ! make prestate MONOREPO_ROOT="$OPTIMISM_ROOT"; then
+        log_error "❌ Failed to build ASTERISC prestate"
+        return 1
+    fi
+    log_success "✅ Built ASTERISC prestate with latest op-program code"
+
     local source_bin_dir="$ASTERISC_SOURCE_DIR/rvgo/bin"
     local source_vm="$source_bin_dir/asterisc"
     local source_prestate_json="$source_bin_dir/prestate.json"
