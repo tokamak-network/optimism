@@ -116,8 +116,8 @@ contract Deploy is Deployer {
             SystemConfig: artifacts.getAddress("SystemConfigProxy"),
             L1ERC721Bridge: artifacts.getAddress("L1ERC721BridgeProxy"),
             ProtocolVersions: artifacts.getAddress("ProtocolVersionsProxy"),
-            SuperchainConfig: artifacts.getAddress("SuperchainConfigProxy"),
-            RAT: artifacts.getAddress("RATProxy")
+            SuperchainConfig: artifacts.getAddress("SuperchainConfigProxy")
+            // NOTE: RAT removed - RAT is deployed separately by TON Staking V3
         });
     }
 
@@ -359,10 +359,8 @@ contract Deploy is Deployer {
         artifacts.save("OptimismPortalProxy", address(deployOutput.optimismPortalProxy));
         artifacts.save("OptimismPortal2Proxy", address(deployOutput.optimismPortalProxy));
 
-        // Save RAT proxy if deployed
-        if (cfg.deployRAT()) {
-            artifacts.save("RATProxy", address(deployOutput.ratProxy));
-        }
+        // NOTE: RAT is deployed separately by TON Staking V3
+        // Use DisputeGameFactory.setRAT() to configure external RAT
 
         // Check if the permissionless game implementation is already set
         IDisputeGameFactory factory = IDisputeGameFactory(artifacts.mustGetAddress("DisputeGameFactoryProxy"));
@@ -439,13 +437,8 @@ contract Deploy is Deployer {
             disputeSplitDepth: cfg.faultGameSplitDepth(),
             disputeClockExtension: Duration.wrap(uint64(cfg.faultGameClockExtension())),
             disputeMaxClockDuration: Duration.wrap(uint64(cfg.faultGameMaxClockDuration())),
-            // RAT configuration from deploy config
-            deployRAT: cfg.deployRAT(),
-            perTestBondAmount: cfg.perTestBondAmount(),
-            evidenceSubmissionPeriod: cfg.evidenceSubmissionPeriod(),
-            minimumStakingBalance: cfg.minimumStakingBalance(),
-            ratTriggerProbability: cfg.ratTriggerProbability(),
-            ratManager: cfg.ratManager()
+            // TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
+            ratAddress: cfg.ratAddress()
         });
     }
 }

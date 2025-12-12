@@ -6,7 +6,6 @@ This guide helps you set up a local Optimism devnet environment for challenger t
 
 - **Local L1/L2 blockchain networks** with fast 20-minute dispute games
 - **OP-Challenger service** for testing dispute game resolution
-- **RAT (Randomized Attention Test)** comprehensive testing framework
 - **Automated verification tools** for post-deployment testing
 - **Complete toolchain** for contract development and testing
 - **Continuous monitoring** for devnet management
@@ -148,7 +147,7 @@ vi simple.yaml  # or your preferred editor
        cannon_trace_types: ["cannon"]
        extra_params: ["--unsafe-allow-invalid-prestate"]
    ```
-   **Purpose**: The `--unsafe-allow-invalid-prestate` flag allows challenger to participate in dispute games even when prestate validation fails. This is essential for RAT testing scenarios where invalid root claims are intentionally tested.
+   **Purpose**: The `--unsafe-allow-invalid-prestate` flag allows challenger to participate in dispute games even when prestate validation fails. This is useful for testing scenarios where invalid root claims are intentionally tested.
 
    **⚠️ Security Note**: Only use in development/testing environments. Never use in production.
 
@@ -162,19 +161,6 @@ vi simple.yaml  # or your preferred editor
 | **0** | CANNON | Complete fault proof | ✅ **recommended** |
 | **1** | PERMISSIONED | Fast development/testing | ✅ working |
 | **2** | ASTERISC | Asterisc VM | ⚠️ needs testing |
-
-## Step 4.5: 🧪 RAT Testing (Optional)
-
-**Quick Start**:
-```bash
-go clean -testcache
-go test -v ./op-e2e/faultproofs -run "TestRATDisputeGameVictoryE2E"
-```
-
-**📖 Complete Guide**: [RAT E2E Testing Guide](./docs/rat-e2e-testing-guide.md)
-**📋 Implementation Status**: [RAT Testing Implementation Plan](./docs/rat-testing-implementation-plan.md)
-
----
 
 ## Step 5: Build Devnet Environment
 

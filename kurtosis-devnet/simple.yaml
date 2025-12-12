@@ -4,13 +4,9 @@ overrides:
     faultGameClockExtension: 300
     preimageOracleChallengePeriod: 300
     vmType: "CANNON"
-    # RAT (Refund Address Tracker) configuration
-    deployRAT: true
-    perTestBondAmount: "100000000000000"          # 0.0001 ETH in wei (uint64 범위 내)
-    evidenceSubmissionPeriod: 600                # 10 minutes in seconds
-    minimumStakingBalance: "1000000000000000000"    # 1 ETH in wei
-    ratTriggerProbability: "100000"                         # 100% (100000/100000)
-    ratManager: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"  # First prefunded account
+    # TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
+    # Set to external RAT contract address, or zero address to disable
+    ratAddress: "0x0000000000000000000000000000000000000000"
 optimism_package:
   faucet:
     enabled: true
@@ -83,13 +79,9 @@ optimism_package:
       faultGameMaxClockDuration: 1200
       faultGameClockExtension: 300
       preimageOracleChallengePeriod: 300
-      # RAT (Refund Address Tracker) configuration
-      deployRAT: true
-      perTestBondAmount: "100000000000000"          # 0.0001 ETH in wei (uint64 범위 내)
-      evidenceSubmissionPeriod: 600                # 10 minutes in seconds
-      minimumStakingBalance: "1000000000000000000"    # 1 ETH in wei
-      ratTriggerProbability: "100000"                         # 100% (100000/100000)
-      ratManager: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"  # First prefunded account
+      # TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
+      # Set to external RAT contract address, or zero address to disable
+      ratAddress: "0x0000000000000000000000000000000000000000"
   global_log_level: "debug"
   global_node_selectors: {}
   global_tolerations: []

@@ -44,13 +44,9 @@ type DeployOPChainInput struct {
 	OperatorFeeScalar   uint32
 	OperatorFeeConstant uint64
 
-	// RAT configuration
-	DeployRAT                bool
-	PerTestBondAmount        *big.Int
-	EvidenceSubmissionPeriod *big.Int
-	MinimumStakingBalance    *big.Int
-	RatTriggerProbability    *big.Int
-	RatManager               common.Address
+	// TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
+	// Set RatAddress to external RAT contract address, or zero address to disable
+	RatAddress common.Address
 }
 
 func (input *DeployOPChainInput) InputSet() bool {
@@ -78,7 +74,7 @@ type DeployOPChainOutput struct {
 	PermissionedDisputeGame            common.Address
 	DelayedWETHPermissionedGameProxy   common.Address
 	DelayedWETHPermissionlessGameProxy common.Address
-	RATProxy                           common.Address `evm:"ratProxy"`
+	// NOTE: RATProxy removed - RAT is deployed separately by TON Staking V3
 }
 
 func (output *DeployOPChainOutput) CheckOutput(input common.Address) error {

@@ -75,5 +75,8 @@ interface IDisputeGameFactory is IProxyAdminOwnedBase, IReinitializableBase {
     function rat() external view returns (address);
     function setRAT(address _rat) external;
 
+    function systemConfig() external view returns (address);
+    function setSystemConfig(address _systemConfig) external;
+
     function __constructor__() external;
 }

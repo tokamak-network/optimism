@@ -46,7 +46,7 @@ type ImplementationsContracts struct {
 	OptimismMintableErc20FactoryImpl common.Address
 	DisputeGameFactoryImpl           common.Address
 	AnchorStateRegistryImpl          common.Address
-	RATImpl                          common.Address
+	// NOTE: RATImpl removed - RAT is deployed separately by TON Staking V3
 }
 
 // OpChainContracts struct contains all the contracts for a specific L2 OpChain
@@ -81,7 +81,7 @@ type OpChainFaultProofsContracts struct {
 	PermissionedDisputeGameImpl        common.Address
 	DelayedWethPermissionedGameProxy   common.Address
 	DelayedWethPermissionlessGameProxy common.Address
-	RATProxy                           common.Address
+	// NOTE: RAT is deployed separately by TON Staking V3
 }
 
 type OpChainAltDAContracts struct {

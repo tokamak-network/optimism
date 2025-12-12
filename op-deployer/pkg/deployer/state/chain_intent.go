@@ -42,13 +42,9 @@ type ChainProofParams struct {
 	DisputeMaxClockDuration                 uint64      `json:"faultGameMaxClockDuration" toml:"faultGameMaxClockDuration"`
 	DangerouslyAllowCustomDisputeParameters bool        `json:"dangerouslyAllowCustomDisputeParameters" toml:"dangerouslyAllowCustomDisputeParameters"`
 
-	// RAT configuration
-	DeployRAT                bool           `json:"deployRAT" toml:"deployRAT"`
-	PerTestBondAmount        string         `json:"perTestBondAmount" toml:"perTestBondAmount"`
-	EvidenceSubmissionPeriod uint64         `json:"evidenceSubmissionPeriod" toml:"evidenceSubmissionPeriod"`
-	MinimumStakingBalance    string         `json:"minimumStakingBalance" toml:"minimumStakingBalance"`
-	RatTriggerProbability    string         `json:"ratTriggerProbability" toml:"ratTriggerProbability"`
-	RatManager               common.Address `json:"ratManager" toml:"ratManager"`
+	// TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
+	// Set RatAddress to external RAT contract address, or zero address to disable
+	RatAddress common.Address `json:"ratAddress" toml:"ratAddress"`
 }
 
 type AdditionalDisputeGame struct {

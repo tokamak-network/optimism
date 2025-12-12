@@ -597,8 +597,8 @@ contract OPContractsManager_TestInit is Test {
                 _args: DeployUtils.encodeConstructor(
                     abi.encodeCall(IMIPS64.__constructor__, (oracle, StandardConstants.MIPS_VERSION))
                 )
-            }),
-            ratImpl: address(0) // RAT implementation not used in tests
+            })
+            // NOTE: ratImpl removed - RAT is deployed separately by TON Staking V3
          });
 
         vm.etch(address(superchainConfigProxy), hex"01");
@@ -747,13 +747,8 @@ contract OPContractsManager_TestInit is Test {
                 disputeSplitDepth: 30,
                 disputeClockExtension: Duration.wrap(10800),
                 disputeMaxClockDuration: Duration.wrap(302400),
-                // RAT configuration parameters (default values for tests)
-                deployRAT: false,
-                perTestBondAmount: 0,
-                evidenceSubmissionPeriod: 0,
-                minimumStakingBalance: 0,
-                ratTriggerProbability: 0,
-                ratManager: address(0)
+                // TON Staking V3 RAT configuration (RAT is deployed separately)
+                ratAddress: address(0)
             })
         );
     }
@@ -1951,13 +1946,8 @@ contract OPContractsManager_Deploy_Test is DeployOPChain_TestBase {
             disputeSplitDepth: _doi.disputeSplitDepth(),
             disputeClockExtension: _doi.disputeClockExtension(),
             disputeMaxClockDuration: _doi.disputeMaxClockDuration(),
-            // RAT configuration parameters (default values for tests)
-            deployRAT: false,
-            perTestBondAmount: 0,
-            evidenceSubmissionPeriod: 0,
-            minimumStakingBalance: 0,
-            ratTriggerProbability: 0,
-            ratManager: address(0)
+            // TON Staking V3 RAT configuration (RAT is deployed separately)
+            ratAddress: address(0)
         });
     }
 

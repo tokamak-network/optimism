@@ -71,8 +71,11 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
     ///         efficiently track dispute games.
     GameId[] internal _disputeGameList;
 
-    /// @notice RAT contract address
+    /// @notice RAT contract address (TON Staking V3 RAT)
     address public rat;
+
+    /// @notice SystemConfig address for RAT L2 identification
+    address public systemConfig;
 
     /// @notice Constructs a new DisputeGameFactory contract.
     constructor() OwnableUpgradeable() ReinitializableBase(1) {
@@ -174,8 +177,8 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         // └──────────────┴────────────────────────────────────┘
         proxy_ = IDisputeGame(address(impl).clone(abi.encodePacked(msg.sender, _rootClaim, parentHash, _extraData)));
 
-        // Initialize with RAT address if CANNON game type
-        if (_gameType.raw() == GameTypes.CANNON.raw()) {
+        // Initialize with RAT address if CANNON game type and RAT is configured
+        if (_gameType.raw() == GameTypes.CANNON.raw() && rat != address(0)) {
             IInitializable(address(proxy_)).initialize{ value: msg.value }(rat);
         } else {
             proxy_.initialize{ value: msg.value }();
@@ -196,9 +199,14 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         emit DisputeGameCreated(address(proxy_), _gameType, _rootClaim);
 
         // Trigger RAT attention test if RAT contract is set and game type is CANNON
+        // RAT identifies the game via msg.sender (this factory) and batchIndex
         if (rat != address(0) && _gameType.raw() == GameTypes.CANNON.raw()) {
-            (,, address gameAddress) = id.unpack();
-            try IRAT(rat).triggerAttentionTest(gameAddress, Claim.unwrap(_rootClaim), parentHash) { } catch { }
+            try IRAT(rat).triggerAttentionTest(
+                systemConfig,
+                uint32(_disputeGameList.length - 1),
+                Claim.unwrap(_rootClaim),
+                parentHash
+            ) { } catch { }
         }
     }
 
@@ -299,5 +307,12 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
     /// @param _rat The RAT contract address.
     function setRAT(address _rat) external onlyOwner {
         rat = _rat;
+    }
+
+    /// @notice Sets the SystemConfig address for RAT L2 identification.
+    /// @dev May only be called by the `owner`.
+    /// @param _systemConfig The SystemConfig address for this L2.
+    function setSystemConfig(address _systemConfig) external onlyOwner {
+        systemConfig = _systemConfig;
     }
 }

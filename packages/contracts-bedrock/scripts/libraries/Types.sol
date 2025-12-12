@@ -19,6 +19,6 @@ library Types {
         address L1ERC721Bridge;
         address ProtocolVersions;
         address SuperchainConfig;
-        address RAT;
+        // NOTE: RAT removed - RAT is deployed separately by TON Staking V3
     }
 }

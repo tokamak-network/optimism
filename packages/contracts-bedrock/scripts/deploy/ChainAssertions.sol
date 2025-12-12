@@ -482,8 +482,8 @@ library ChainAssertions {
             SystemConfig: address(_output.systemConfigImpl),
             L1ERC721Bridge: address(_output.l1ERC721BridgeImpl),
             ProtocolVersions: address(_output.protocolVersionsImpl),
-            SuperchainConfig: address(_output.superchainConfigImpl),
-            RAT: address(_output.ratImpl)
+            SuperchainConfig: address(_output.superchainConfigImpl)
+            // NOTE: RAT removed - RAT is deployed separately by TON Staking V3
         });
     }
 }

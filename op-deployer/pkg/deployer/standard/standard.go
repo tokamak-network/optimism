@@ -35,12 +35,8 @@ const (
 	Eip1559Denominator              uint64 = 50
 	Eip1559Elasticity               uint64 = 6
 
-	// RAT defaults
-	DeployRAT                bool   = false
-	PerTestBondAmount        string = "10000000000000000"   // 0.01 ETH (safe within uint96 range)
-	EvidenceSubmissionPeriod uint64 = 3600                 // 1 hours
-	MinimumStakingBalance    string = "1000000000000000000" // 1 ETH
-	RatTriggerProbability    string = "10000"              // 10% (10000/100000)
+	// TON Staking V3 RAT - RAT is deployed separately by TON Staking V3
+	// Default to zero address (disabled)
 
 	ContractsV160Tag        = "op-contracts/v1.6.0"
 	ContractsV180Tag        = "op-contracts/v1.8.0-rc.4"

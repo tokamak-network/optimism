@@ -78,13 +78,8 @@ contract DeployConfig is Script {
     bool public useInterop;
     bool public useUpgradedFork;
 
-    // RAT configuration
-    bool public deployRAT;
-    uint256 public perTestBondAmount;
-    uint256 public evidenceSubmissionPeriod;
-    uint256 public minimumStakingBalance;
-    uint256 public ratTriggerProbability;
-    address public ratManager;
+    // TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
+    address public ratAddress;
 
     function read(string memory _path) public {
         console.log("DeployConfig: reading file %s", _path);
@@ -160,12 +155,8 @@ contract DeployConfig is Script {
         useUpgradedFork;
 
         // RAT configuration with default values
-        deployRAT = _readOr(_json, "$.deployRAT", false);
-        perTestBondAmount = _readOr(_json, "$.perTestBondAmount", 0.01 ether); // 0.01 ETH in wei
-        evidenceSubmissionPeriod = _readOr(_json, "$.evidenceSubmissionPeriod", 1 days); // 1 day in seconds
-        minimumStakingBalance = _readOr(_json, "$.minimumStakingBalance", 1 ether); // 1 ETH in wei
-        ratTriggerProbability = _readOr(_json, "$.ratTriggerProbability", 10000); // 10% (10000/100000)
-        ratManager = _readOr(_json, "$.ratManager", address(0));
+        // TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
+        ratAddress = _readOr(_json, "$.ratAddress", address(0));
     }
 
     function fork() public view returns (Fork fork_) {

@@ -33,7 +33,7 @@ import { IL1StandardBridge } from "interfaces/L1/IL1StandardBridge.sol";
 import { IOptimismMintableERC20Factory } from "interfaces/universal/IOptimismMintableERC20Factory.sol";
 import { IHasSuperchainConfig } from "interfaces/L1/IHasSuperchainConfig.sol";
 import { IETHLockbox } from "interfaces/L1/IETHLockbox.sol";
-import { IRAT } from "interfaces/L1/IRAT.sol";
+// RAT is deployed separately by TON Staking V3, not by OPContractsManager
 import { OPContractsManagerStandardValidator } from "src/L1/OPContractsManagerStandardValidator.sol";
 
 contract OPContractsManagerContractsContainer {
@@ -1166,15 +1166,12 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
             data
         );
 
-        // Deploy RAT if requested - before DisputeGameFactory initialization
-        // RAT only needs the DisputeGameFactory proxy address, not full initialization
-        if (_input.deployRAT) {
-            output.ratProxy = IRAT(deployProxy(_input.l2ChainId, output.opChainProxyAdmin, _input.saltMixer, "RAT"));
-
-            data = encodeRATInitializer(_input, output);
-            upgradeToAndCall(output.opChainProxyAdmin, address(output.ratProxy), implementation.ratImpl, data);
-
-            IDisputeGameFactory(output.disputeGameFactoryProxy).setRAT(address(output.ratProxy));
+        // Configure RAT and SystemConfig on DisputeGameFactory
+        // RAT is deployed separately by TON Staking V3, address comes from DeployInput
+        // SystemConfig is created during this deployment
+        if (_input.ratAddress != address(0)) {
+            IDisputeGameFactory(address(output.disputeGameFactoryProxy)).setRAT(_input.ratAddress);
+            IDisputeGameFactory(address(output.disputeGameFactoryProxy)).setSystemConfig(address(output.systemConfigProxy));
         }
 
         // Register the deployed game implementation in the DisputeGameFactory
@@ -1403,31 +1400,7 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
         return abi.encodeCall(IDelayedWETH.initialize, (_output.systemConfigProxy));
     }
 
-    function encodeRATInitializer(
-        OPContractsManager.DeployInput memory _input,
-        OPContractsManager.DeployOutput memory _output
-    )
-        internal
-        view
-        virtual
-        returns (bytes memory)
-    {
-        // console.log("OPContractsManager: About to encode RAT.initialize call");
-        // console.log("OPContractsManager: _input.perTestBondAmount =", _input.perTestBondAmount);
-        // console.log("OPContractsManager: _input.evidenceSubmissionPeriod =", _input.evidenceSubmissionPeriod);
-        // console.log("OPContractsManager: _input.minimumStakingBalance =", _input.minimumStakingBalance);
-        return abi.encodeCall(
-            IRAT.initialize,
-            (
-                IDisputeGameFactory(_output.disputeGameFactoryProxy), // _disputeGameFactory
-                _input.perTestBondAmount, // _perTestBondAmount
-                _input.evidenceSubmissionPeriod, // _evidenceSubmissionPeriod
-                _input.minimumStakingBalance, // _minimumStakingBalance
-                _input.ratTriggerProbability, // _ratTriggerProbability
-                _input.ratManager // _manager
-            )
-        );
-    }
+    // NOTE: RAT initializer encoding removed - RAT is deployed separately by TON Staking V3
 }
 
 /// @title OPContractsManagerInteropMigrator
@@ -1744,13 +1717,8 @@ contract OPContractsManager is ISemver {
         uint256 disputeSplitDepth;
         Duration disputeClockExtension;
         Duration disputeMaxClockDuration;
-        // RAT configuration parameters.
-        bool deployRAT;
-        uint256 perTestBondAmount;
-        uint256 evidenceSubmissionPeriod;
-        uint256 minimumStakingBalance;
-        uint256 ratTriggerProbability;
-        address ratManager;
+        // TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
+        address ratAddress; // External RAT contract address (set to address(0) to skip)
     }
 
     /// @notice The full set of outputs from deploying a new OP Stack chain.
@@ -1771,7 +1739,7 @@ contract OPContractsManager is ISemver {
         IPermissionedDisputeGame permissionedDisputeGame;
         IDelayedWETH delayedWETHPermissionedGameProxy;
         IDelayedWETH delayedWETHPermissionlessGameProxy;
-        IRAT ratProxy;
+        // NOTE: ratProxy removed - RAT is deployed separately by TON Staking V3
     }
 
     /// @notice Addresses of ERC-5202 Blueprint contracts. There are used for deploying full size
@@ -1793,7 +1761,7 @@ contract OPContractsManager is ISemver {
         address superPermissionedDisputeGame2;
         address superPermissionlessDisputeGame1;
         address superPermissionlessDisputeGame2;
-        address rat;
+        // NOTE: rat blueprint removed - RAT is deployed separately by TON Staking V3
     }
 
     /// @notice The latest implementation contracts for the OP Stack.
@@ -1811,7 +1779,7 @@ contract OPContractsManager is ISemver {
         address anchorStateRegistryImpl;
         address delayedWETHImpl;
         address mipsImpl;
-        address ratImpl;
+        // NOTE: ratImpl removed - RAT is deployed separately by TON Staking V3
     }
 
     /// @notice The input required to identify a chain for upgrading, along with new prestate hashes
@@ -1978,9 +1946,6 @@ contract OPContractsManager is ISemver {
     /// @param _input The deploy input parameters for the deployment.
     /// @return The deploy output values of the deployment.
     function deploy(DeployInput calldata _input) external virtual returns (DeployOutput memory) {
-        // console.log("OPContractsManager.deploy() called with deployRAT:", _input.deployRAT);
-        // console.log("OPContractsManager.deploy() ratTriggerProbability:", _input.ratTriggerProbability);
-        // console.log("OPContractsManager.deploy() perTestBondAmount:", _input.perTestBondAmount);
         return opcmDeployer.deploy(_input, superchainConfig, msg.sender);
     }
 

@@ -1174,8 +1174,7 @@ type L1Deployments struct {
 	ProtocolVersionsProxy             common.Address `json:"ProtocolVersionsProxy"`
 	DataAvailabilityChallenge         common.Address `json:"DataAvailabilityChallenge"`
 	DataAvailabilityChallengeProxy    common.Address `json:"DataAvailabilityChallengeProxy"`
-	RAT                               common.Address `json:"RAT"`
-	RATProxy                          common.Address `json:"RATProxy"`
+	// NOTE: RAT removed - RAT is deployed separately by TON Staking V3
 }
 
 func CreateL1DeploymentsFromContracts(contracts *addresses.L1Contracts) *L1Deployments {
@@ -1203,8 +1202,7 @@ func CreateL1DeploymentsFromContracts(contracts *addresses.L1Contracts) *L1Deplo
 		ProtocolVersionsProxy:             contracts.ProtocolVersionsProxy,
 		DataAvailabilityChallenge:         contracts.AltDAChallengeImpl,
 		DataAvailabilityChallengeProxy:    contracts.AltDAChallengeProxy,
-		RAT:                               contracts.RATImpl,
-		RATProxy:                          contracts.RATProxy,
+		// NOTE: RAT removed - RAT is deployed separately by TON Staking V3
 	}
 }
 
@@ -1244,10 +1242,7 @@ func (d *L1Deployments) Check(deployConfig *DeployConfig) error {
 				name == "DataAvailabilityChallengeProxy") {
 			continue
 		}
-		// Skip RAT proxy check for now - RAT deployment is optional
-		if name == "RATProxy" {
-			continue
-		}
+		// NOTE: RAT is deployed separately by TON Staking V3
 
 		if val.Field(i).Interface().(common.Address) == (common.Address{}) {
 			return fmt.Errorf("%s is not set", name)

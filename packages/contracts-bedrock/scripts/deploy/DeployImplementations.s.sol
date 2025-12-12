@@ -16,7 +16,6 @@ import { IPreimageOracle } from "interfaces/cannon/IPreimageOracle.sol";
 import { IMIPS64 } from "interfaces/cannon/IMIPS64.sol";
 import { IDisputeGameFactory } from "interfaces/dispute/IDisputeGameFactory.sol";
 import { IAnchorStateRegistry } from "interfaces/dispute/IAnchorStateRegistry.sol";
-import { IRAT } from "interfaces/L1/IRAT.sol";
 import {
     IOPContractsManager,
     IOPContractsManagerGameTypeAdder,
@@ -76,7 +75,7 @@ contract DeployImplementations is Script {
         IOptimismMintableERC20Factory optimismMintableERC20FactoryImpl;
         IDisputeGameFactory disputeGameFactoryImpl;
         IAnchorStateRegistry anchorStateRegistryImpl;
-        IRAT ratImpl; // RAT implementation contract
+        // NOTE: RAT is deployed separately by TON Staking V3
         ISuperchainConfig superchainConfigImpl;
         IProtocolVersions protocolVersionsImpl;
     }
@@ -103,7 +102,7 @@ contract DeployImplementations is Script {
         deployMipsSingleton(_input, output_);
         deployDisputeGameFactoryImpl(output_);
         deployAnchorStateRegistryImpl(_input, output_);
-        deployRATImpl(output_);
+        // NOTE: RAT is deployed separately by TON Staking V3, not by DeployImplementations
 
         // Deploy the OP Contracts Manager with the new implementations set.
         deployOPContractsManager(_input, output_);
@@ -136,8 +135,8 @@ contract DeployImplementations is Script {
             disputeGameFactoryImpl: address(_output.disputeGameFactoryImpl),
             anchorStateRegistryImpl: address(_output.anchorStateRegistryImpl),
             delayedWETHImpl: address(_output.delayedWETHImpl),
-            mipsImpl: address(_output.mipsSingleton),
-            ratImpl: address(_output.ratImpl)
+            mipsImpl: address(_output.mipsSingleton)
+            // NOTE: ratImpl removed - RAT is deployed separately by TON Staking V3
         });
 
         deployOPCMBPImplsContainer(_output, _blueprints, implementations);
@@ -451,17 +450,7 @@ contract DeployImplementations is Script {
         _output.anchorStateRegistryImpl = impl;
     }
 
-    function deployRATImpl(Output memory _output) private {
-        IRAT impl = IRAT(
-            DeployUtils.createDeterministic({
-                _name: "RAT",
-                _args: DeployUtils.encodeConstructor(abi.encodeCall(IRAT.__constructor__, ())),
-                _salt: _salt
-            })
-        );
-        vm.label(address(impl), "RATImpl");
-        _output.ratImpl = impl;
-    }
+    // NOTE: RAT is deployed separately by TON Staking V3, not by DeployImplementations
 
     function deployOPCMBPImplsContainer(
         Output memory _output,
@@ -627,8 +616,8 @@ contract DeployImplementations is Script {
             address(_output.optimismMintableERC20FactoryImpl),
             address(_output.disputeGameFactoryImpl),
             address(_output.anchorStateRegistryImpl),
-            address(_output.ethLockboxImpl),
-            address(_output.ratImpl)
+            address(_output.ethLockboxImpl)
+            // NOTE: ratImpl removed - RAT is deployed separately by TON Staking V3
         );
 
         DeployUtils.assertValidContractAddresses(Solarray.extend(addrs1, addrs2));
