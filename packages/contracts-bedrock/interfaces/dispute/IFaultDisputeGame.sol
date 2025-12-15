@@ -116,6 +116,7 @@ interface IFaultDisputeGame is IDisputeGame {
     function l2BlockNumberChallenged() external view returns (bool);
     function l2BlockNumberChallenger() external view returns (address);
     function l2ChainId() external view returns (uint256 l2ChainId_);
+    function rat() external view returns (address);
     function maxClockDuration() external view returns (Duration maxClockDuration_);
     function maxGameDepth() external view returns (uint256 maxGameDepth_);
     function move(Claim _disputed, uint256 _challengeIndex, Claim _claim, bool _isAttack) external payable;

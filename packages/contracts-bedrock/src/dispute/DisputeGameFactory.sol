@@ -199,9 +199,10 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         emit DisputeGameCreated(address(proxy_), _gameType, _rootClaim);
 
         // Trigger RAT attention test if RAT contract is set and game type is CANNON
-        // RAT identifies the game via msg.sender (this factory) and batchIndex
+        // RAT stores gameAddress to verify authenticity in resolveClaim()
         if (rat != address(0) && _gameType.raw() == GameTypes.CANNON.raw()) {
             try IRAT(rat).triggerAttentionTest(
+                address(proxy_),
                 systemConfig,
                 uint32(_disputeGameList.length - 1),
                 Claim.unwrap(_rootClaim),

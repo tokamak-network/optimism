@@ -8,12 +8,14 @@ pragma solidity ^0.8.0;
 interface IRAT {
     /// @notice Triggers attention test (called by DisputeGameFactory)
     /// @dev Called when a DisputeGame is created
-    /// @dev RAT identifies the game via msg.sender (DisputeGameFactory) context
+    /// @dev RAT stores gameAddress to verify authenticity in resolveClaim()
+    /// @param gameAddress The newly created FaultDisputeGame address
     /// @param systemConfig L2's SystemConfig address (L2 identifier)
     /// @param batchIndex Batch/game index
     /// @param batchHash Batch hash or Output Root
     /// @param blockHash Block hash (used for random validator selection)
     function triggerAttentionTest(
+        address gameAddress,
         address systemConfig,
         uint32 batchIndex,
         bytes32 batchHash,
