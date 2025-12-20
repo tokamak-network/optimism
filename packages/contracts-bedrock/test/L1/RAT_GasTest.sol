@@ -119,7 +119,7 @@ contract RAT_GasTest is CommonTest {
 
         vm.prank(mockDisputeGameFactory);
         uint256 gasStart = gasleft();
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash, uint64(block.number));
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT triggerAttentionTest() gas used", gasUsed);
@@ -140,7 +140,7 @@ contract RAT_GasTest is CommonTest {
 
         vm.prank(mockDisputeGameFactory);
         uint256 gasStart = gasleft();
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash, uint64(block.number));
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT triggerAttentionTest() no valid challengers gas used", gasUsed);
@@ -162,23 +162,19 @@ contract RAT_GasTest is CommonTest {
         vm.prank(address(1)); // proxy admin owner
         rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
 
-        // // Check challenger status after staking
-        // RAT.ChallengerInfo memory info = rat.getChallengerInfo(challenger);
-        // uint256 validChallengerCount = rat.getValidChallengerCount();
-
-        // // emit log_named_uint("Challenger staking amount", info.stakingAmount);
-        // // emit log_named_uint("Challenger is valid", info.isValid ? 1 : 0);
-        // // emit log_named_uint("Valid challenger count", validChallengerCount);
-        // // emit log_named_uint("Challenger validator index", info.validatorIndex);
-
+        // Setup OutputRoot verification data
         address gameAddress = address(0x5678);
-        bytes32 proofLV = keccak256("left_value");
-        bytes32 proofRV = keccak256("right_value");
-        bytes32 stateRoot = keccak256(abi.encodePacked(proofLV, proofRV));
+        bytes32 version = bytes32(0);
+        bytes memory stateTrieNodeRLP = hex"f8918080a0abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234a0ef561234ef561234ef561234ef561234ef561234ef561234ef561234ef5612348080808080808080808080";
+        bytes32 messagePasserStorageRoot = keccak256("msgPasserRoot");
+        bytes32 latestBlockhash = keccak256("blockHash");
+
+        bytes32 stateRoot = keccak256(stateTrieNodeRLP);
+        bytes32 outputRoot = keccak256(abi.encode(version, stateRoot, messagePasserStorageRoot, latestBlockhash));
 
         vm.prank(mockDisputeGameFactory);
         uint256 gasStart1 = gasleft();
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
+        rat.triggerAttentionTest(gameAddress, outputRoot, blockhash(block.number - 1, uint64(block.number)));
         uint256 gasUsed1 = gasStart1 - gasleft();
 
         emit log_named_uint("RAT triggerAttentionTest() gas used", gasUsed1);
@@ -190,7 +186,7 @@ contract RAT_GasTest is CommonTest {
         // Test submitCorrectEvidence
         vm.prank(challenger);
         uint256 gasStart2 = gasleft();
-        rat.submitCorrectEvidence(gameAddress, proofLV, proofRV);
+        rat.submitCorrectEvidence(gameAddress, version, stateTrieNodeRLP, messagePasserStorageRoot, latestBlockhash);
         uint256 gasUsed2 = gasStart2 - gasleft();
 
         emit log_named_uint("RAT submitCorrectEvidence() gas used", gasUsed2);
@@ -207,7 +203,7 @@ contract RAT_GasTest is CommonTest {
         // emit log_named_uint("Staking amount after", infoAfter.stakingAmount);
 
         // Verify evidence was submitted
-        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (, , , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
         assertTrue(evidenceSubmitted);
 
         // Verify bond was refunded to staking amount (not as ETH)
@@ -231,7 +227,7 @@ contract RAT_GasTest is CommonTest {
         bytes32 stateRoot = keccak256("test_state_root");
 
         vm.prank(mockDisputeGameFactory);
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1, uint64(block.number)));
 
         // Test resolveClaim
         vm.prank(gameAddress);
@@ -242,7 +238,7 @@ contract RAT_GasTest is CommonTest {
         emit log_named_uint("RAT resolveClaim() gas used", gasUsed);
 
         // Verify claim was resolved
-        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (, , , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
         assertTrue(evidenceSubmitted);
     }
 
@@ -258,7 +254,7 @@ contract RAT_GasTest is CommonTest {
         bytes32 stateRoot = keccak256("test_state_root");
 
         vm.prank(mockDisputeGameFactory);
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1, uint64(block.number)));
 
         // Test resolveClaim with wrong claimant
         address wrongClaimant = address(0x9999);
@@ -270,7 +266,7 @@ contract RAT_GasTest is CommonTest {
         emit log_named_uint("RAT resolveClaim() wrong claimant gas used", gasUsed);
 
         // Verify nothing changed (should be ignored)
-        (, , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
+        (, , , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
         assertFalse(evidenceSubmitted);
     }
 
@@ -286,21 +282,25 @@ contract RAT_GasTest is CommonTest {
         vm.prank(address(1)); // proxy admin owner
         rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
 
+        // Setup OutputRoot verification data
         address gameAddress = address(0x5678);
-        bytes32 proofLV = keccak256("left_value");
-        bytes32 proofRV = keccak256("right_value");
-        bytes32 stateRoot = keccak256(abi.encodePacked(proofLV, proofRV));
+        bytes32 version = bytes32(0);
+        bytes memory stateTrieNodeRLP = hex"f8918080a0abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234a0ef561234ef561234ef561234ef561234ef561234ef561234ef561234ef5612348080808080808080808080";
+        bytes32 messagePasserStorageRoot = keccak256("msgPasserRoot");
+        bytes32 latestBlockhash = keccak256("blockHash");
+
+        bytes32 stateRoot = keccak256(stateTrieNodeRLP);
+        bytes32 outputRoot = keccak256(abi.encode(version, stateRoot, messagePasserStorageRoot, latestBlockhash));
 
         vm.prank(mockDisputeGameFactory);
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
+        rat.triggerAttentionTest(gameAddress, outputRoot, blockhash(block.number - 1, uint64(block.number)));
 
         // Test submitCorrectEvidence with wrong proof
-        bytes32 wrongProofLV = keccak256("wrong_left");
-        bytes32 wrongProofRV = keccak256("wrong_right");
+        bytes memory wrongStateTrieNodeRLP = hex"f891809999";
 
         vm.prank(challenger);
         uint256 gasStart = gasleft();
-        try rat.submitCorrectEvidence(gameAddress, wrongProofLV, wrongProofRV) {
+        try rat.submitCorrectEvidence(gameAddress, version, wrongStateTrieNodeRLP, messagePasserStorageRoot, latestBlockhash) {
             fail();
         } catch {
             uint256 gasUsed = gasStart - gasleft();
@@ -320,19 +320,24 @@ contract RAT_GasTest is CommonTest {
         vm.prank(address(1)); // proxy admin owner
         rat.setRatTriggerProbability(100000); // MAX_PROBABILITY
 
+        // Setup OutputRoot verification data
         address gameAddress = address(0x5678);
-        bytes32 proofLV = keccak256("left_value");
-        bytes32 proofRV = keccak256("right_value");
-        bytes32 stateRoot = keccak256(abi.encodePacked(proofLV, proofRV));
+        bytes32 version = bytes32(0);
+        bytes memory stateTrieNodeRLP = hex"f8918080a0abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234a0ef561234ef561234ef561234ef561234ef561234ef561234ef561234ef5612348080808080808080808080";
+        bytes32 messagePasserStorageRoot = keccak256("msgPasserRoot");
+        bytes32 latestBlockhash = keccak256("blockHash");
+
+        bytes32 stateRoot = keccak256(stateTrieNodeRLP);
+        bytes32 outputRoot = keccak256(abi.encode(version, stateRoot, messagePasserStorageRoot, latestBlockhash));
 
         vm.prank(mockDisputeGameFactory);
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockhash(block.number - 1));
+        rat.triggerAttentionTest(gameAddress, outputRoot, blockhash(block.number - 1, uint64(block.number)));
 
         // Test submitCorrectEvidence with wrong challenger
         address wrongChallenger = address(0x9999);
         vm.prank(wrongChallenger);
         uint256 gasStart = gasleft();
-        try rat.submitCorrectEvidence(gameAddress, proofLV, proofRV) {
+        try rat.submitCorrectEvidence(gameAddress, version, stateTrieNodeRLP, messagePasserStorageRoot, latestBlockhash) {
             fail();
         } catch {
             uint256 gasUsed = gasStart - gasleft();
@@ -350,12 +355,14 @@ contract RAT_GasTest is CommonTest {
 
         // Test submitCorrectEvidence for non-existent game
         address nonExistentGame = address(0x8888);
-        bytes32 proofLV = keccak256("left_value");
-        bytes32 proofRV = keccak256("right_value");
+        bytes32 version = bytes32(0);
+        bytes memory stateTrieNodeRLP = hex"f8918080a0abcd1234";
+        bytes32 messagePasserStorageRoot = keccak256("msgPasserRoot");
+        bytes32 latestBlockhash = keccak256("blockHash");
 
         vm.prank(challenger);
         uint256 gasStart = gasleft();
-        try rat.submitCorrectEvidence(nonExistentGame, proofLV, proofRV) {
+        try rat.submitCorrectEvidence(nonExistentGame, version, stateTrieNodeRLP, messagePasserStorageRoot, latestBlockhash) {
             fail();
         } catch {
             uint256 gasUsed = gasStart - gasleft();
@@ -417,7 +424,7 @@ contract RAT_GasTest is CommonTest {
 
         vm.prank(mockDisputeGameFactory);
         uint256 gasStart = gasleft();
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash, uint64(block.number));
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT triggerAttentionTest() probability=0 gas used", gasUsed);
@@ -446,7 +453,7 @@ contract RAT_GasTest is CommonTest {
 
         vm.prank(mockDisputeGameFactory);
         uint256 gasStart = gasleft();
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
+        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash, uint64(block.number));
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT triggerAttentionTest() probability=MAX gas used", gasUsed);
@@ -494,11 +501,11 @@ contract RAT_GasTest is CommonTest {
             // Test triggerAttentionTest
             vm.prank(mockDisputeGameFactory);
             uint256 gasStart = gasleft();
-            rat.triggerAttentionTest(gameAddress, stateRoot, blockHash);
+            rat.triggerAttentionTest(gameAddress, stateRoot, blockHash, uint64(block.number));
             uint256 gasUsed = gasStart - gasleft();
 
             emit log_named_uint(
-                string(abi.encodePacked("RAT triggerAttentionTest() probability=", _toString(probabilities[i]), " gas used")),
+                string(abi.encodePacked("RAT triggerAttentionTest() probability=", _toString(probabilities[i]), " gas used", uint64(block.number))),
                 gasUsed
             );
 

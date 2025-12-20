@@ -63,6 +63,7 @@ type Config struct {
 	L1EthRpc             string           // L1 RPC Url
 	L1Beacon             string           // L1 Beacon API Url
 	GameFactoryAddress   common.Address   // Address of the dispute game factory
+	RatContractAddress   common.Address   // Address of the RAT contract
 	GameAllowlist        []common.Address // Allowlist of fault game addresses
 	GameWindow           time.Duration    // Maximum time duration to look for games to progress
 	Datadir              string           // Data Directory
@@ -80,6 +81,11 @@ type Config struct {
 	RollupRpc     string   // L2 Rollup RPC Url
 	SupervisorRPC string   // L2 supervisor RPC URL
 	L2Rpcs        []string // L2 RPC Url
+
+	// ICDCS Experiment fields
+	VirtualLatencyMs int    // Simulated network latency (mean) in ms
+	JitterMs         int    // Latency jitter (std dev) in ms
+	RegionId         string // Region identifier for this validator
 
 	// Specific to the cannon trace provider
 	Cannon                        vm.Config

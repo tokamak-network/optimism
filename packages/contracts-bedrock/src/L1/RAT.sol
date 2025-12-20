@@ -30,11 +30,12 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     /// @notice Attention test information structure
     /// @dev Packed to minimize storage slots - 3 slots total
     struct AttentionInfo {
-        bytes32 stateRoot;          // Slot 1: 32 bytes
-        uint96 bondAmount;          // Slot 2: 12 bytes (packed with challengerAddress)
-        address challengerAddress;  // Slot 2: 20 bytes (packed with bondAmount)
-        uint64 l1BlockNumber;       // Slot 3: 8 bytes
-        bool evidenceSubmitted;     // Slot 3: 1 byte (packed)
+        bytes32 outputRoot;              // Slot 1: 32 bytes (the OutputRoot being challenged)
+        uint96 bondAmount;               // Slot 2: 12 bytes (packed with challengerAddress)
+        address challengerAddress;       // Slot 2: 20 bytes (packed with bondAmount)
+        uint64 submissionDeadlineBlock;  // Slot 3: 8 bytes (L1 block deadline for evidence)
+        uint64 l2BlockNumber;            // Slot 3: 8 bytes (L2 block number for proof data)
+        bool evidenceSubmitted;          // Slot 3: 1 byte (packed)
     }
 
     /// @notice Emitted when a challenger stakes ETH
@@ -139,8 +140,22 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     }
 
     /// @notice Constructs the RAT contract
+    /// @dev For TESTING/DEVELOPMENT purposes, `_disableInitializers()` is commented out.
+    ///      This allows direct deployment followed by `initialize()` call.
+    ///
+    ///      For PRODUCTION deployment, you MUST:
+    ///      1. Uncomment `_disableInitializers()` below
+    ///      2. Deploy this contract as an implementation (not directly used)
+    ///      3. Deploy a Proxy contract pointing to this implementation
+    ///      4. Call `initialize()` through the Proxy
+    ///
+    ///      Why `_disableInitializers()` matters:
+    ///      - Prevents attackers from directly calling initialize() on the implementation
+    ///      - Ensures all state is stored in the Proxy, not the implementation
+    ///      - Standard OpenZeppelin UUPS/Transparent proxy security pattern
     constructor() ReinitializableBase(2) {
-        _disableInitializers();
+        // UNCOMMENT FOR PRODUCTION:
+        // _disableInitializers();
     }
 
     /// @notice Initializes the contract
@@ -212,12 +227,14 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
     /// @notice Triggers attention test (called by DisputeGameFactory)
     /// @param _gameAddress Game contract address
-    /// @param _stateRoot State root to be verified
+    /// @param _outputRoot Output root to be verified
     /// @param _blockHash Block hash for validator selection
+    /// @param _l2BlockNumber L2 block number used to generate the output root
     function triggerAttentionTest(
         address _gameAddress,
-        bytes32 _stateRoot,
-        bytes32 _blockHash
+        bytes32 _outputRoot,
+        bytes32 _blockHash,
+        uint64 _l2BlockNumber
     )
         external
         onlyDisputeGameFactory
@@ -250,10 +267,11 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
             // Store attention test info
             attentionTests[_gameAddress] = AttentionInfo({
-                stateRoot: _stateRoot,
+                outputRoot: _outputRoot,
                 bondAmount: uint96(bondAmount),
                 challengerAddress: selectedChallenger,
-                l1BlockNumber: uint64(block.number),
+                submissionDeadlineBlock: uint64(block.number) + uint64(evidenceSubmissionPeriod),
+                l2BlockNumber: _l2BlockNumber,
                 evidenceSubmitted: false
             });
 
@@ -278,13 +296,18 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     }
 
     /// @notice Submits correct evidence for attention test
+    /// @dev Requires raw RLP-encoded state trie root node as proof of execution
     /// @param _gameAddress Game contract address
-    /// @param _proofLV Left child state value
-    /// @param _proofRV Right child state value
+    /// @param _version Version of the output root (always 0)
+    /// @param _stateTrieNodeRLP Raw RLP-encoded state trie root node
+    /// @param _messagePasserStorageRoot Root of the message passer storage trie
+    /// @param _latestBlockhash Hash of the block this output was generated from
     function submitCorrectEvidence(
         address _gameAddress,
-        bytes32 _proofLV,
-        bytes32 _proofRV
+        bytes32 _version,
+        bytes memory _stateTrieNodeRLP,
+        bytes32 _messagePasserStorageRoot,
+        bytes32 _latestBlockhash
     )
         external
     {
@@ -296,13 +319,24 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         if (challengerAddress != msg.sender) revert InvalidChallengerAddress();
         if (attentionTest.evidenceSubmitted) revert EvidenceAlreadySubmitted();
 
-        // Time validation with overflow protection (gas optimized)
-        uint256 submissionDeadline = attentionTest.l1BlockNumber + evidenceSubmissionPeriod;
-        if (submissionDeadline < attentionTest.l1BlockNumber) revert("Deadline overflow");
-        if (block.number >= submissionDeadline) revert EvidenceSubmissionExpired();
+        // Time validation - deadline is pre-calculated at trigger time
+        if (block.number >= attentionTest.submissionDeadlineBlock) revert EvidenceSubmissionExpired();
 
-        // Verify proof (gas optimized - single hash operation)
-        if (keccak256(abi.encodePacked(_proofLV, _proofRV)) != attentionTest.stateRoot) revert ProofVerificationFailed();
+        // Step 1: Hash raw RLP to reconstruct stateRoot
+        bytes32 reconstructedStateRoot = keccak256(_stateTrieNodeRLP);
+
+        // Step 2: Compute OutputRootProof (Optimism standard)
+        bytes32 computedRoot = keccak256(
+            abi.encode(
+                _version,
+                reconstructedStateRoot,
+                _messagePasserStorageRoot,
+                _latestBlockhash
+            )
+        );
+
+        // Verify computed OutputRoot matches expected
+        if (computedRoot != attentionTest.outputRoot) revert ProofVerificationFailed();
 
         // Cache values for gas optimization
         uint256 bond = uint256(attentionTest.bondAmount);

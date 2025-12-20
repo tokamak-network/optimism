@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-challenger/game/fault/contracts"
 	"github.com/ethereum-optimism/optimism/op-challenger/game/registry"
 	"github.com/ethereum-optimism/optimism/op-challenger/game/scheduler"
+	"github.com/ethereum-optimism/optimism/op-challenger/game/rat"
 	"github.com/ethereum-optimism/optimism/op-challenger/metrics"
 	"github.com/ethereum-optimism/optimism/op-challenger/version"
 	"github.com/ethereum-optimism/optimism/op-service/client"
@@ -36,6 +37,7 @@ type Service struct {
 	logger  log.Logger
 	metrics metrics.Metricer
 	monitor *gameMonitor
+	ratMonitor *rat.RatMonitor
 	sched   *scheduler.Scheduler
 
 	faultGamesCloser fault.CloseFunc
@@ -116,7 +118,11 @@ func (s *Service) initFromConfig(ctx context.Context, cfg *config.Config) error 
 		return fmt.Errorf("failed to init large preimage scheduler: %w", err)
 	}
 
+
 	s.initMonitor(cfg)
+	if err := s.initRatMonitor(cfg); err != nil {
+		return fmt.Errorf("failed to init rat monitor: %w", err)
+	}
 
 	s.metrics.RecordInfo(version.SimpleWithMeta)
 	s.metrics.RecordUp()
@@ -237,6 +243,28 @@ func (s *Service) initMonitor(cfg *config.Config) {
 	s.monitor = newGameMonitor(s.logger, s.l1Clock, s.factoryContract, s.sched, s.preimages, cfg.GameWindow, s.claimer, cfg.GameAllowlist, s.pollClient, cfg.MinUpdateInterval)
 }
 
+func (s *Service) initRatMonitor(cfg *config.Config) error {
+	if cfg.RatContractAddress == (common.Address{}) {
+		return nil
+	}
+	l2Rpc := cfg.L2Rpcs[0] // Use first L2 RPC
+	monitor, err := rat.NewRatMonitor(
+		s.logger,
+		cfg.RatContractAddress,
+		s.l1Client,
+		s.txSender,
+		l2Rpc,
+		cfg.VirtualLatencyMs,
+		cfg.JitterMs,
+		cfg.RegionId,
+	)
+	if err != nil {
+		return err
+	}
+	s.ratMonitor = monitor
+	return nil
+}
+
 func (s *Service) Start(ctx context.Context) error {
 	s.logger.Info("starting scheduler")
 	s.sched.Start(ctx)
@@ -244,6 +272,9 @@ func (s *Service) Start(ctx context.Context) error {
 	s.preimages.Start(ctx)
 	s.logger.Info("starting monitoring")
 	s.monitor.StartMonitoring()
+	if s.ratMonitor != nil {
+		s.ratMonitor.Start()
+	}
 	s.logger.Info("challenger game service start completed")
 	return nil
 }
@@ -263,6 +294,9 @@ func (s *Service) Stop(ctx context.Context) error {
 	}
 	if s.monitor != nil {
 		s.monitor.StopMonitoring()
+	}
+	if s.ratMonitor != nil {
+		s.ratMonitor.Stop()
 	}
 	if s.claimer != nil {
 		if err := s.claimer.Close(); err != nil {

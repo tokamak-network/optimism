@@ -1,0 +1,565 @@
+{
+  "contract": "DisputeGameFactory",
+  "transaction": {
+    "from": "0x59168a780f18c400d602e97ab73b52bbc29d2943",
+    "to": null,
+    "maxFeePerGas": "0x3b9aca0e",
+    "maxPriorityFeePerGas": "0x3b9aca00",
+    "gas": "0x183784",
+    "input": "0x60a060405234801561001057600080fd5b50600160805261001e610023565b6100e3565b600054610100900460ff161561008f5760405162461bcd60e51b815260206004820152602760248201527f496e697469616c697a61626c653a20636f6e747261637420697320696e697469604482015266616c697a696e6760c81b606482015260840160405180910390fd5b60005460ff90811610156100e1576000805460ff191660ff9081179091556040519081527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15b565b608051611b25610105600039600081816102740152610ee10152611b256000f3fe60806040526004361061015f5760003560e01c80636593dc6e116100c0578063bb8aa1fc11610074578063dad544e011610059578063dad544e01461049e578063f2fde38b146104b3578063f5a7ab6e146104d357600080fd5b8063bb8aa1fc1461041d578063c4d66de81461047e57600080fd5b806382ecf2f6116100a557806382ecf2f6146103bf5780638da5cb5b146103d257806396cd9720146103fd57600080fd5b80636593dc6e1461037d578063715018a6146103aa57600080fd5b806338d38c97116101175780634d1975b4116100fc5780634d1975b4146102b357806354fd4d50146102d25780635f0150cb1461032857600080fd5b806338d38c97146102605780633e47158c1461029e57600080fd5b80631e334240116101485780631e334240146101f357806321aec12e14610213578063254bd6831461023357600080fd5b806314f6b1a3146101645780631b685b9e14610186575b600080fd5b34801561017057600080fd5b5061018461017f3660046115d2565b610500565b005b34801561019257600080fd5b506101c96101a1366004611609565b60656020526000908152604090205473ffffffffffffffffffffffffffffffffffffffff1681565b60405173ffffffffffffffffffffffffffffffffffffffff90911681526020015b60405180910390f35b3480156101ff57600080fd5b5061018461020e366004611624565b61058a565b34801561021f57600080fd5b5061018461022e36600461164e565b6105d6565b34801561023f57600080fd5b5061025361024e36600461166b565b610625565b6040516101ea9190611718565b34801561026c57600080fd5b5060405160ff7f00000000000000000000000000000000000000000000000000000000000000001681526020016101ea565b3480156102aa57600080fd5b506101c9610869565b3480156102bf57600080fd5b506068545b6040519081526020016101ea565b3480156102de57600080fd5b5061031b6040518060400160405280600581526020017f312e322e3000000000000000000000000000000000000000000000000000000081525081565b6040516101ea91906117d5565b34801561033457600080fd5b506103486103433660046117e8565b610a74565b6040805173ffffffffffffffffffffffffffffffffffffffff909316835267ffffffffffffffff9091166020830152016101ea565b34801561038957600080fd5b506102c4610398366004611609565b60666020526000908152604090205481565b3480156103b657600080fd5b50610184610ac7565b6101c96103cd3660046117e8565b610adb565b3480156103de57600080fd5b5060335473ffffffffffffffffffffffffffffffffffffffff166101c9565b34801561040957600080fd5b506102c46104183660046117e8565b610e3d565b34801561042957600080fd5b5061043d61043836600461186f565b610e76565b6040805163ffffffff909416845267ffffffffffffffff909216602084015273ffffffffffffffffffffffffffffffffffffffff16908201526060016101ea565b34801561048a57600080fd5b5061018461049936600461164e565b610edf565b3480156104aa57600080fd5b506101c9611057565b3480156104bf57600080fd5b506101846104ce36600461164e565b6110d4565b3480156104df57600080fd5b506069546101c99073ffffffffffffffffffffffffffffffffffffffff1681565b61050861118b565b63ffffffff821660008181526065602052604080822080547fffffffffffffffffffffffff00000000000000000000000000000000000000001673ffffffffffffffffffffffffffffffffffffffff8616908117909155905190917fff513d80e2c7fa487608f70a618dfbc0cf415699dc69588c747e8c71566c88de91a35050565b61059261118b565b63ffffffff8216600081815260666020526040808220849055518392917f74d6665c4b26d5596a5aa13d3014e0c06af4d322075a797f87b03cd4c5bc91ca91a35050565b6105de61118b565b606980547fffffffffffffffffffffffff00000000000000000000000000000000000000001673ffffffffffffffffffffffffffffffffffffffff92909216919091179055565b60685460609083101580610637575081155b610862575060408051600583901b8101602001909152825b8381116108605760006068828154811061066b5761066b611888565b600091825260209091200154905060e081901c60a082901c67ffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff831663ffffffff89168303610831576001865101865260008173ffffffffffffffffffffffffffffffffffffffff1663609d33346040518163ffffffff1660e01b8152600401600060405180830381865afa158015610705573d6000803e3d6000fd5b505050506040513d6000823e601f3d9081017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe016820160405261074b91908101906118e6565b905060008273ffffffffffffffffffffffffffffffffffffffff1663bcef3b556040518163ffffffff1660e01b8152600401602060405180830381865afa15801561079a573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906107be91906119b1565b90506040518060a001604052808881526020018781526020018567ffffffffffffffff168152602001828152602001838152508860018a5161080091906119f9565b8151811061081057610810611888565b60200260200101819052508888511061082e57505050505050610860565b50505b50507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff909201915061064f9050565b505b9392505050565b6000806108947fb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d61035490565b905073ffffffffffffffffffffffffffffffffffffffff8116156108b757919050565b6040518060400160405280601a81526020017f4f564d5f4c3143726f7373446f6d61696e4d657373656e6765720000000000008152505160026108fa9190611a10565b604080513060208201526000918101919091527f4f564d5f4c3143726f7373446f6d61696e4d657373656e6765720000000000009190911790610955906060015b604051602081830303815290604052805190602001205490565b1461098c576040517f54e433cd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b604080513060208201526001918101919091526000906109ae9060600161093b565b905073ffffffffffffffffffffffffffffffffffffffff811615610a42578073ffffffffffffffffffffffffffffffffffffffff16638da5cb5b6040518163ffffffff1660e01b8152600401602060405180830381865afa158015610a17573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610a3b9190611a4d565b9250505090565b6040517f332144db00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6000806000610a8587878787610e3d565b60009081526067602052604090205473ffffffffffffffffffffffffffffffffffffffff81169860a09190911c67ffffffffffffffff16975095505050505050565b610acf61118b565b610ad9600061120c565b565b63ffffffff841660009081526065602052604081205473ffffffffffffffffffffffffffffffffffffffff1680610b4b576040517f031c6de400000000000000000000000000000000000000000000000000000000815263ffffffff871660048201526024015b60405180910390fd5b63ffffffff86166000908152606660205260409020543414610b99576040517f8620aa1900000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6000610ba66001436119f9565b409050610c103387838888604051602001610bc5959493929190611a6a565b604080517fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe081840301815291905273ffffffffffffffffffffffffffffffffffffffff841690611283565b92508273ffffffffffffffffffffffffffffffffffffffff16638129fc1c346040518263ffffffff1660e01b81526004016000604051808303818588803b158015610c5a57600080fd5b505af1158015610c6e573d6000803e3d6000fd5b50505050506000610c8188888888610e3d565b60008181526067602052604090205490915015610ccd576040517f014f6fe500000000000000000000000000000000000000000000000000000000815260048101829052602401610b42565b60004260a01b60e08a901b178517600083815260676020526040808220839055606880546001810182559083527fa2153420d844928b4421650203c77babc8b33d7f2e7b450e2966db0c220977530183905551919250899163ffffffff8c169173ffffffffffffffffffffffffffffffffffffffff8916917f5b565efe82411da98814f356d0e7bcb8f0219b8d970307c5afb4a6903a8b2e359190a460695473ffffffffffffffffffffffffffffffffffffffff1615801590610d94575063ffffffff8916155b15610e3157606954604080517f96e9b64100000000000000000000000000000000000000000000000000000000815273ffffffffffffffffffffffffffffffffffffffff80851660048301819052602483018d9052604483018890529251929316916396e9b6419160648082019260009290919082900301818387803b158015610e1d57600080fd5b505af1925050508015610e2e575060015b50505b50505050949350505050565b600084848484604051602001610e569493929190611ab7565b604051602081830303815290604052805190602001209050949350505050565b600080600080600080610ecf60688881548110610e9557610e95611888565b906000526020600020015460e081901c9160a082901c67ffffffffffffffff169173ffffffffffffffffffffffffffffffffffffffff1690565b9199909850909650945050505050565b7f0000000000000000000000000000000000000000000000000000000000000000600054610100900460ff16158015610f1f575060005460ff8083169116105b610fab576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201527f647920696e697469616c697a65640000000000000000000000000000000000006064820152608401610b42565b600080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00001660ff831617610100179055610fe4611291565b610fec611312565b610ff58261120c565b600080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ff16905560405160ff821681527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15050565b6000611061610869565b73ffffffffffffffffffffffffffffffffffffffff16638da5cb5b6040518163ffffffff1660e01b8152600401602060405180830381865afa1580156110ab573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906110cf9190611a4d565b905090565b6110dc61118b565b73ffffffffffffffffffffffffffffffffffffffff811661117f576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201527f64647265737300000000000000000000000000000000000000000000000000006064820152608401610b42565b6111888161120c565b50565b60335473ffffffffffffffffffffffffffffffffffffffff163314610ad9576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610b42565b6033805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b6000610862600084846113b1565b3361129a610869565b73ffffffffffffffffffffffffffffffffffffffff16141580156112db5750336112c2611057565b73ffffffffffffffffffffffffffffffffffffffff1614155b15610ad9576040517fc4050a2600000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b600054610100900460ff166113a9576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602b60248201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960448201527f6e697469616c697a696e670000000000000000000000000000000000000000006064820152608401610b42565b610ad96114f7565b600060608203516040830351602084035184518060208701018051600283016c5af43d3d93803e606057fd5bf3895289600d8a035278593da1005b363d3d373d3d3d3d610000806062363936013d738160481b1760218a03527f9e4ac34f21c619cefc926c8bd93b54bf5a39c7ab2127a895af1cc0691d7e3dff603a8a035272fd6100003d81600a3d39f336602c57343d527f6062820160781b1761ff9e82106059018a03528060f01b8352606c8101604c8a038cf09750508661147d5763301164256000526004601cfd5b905285527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08501527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc08401527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa09092019190915292915050565b600054610100900460ff1661158e576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602b60248201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960448201527f6e697469616c697a696e670000000000000000000000000000000000000000006064820152608401610b42565b610ad93361120c565b803563ffffffff811681146115ab57600080fd5b919050565b73ffffffffffffffffffffffffffffffffffffffff8116811461118857600080fd5b600080604083850312156115e557600080fd5b6115ee83611597565b915060208301356115fe816115b0565b809150509250929050565b60006020828403121561161b57600080fd5b61086282611597565b6000806040838503121561163757600080fd5b61164083611597565b946020939093013593505050565b60006020828403121561166057600080fd5b8135610862816115b0565b60008060006060848603121561168057600080fd5b61168984611597565b95602085013595506040909401359392505050565b60005b838110156116b95781810151838201526020016116a1565b838111156116c8576000848401525b50505050565b600081518084526116e681602086016020860161169e565b601f017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0169290920160200192915050565b60006020808301818452808551808352604092508286019150828160051b87010184880160005b838110156117c7578883037fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc001855281518051845287810151888501528681015167ffffffffffffffff16878501526060808201519085015260809081015160a0918501829052906117b3818601836116ce565b96890196945050509086019060010161173f565b509098975050505050505050565b60208152600061086260208301846116ce565b600080600080606085870312156117fe57600080fd5b61180785611597565b935060208501359250604085013567ffffffffffffffff8082111561182b57600080fd5b818701915087601f83011261183f57600080fd5b81358181111561184e57600080fd5b88602082850101111561186057600080fd5b95989497505060200194505050565b60006020828403121561188157600080fd5b5035919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b6000602082840312156118f857600080fd5b815167ffffffffffffffff8082111561191057600080fd5b818401915084601f83011261192457600080fd5b815181811115611936576119366118b7565b604051601f82017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0908116603f0116810190838211818310171561197c5761197c6118b7565b8160405282815287602084870101111561199557600080fd5b6119a683602083016020880161169e565b979650505050505050565b6000602082840312156119c357600080fd5b5051919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b600082821015611a0b57611a0b6119ca565b500390565b6000817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0483118215151615611a4857611a486119ca565b500290565b600060208284031215611a5f57600080fd5b8151610862816115b0565b7fffffffffffffffffffffffffffffffffffffffff0000000000000000000000008660601b1681528460148201528360348201528183605483013760009101605401908152949350505050565b63ffffffff8516815283602082015260606040820152816060820152818360808301376000818301608090810191909152601f9092017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0160101939250505056fea164736f6c634300080f000a",
+    "nonce": "0x2",
+    "chainId": "0x301824"
+  },
+  "abi": [
+    {
+      "type": "constructor",
+      "inputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "create",
+      "inputs": [
+        {
+          "name": "_gameType",
+          "type": "uint32",
+          "internalType": "GameType"
+        },
+        {
+          "name": "_rootClaim",
+          "type": "bytes32",
+          "internalType": "Claim"
+        },
+        {
+          "name": "_extraData",
+          "type": "bytes",
+          "internalType": "bytes"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "proxy_",
+          "type": "address",
+          "internalType": "contract IDisputeGame"
+        }
+      ],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "findLatestGames",
+      "inputs": [
+        {
+          "name": "_gameType",
+          "type": "uint32",
+          "internalType": "GameType"
+        },
+        {
+          "name": "_start",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "_n",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "games_",
+          "type": "tuple[]",
+          "internalType": "struct DisputeGameFactory.GameSearchResult[]",
+          "components": [
+            {
+              "name": "index",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "metadata",
+              "type": "bytes32",
+              "internalType": "GameId"
+            },
+            {
+              "name": "timestamp",
+              "type": "uint64",
+              "internalType": "Timestamp"
+            },
+            {
+              "name": "rootClaim",
+              "type": "bytes32",
+              "internalType": "Claim"
+            },
+            {
+              "name": "extraData",
+              "type": "bytes",
+              "internalType": "bytes"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "gameAtIndex",
+      "inputs": [
+        {
+          "name": "_index",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "gameType_",
+          "type": "uint32",
+          "internalType": "GameType"
+        },
+        {
+          "name": "timestamp_",
+          "type": "uint64",
+          "internalType": "Timestamp"
+        },
+        {
+          "name": "proxy_",
+          "type": "address",
+          "internalType": "contract IDisputeGame"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "gameCount",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "gameCount_",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "gameImpls",
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint32",
+          "internalType": "GameType"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "contract IDisputeGame"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "games",
+      "inputs": [
+        {
+          "name": "_gameType",
+          "type": "uint32",
+          "internalType": "GameType"
+        },
+        {
+          "name": "_rootClaim",
+          "type": "bytes32",
+          "internalType": "Claim"
+        },
+        {
+          "name": "_extraData",
+          "type": "bytes",
+          "internalType": "bytes"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "proxy_",
+          "type": "address",
+          "internalType": "contract IDisputeGame"
+        },
+        {
+          "name": "timestamp_",
+          "type": "uint64",
+          "internalType": "Timestamp"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getGameUUID",
+      "inputs": [
+        {
+          "name": "_gameType",
+          "type": "uint32",
+          "internalType": "GameType"
+        },
+        {
+          "name": "_rootClaim",
+          "type": "bytes32",
+          "internalType": "Claim"
+        },
+        {
+          "name": "_extraData",
+          "type": "bytes",
+          "internalType": "bytes"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "uuid_",
+          "type": "bytes32",
+          "internalType": "Hash"
+        }
+      ],
+      "stateMutability": "pure"
+    },
+    {
+      "type": "function",
+      "name": "initBonds",
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint32",
+          "internalType": "GameType"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "initVersion",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint8",
+          "internalType": "uint8"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "initialize",
+      "inputs": [
+        {
+          "name": "_owner",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "owner",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "proxyAdmin",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "contract IProxyAdmin"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "proxyAdminOwner",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "rat",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "renounceOwnership",
+      "inputs": [],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "setImplementation",
+      "inputs": [
+        {
+          "name": "_gameType",
+          "type": "uint32",
+          "internalType": "GameType"
+        },
+        {
+          "name": "_impl",
+          "type": "address",
+          "internalType": "contract IDisputeGame"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "setInitBond",
+      "inputs": [
+        {
+          "name": "_gameType",
+          "type": "uint32",
+          "internalType": "GameType"
+        },
+        {
+          "name": "_initBond",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "setRAT",
+      "inputs": [
+        {
+          "name": "_rat",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "transferOwnership",
+      "inputs": [
+        {
+          "name": "newOwner",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "version",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "event",
+      "name": "DisputeGameCreated",
+      "inputs": [
+        {
+          "name": "disputeProxy",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "gameType",
+          "type": "uint32",
+          "indexed": true,
+          "internalType": "GameType"
+        },
+        {
+          "name": "rootClaim",
+          "type": "bytes32",
+          "indexed": true,
+          "internalType": "Claim"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "ImplementationSet",
+      "inputs": [
+        {
+          "name": "impl",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "gameType",
+          "type": "uint32",
+          "indexed": true,
+          "internalType": "GameType"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "InitBondUpdated",
+      "inputs": [
+        {
+          "name": "gameType",
+          "type": "uint32",
+          "indexed": true,
+          "internalType": "GameType"
+        },
+        {
+          "name": "newBond",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "Initialized",
+      "inputs": [
+        {
+          "name": "version",
+          "type": "uint8",
+          "indexed": false,
+          "internalType": "uint8"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "OwnershipTransferred",
+      "inputs": [
+        {
+          "name": "previousOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "newOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "error",
+      "name": "GameAlreadyExists",
+      "inputs": [
+        {
+          "name": "uuid",
+          "type": "bytes32",
+          "internalType": "Hash"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "IncorrectBondAmount",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NoImplementation",
+      "inputs": [
+        {
+          "name": "gameType",
+          "type": "uint32",
+          "internalType": "GameType"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "ProxyAdminOwnedBase_NotProxyAdmin",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ProxyAdminOwnedBase_NotProxyAdminOrProxyAdminOwner",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ProxyAdminOwnedBase_NotProxyAdminOwner",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ProxyAdminOwnedBase_NotResolvedDelegateProxy",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ProxyAdminOwnedBase_NotSharedProxyAdminOwner",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ProxyAdminOwnedBase_ProxyAdminNotFound",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ReinitializableBase_ZeroInitVersion",
+      "inputs": []
+    }
+  ]
+}

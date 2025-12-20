@@ -1,0 +1,635 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "attentionTests",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "stateRoot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "bondAmount",
+        "type": "uint96",
+        "internalType": "uint96"
+      },
+      {
+        "name": "challengerAddress",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "l1BlockNumber",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "evidenceSubmitted",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "challengers",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "stakingAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "totalSlashedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "validatorIndex",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "isValid",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "disputeGameFactory",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IDisputeGameFactory"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "evidenceSubmissionPeriod",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getChallengerInfo",
+    "inputs": [
+      {
+        "name": "_challenger",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct RAT.ChallengerInfo",
+        "components": [
+          {
+            "name": "stakingAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "totalSlashedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "validatorIndex",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "isValid",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getValidChallengerCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "initVersion",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "initialize",
+    "inputs": [
+      {
+        "name": "_disputeGameFactory",
+        "type": "address",
+        "internalType": "contract IDisputeGameFactory"
+      },
+      {
+        "name": "_perTestBondAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_evidenceSubmissionPeriod",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_minimumStakingBalance",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_ratTriggerProbability",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_manager",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "minimumStakingBalance",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "perTestBondAmount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "proxyAdmin",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IProxyAdmin"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "proxyAdminOwner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ratManager",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ratTriggerProbability",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "resolveClaim",
+    "inputs": [
+      {
+        "name": "_claimant",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setEvidenceSubmissionPeriod",
+    "inputs": [
+      {
+        "name": "_period",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setMinimumStakingBalance",
+    "inputs": [
+      {
+        "name": "_balance",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setPerTestBondAmount",
+    "inputs": [
+      {
+        "name": "_amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setRatTriggerProbability",
+    "inputs": [
+      {
+        "name": "_probability",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "stake",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "submitCorrectEvidence",
+    "inputs": [
+      {
+        "name": "_gameAddress",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_version",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_stateTrieNode",
+        "type": "bytes32[17]",
+        "internalType": "bytes32[17]"
+      },
+      {
+        "name": "_messagePasserStorageRoot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_latestBlockhash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "triggerAttentionTest",
+    "inputs": [
+      {
+        "name": "_gameAddress",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_stateRoot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_blockHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "validChallengers",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "version",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "AttentionTriggered",
+    "inputs": [
+      {
+        "name": "gameAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "challenger",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "BondRefunded",
+    "inputs": [
+      {
+        "name": "gameAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "challenger",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "refundedAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ChallengerStaked",
+    "inputs": [
+      {
+        "name": "challenger",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "CorrectEvidenceSubmitted",
+    "inputs": [
+      {
+        "name": "gameAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "challenger",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "restoredAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Initialized",
+    "inputs": [
+      {
+        "name": "version",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AttentionTestNotExists",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ChallengerNotExists",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EvidenceAlreadySubmitted",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EvidenceSubmissionExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientStakingAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidChallengerAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoValidChallengers",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotDisputeGameFactory",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotRatManager",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProofVerificationFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProxyAdminOwnedBase_NotProxyAdmin",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProxyAdminOwnedBase_NotProxyAdminOrProxyAdminOwner",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProxyAdminOwnedBase_NotProxyAdminOwner",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProxyAdminOwnedBase_NotResolvedDelegateProxy",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProxyAdminOwnedBase_NotSharedProxyAdminOwner",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProxyAdminOwnedBase_ProxyAdminNotFound",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ReinitializableBase_ZeroInitVersion",
+    "inputs": []
+  }
+]

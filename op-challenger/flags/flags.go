@@ -70,6 +70,29 @@ var (
 			"If empty, the challenger will play all games.",
 		EnvVars: prefixEnvVars("GAME_ALLOWLIST"),
 	}
+	RatContractFlag = &cli.StringFlag{
+		Name:    "rat-contract",
+		Usage:   "Address of the RAT contract",
+		EnvVars: prefixEnvVars("RAT_CONTRACT"),
+	}
+	VirtualLatencyFlag = &cli.IntFlag{
+		Name:    "virtual-latency",
+		Usage:   "Simulated network latency in ms (mean)",
+		EnvVars: prefixEnvVars("VIRTUAL_LATENCY"),
+		Value:   0,
+	}
+	JitterFlag = &cli.IntFlag{
+		Name:    "jitter",
+		Usage:   "Latency jitter (standard deviation) in ms",
+		EnvVars: prefixEnvVars("JITTER"),
+		Value:   0,
+	}
+	RegionIdFlag = &cli.StringFlag{
+		Name:    "region-id",
+		Usage:   "Region identifier for this validator (e.g., US-01, EU-05)",
+		EnvVars: prefixEnvVars("REGION_ID"),
+		Value:   "default",
+	}
 	TraceTypeFlag = &cli.StringSliceFlag{
 		Name:    "trace-type",
 		Usage:   "The trace types to support. Valid options: " + openum.EnumString(types.TraceTypes),
@@ -289,6 +312,10 @@ var optionalFlags = []cli.Flag{
 	GameWindowFlag,
 	SelectiveClaimResolutionFlag,
 	UnsafeAllowInvalidPrestate,
+	RatContractFlag,
+	VirtualLatencyFlag,
+	JitterFlag,
+	RegionIdFlag,
 }
 
 func init() {
@@ -568,6 +595,15 @@ func NewConfigFromCLI(ctx *cli.Context, logger log.Logger) (*config.Config, erro
 		}
 	}
 
+
+	var ratContractAddress common.Address
+	if ctx.IsSet(RatContractFlag.Name) {
+		ratContractAddress, err = opservice.ParseAddress(ctx.String(RatContractFlag.Name))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	txMgrConfig := txmgr.ReadCLIConfig(ctx)
 	metricsConfig := opmetrics.ReadCLIConfig(ctx)
 	pprofConfig := oppprof.ReadCLIConfig(ctx)
@@ -621,6 +657,10 @@ func NewConfigFromCLI(ctx *cli.Context, logger log.Logger) (*config.Config, erro
 		L1Beacon:                l1Beacon,
 		TraceTypes:              traceTypes,
 		GameFactoryAddress:      gameFactoryAddress,
+		RatContractAddress:      ratContractAddress,
+		VirtualLatencyMs:        ctx.Int(VirtualLatencyFlag.Name),
+		JitterMs:                ctx.Int(JitterFlag.Name),
+		RegionId:                ctx.String(RegionIdFlag.Name),
 		GameAllowlist:           allowedGames,
 		GameWindow:              ctx.Duration(GameWindowFlag.Name),
 		MaxConcurrency:          maxConcurrency,

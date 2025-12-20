@@ -83,3 +83,49 @@ kurtosis-devnet/prestate.bin.gz
 
 op-challenger/scripts/contract-artifacts/
 
+
+# RAT Experiment
+results/
+deployed_config.env
+.venv/
+venv/
+bin/
+*.log
+
+# Generated files
+accounts.json
+kurtosis_*.json
+devnet_startup.json
+__pycache__/
+*.pyc
+
+# RAT Experiment - Build artifacts
+bin/
+rat-validator
+op-challenger/bin/
+op-rat/cmd/*/rat-*
+
+# Kurtosis artifacts
+kurtosis-devnet/contract-artifacts.tar.gz
+kurtosis-devnet/el_cl_genesis_data/
+kurtosis-devnet/genesis_validators_root/
+kurtosis-devnet/contracts-*/
+kurtosis-devnet/*.elf
+
+# Python/Runtime
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Generated files
+results/
+deployed_config.env
+accounts.json
+kurtosis_*.json
+devnet_startup.json
+
+# Logs
+*.log
+op-rat/da_data/
+da_data/

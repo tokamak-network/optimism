@@ -1,123 +1,120 @@
-# Randomized Attention Test (RAT) PoC
+# RAT Protocol Experiment
 
-## 1) About this repository/branch
+Randomized Attention Test (RAT) protocol implementation on Optimism L2 rollup.
 
-This repository contains a proof-of-concept smart contract and gas-cost measurements for the **Randomized Attention Test (RAT)** protocol. RAT probabilistically checks whether Optimistic Rollup validators are actively tracking L2 state transitions.
+## Overview
 
-- **Branch:** `feature/rat-poc-v1`  
-- **Origin:** Forked from the official Optimism repository/branch  
-- **Authors:** Suhyeon Lee, Yeongju Bak  
-- **Paper Title:** *Looking for Attention: Randomized Attention Test Design for Validator Monitoring in Optimistic Rollups*  
-- **PDF Link:** https://arxiv.org/pdf/2505.24393
+RAT is a cryptoeconomic mechanism for randomly selecting and verifying validators in an L2 rollup environment. This branch contains the complete experiment infrastructure for testing RAT protocol performance.
 
-## 2) Contract development
+## Architecture
 
-- **RAT Contract** — `packages/contracts-bedrock/src/L1/RAT.sol`  
-  Core attention-test logic: staking, slashing, evidence submission, settlement.
-- **DisputeGameFactory Upgrade** — `packages/contracts-bedrock/src/dispute/DisputeGameFactory.sol`  
-  RAT integration path for CANNON games (conditional trigger and wiring).
-- **FaultDisputeGame Upgrade** — `packages/contracts-bedrock/src/dispute/FaultDisputeGame.sol`  
-  RAT address support and `resolve`-path integration.
-- **Interface updates**  
-  All required interfaces updated to expose RAT configuration and calls.
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                         KURTOSIS (Infrastructure)                  │
+│   ┌───────────────────────────────────────────────────────────┐   │
+│   │                        L1 (Geth)                          │   │
+│   │   ┌─────────────────┐   ┌─────────────────────────────┐   │   │
+│   │   │ DisputeGame     │   │         RAT Contract        │   │   │
+│   │   │   Factory       │──►│  • triggerAttentionTest()   │   │   │
+│   │   │ • create()      │   │  • submitCorrectEvidence()  │   │   │
+│   │   └────────▲────────┘   └──────────────▲──────────────┘   │   │
+│   └────────────┼───────────────────────────┼──────────────────┘   │
+│   ┌────────────┼───────────────────────────┼──────────────────┐   │
+│   │   L2 (op-geth + op-node) + op-batcher                     │   │
+│   └───────────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────────────┘
+         │                                   │
+═════════╪═══════════════════════════════════╪════════════════════════
+         │      EXPERIMENT COMPONENTS        │
+         │                                   │
+   ┌─────┴─────┐                       ┌─────┴─────┐
+   │  rat-     │ create game           │  rat-     │ L2 transactions
+   │ proposer  │───────────►           │  spammer  │──────────────►
+   └───────────┘                       │ (100 TPS) │
+         │                             └───────────┘
+         │ AttentionTriggered event
+         ▼
+   ┌─────────────────────────────────────────────────────┐
+   │              rat-validators (op-challenger ×30)     │
+   │     US (10)          EU (10)         ASIA (10)      │
+   │   20±5ms latency   100±20ms         220±30ms        │
+   └─────────────────────────────────────────────────────┘
+```
 
-## 3) Testing infrastructure
+## Prerequisites
 
-- **RAT Test Suite** — `packages/contracts-bedrock/test/L1/RAT.t.sol`  
-  - `RAT_Initialize_Test` — Initialization and version checks  
-  - `RAT_Staking_Test` — Minimum amount validation, multiple staking  
-  - `RAT_TriggerAttentionTest_Test` — Trigger mechanism and challenger validation  
-  - `RAT_Evidence_Test` — Correct/incorrect proofs, challenger validation  
-  - `RAT_ResolveClaim_Test` — Claim resolution and bond refunding  
-  - `RAT_Admin_Test` — `perTestBondAmount`, `evidenceSubmissionPeriod`, `minimumStakingBalance`
-- **RAT Gas Tests** — `packages/contracts-bedrock/test/L1/RAT_GasTest.sol`  
-  - Staking (valid/invalid challengers)  
-  - Attention trigger (various probability scenarios)  
-  - Evidence submission (correct/incorrect, different challengers)  
-  - Claim resolution & bond refunding  
-  - Information queries (challenger info, valid challenger count)  
-  - Admin functions (probability settings)
-- **DisputeGameFactory Gas Tests** — `packages/contracts-bedrock/test/L1/DisputeGameFactory_GasTest.sol`  
-  - Game creation without RAT  
-  - Game creation with RAT (not triggered)  
-  - Game creation with RAT (triggered; single/multiple challengers)
+- Docker
+- [Kurtosis](https://docs.kurtosis.com/install/)
+- Go 1.21+
+- Python 3.10+ (for visualization)
 
-## 4) Requirements & Quick Start
+## Quick Start
 
-### Prerequisites
-- Git
-- Node.js (≥ 18)
-- Foundry (forge, cast, anvil)
-- *(Optional)* Go (≥ 1.21) if using any Go FFI helpers
+### 1. Start Kurtosis Environment
 
-### Clone & checkout
 ```bash
-git clone https://github.com/tokamak-network/optimism.git
-cd optimism
-git checkout feature/rat-poc-v1
-
-# Navigate to the contracts directory for building and testing
-cd packages/contracts-bedrock
-```
-### Install & Build
-```
-# install deps (adjust to your workspace layout)
-forge install
-npm install
-
-# build contracts
-forge build
-
-# Build go-ffi (required for tests)
-cd scripts/go-ffi && go build
+./start_kurtosis.sh
 ```
 
-## 5) How to test
-### Core Command (recommended)
-```
-# All testing should be done in packages/contracts-bedrock
-cd packages/contracts-bedrock
+### 2. Run Full Experiment
 
-# Run all RAT tests with gas report 
-forge test --match-contract RAT -vv --gas-report
-```
+```bash
+# Full mode: 50 blocks, 30 validators, 100 TPS
+./run_exp_e_unified.sh --full
 
-### Test separately (optional)
-```
-# Run specific RAT test file
-forge test --match-path "test/L1/RAT.t.sol" -vv
-
-# Run gas measurement tests
-forge test --match-path "test/L1/RAT_GasTest.sol" -vv
-
-# Run DisputeGameFactory gas tests
-forge test --match-path "test/L1/DisputeGameFactory_GasTest.sol" -vv
-
-# Detailed gas report for RAT tests
-forge test --match-contract RAT --gas-report
-
-# Run individual function tests
-forge test --match-test test_stake_gas_measurement -vv
-forge test --match-test test_triggerAttentionTest_gas_measurement -vv
-forge test --match-test test_submitCorrectEvidence_gas_measurement -vv
-forge test --match-test test_resolveClaim_gas_measurement -vv
+# Test mode: 3 blocks, 3 validators (quick validation)
+./run_exp_e_unified.sh
 ```
 
-## 6) Expected Result
+### 3. Visualize Results
 
-- All tests pass.
-- A gas report is printed for relevant functions and scenarios.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install pandas matplotlib seaborn numpy
 
-## 7) Future work
+python3 visualize_results.py --input results/exp_e_YYYYMMDD_HHMMSS/
+```
 
-- Integrate RAT response logic into the validator (Golang) code.
-- Stand up nodes and operate RAT in a testnet environment to evaluate behavior and costs end-to-end.
+## Experiment Parameters
 
-## 8) License & citation
+| Parameter | Test Mode | Full Mode |
+|-----------|-----------|-----------|
+| Validators | 3 | 30 |
+| Blocks | 3 | 50 |
+| Spammer TPS | 50±30% | 100±30% |
+| Regions | US only | US, EU, ASIA |
 
-- MIT License
-- If you use this PoC or build on it, please cite the paper above and reference this repository/branch.
+## Output
 
-## 9) Contact
-- zena @ tokamak.network
-- suhyeon @ tokamak.network
+### Experiment Results
+```
+results/exp_e_YYYYMMDD_HHMMSS/
+├── proposer.log
+├── validator_VAL-*.log
+├── spammer.log
+├── timing_metrics.csv
+└── figures/
+    ├── fig_a_processing_time.pdf
+    ├── fig_b_timing_breakdown.pdf
+    ├── fig_c_proof_timeline.pdf
+    └── fig_d_l2_load.pdf
+```
+
+### Key Metrics
+- **T_proc**: Processing time (network latency simulation)
+- **T_net**: Network time (L1 transaction confirmation)
+- **T_total**: Total response time
+
+## Core Components
+
+| Component | Path | Description |
+|-----------|------|-------------|
+| RAT Contract | `packages/contracts-bedrock/src/L1/RAT.sol` | On-chain RAT logic |
+| Proposer | `op-rat/cmd/rat-proposer/` | Creates dispute games |
+| Validator | `op-challenger/game/rat/` | Monitors and responds to RAT |
+| Spammer | `op-rat/cmd/rat-spammer/` | L2 transaction load generator |
+
+## License
+
+MIT License - See original Optimism repository for details.

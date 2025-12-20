@@ -20,12 +20,12 @@ interface IRAT is IProxyAdminOwnedBase, IReinitializableBase {
     /// @notice Attention test information structure
     /// @dev Packed to minimize storage slots
     struct AttentionInfo {
-        // GameId removed - using mapping key instead
-        bytes32 stateRoot;          // Slot 2: 32 bytes
-        uint256 slashedAmount;      // Slot 3: 32 bytes
-        address challengerAddress;  // Slot 4: 20 bytes
-        uint64 l1BlockNumber;       // Slot 4: 8 bytes (packed with address)
-        bool evidenceSubmitted;     // Slot 4: 1 byte (packed)
+        bytes32 outputRoot;              // Slot 1: 32 bytes (the OutputRoot being challenged)
+        uint96 bondAmount;               // Slot 2: 12 bytes (packed with challengerAddress)
+        address challengerAddress;       // Slot 2: 20 bytes (packed with bondAmount)
+        uint64 submissionDeadlineBlock;  // Slot 3: 8 bytes (L1 block deadline for evidence)
+        uint64 l2BlockNumber;            // Slot 3: 8 bytes (L2 block number for proof data)
+        bool evidenceSubmitted;          // Slot 3: 1 byte (packed)
     }
 
     /// @notice Emitted when a challenger stakes ETH
@@ -64,15 +64,24 @@ interface IRAT is IProxyAdminOwnedBase, IReinitializableBase {
 
     /// @notice Triggers attention test (called by DisputeGameFactory)
     /// @param _gameAddress Game contract address
-    /// @param _stateRoot State root to be verified
+    /// @param _outputRoot Output root to be verified
     /// @param _blockHash Block hash for validator selection
-    function triggerAttentionTest(address _gameAddress, bytes32 _stateRoot, bytes32 _blockHash) external;
+    /// @param _l2BlockNumber L2 block number used to generate the output root
+    function triggerAttentionTest(address _gameAddress, bytes32 _outputRoot, bytes32 _blockHash, uint64 _l2BlockNumber) external;
 
     /// @notice Submits correct evidence for attention test
     /// @param _gameAddress Game contract address
-    /// @param _proofLV Left child state value
-    /// @param _proofRV Right child state value
-    function submitCorrectEvidence(address _gameAddress, bytes32 _proofLV, bytes32 _proofRV) external;
+    /// @param _version Version of the output root (always 0)
+    /// @param _stateTrieNodeRLP Raw RLP-encoded state trie root node
+    /// @param _messagePasserStorageRoot Root of the message passer storage trie
+    /// @param _latestBlockhash Hash of the block this output was generated from
+    function submitCorrectEvidence(
+        address _gameAddress,
+        bytes32 _version,
+        bytes memory _stateTrieNodeRLP,
+        bytes32 _messagePasserStorageRoot,
+        bytes32 _latestBlockhash
+    ) external;
 
     /// @notice Called when a claim is resolved in FaultDisputeGame
     /// @param _claimant Address receiving the bond refund
