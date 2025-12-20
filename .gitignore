@@ -129,3 +129,5 @@ devnet_startup.json
 *.log
 op-rat/da_data/
 da_data/
+.cursor/
+.vscode/
