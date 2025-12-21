@@ -98,17 +98,14 @@ RAT_CONTRACT=""
 RESULTS_DIR="results/exp_e_$(date +%Y%m%d_%H%M%S)"
 mkdir -p $RESULTS_DIR
 
-# Load Deployed Config if exists
-if [ -f deployed_config.env ]; then
-    echo "📄 Loading deployed configuration..."
-    source deployed_config.env
-fi
+# Script directory for portable paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # --- ethereum-package Pre-funded Accounts (1 billion ETH each) ---
 # Source: github.com/ethpandaops/ethereum-package genesis_constants
 PREFUNDED_KEY="bcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31"
 PREFUNDED_ADDR="0x8943545177806ED17B9F23F0a21ee5948eCaa776"
-CAST=/home/jazz/.foundry/bin/cast
+CAST=$(which cast)
 MIN_ADMIN_BALANCE=10000000000000000000  # 10 ETH minimum
 REFILL_AMOUNT=100000000000000000000     # 100 ETH refill
 
@@ -153,24 +150,13 @@ refill_admin_if_needed() {
 # --- 0. Ensure Admin has funds ---
 refill_admin_if_needed
 
-# --- 1. Deploy Contracts (if needed) ---
-deploy_contracts_if_needed() {
-    FORGE=/home/jazz/.foundry/bin/forge
+# --- 1. Deploy Contracts (always fresh for clean participant pool) ---
+deploy_contracts() {
+    FORGE=$(which forge)
     ADMIN_ADDR=$($CAST wallet address --private-key $ADMIN_KEY)
 
-    # Check if DGF.rat() is properly set
-    if [ -n "$DGF_CONTRACT" ] && [ -n "$RAT_CONTRACT" ]; then
-        DGF_RAT=$($CAST call --rpc-url $L1_RPC $DGF_CONTRACT "rat()" 2>/dev/null | tail -c 41)
-        RAT_LOWER=$(echo $RAT_CONTRACT | tr '[:upper:]' '[:lower:]' | sed 's/0x//')
-
-        if [[ "$DGF_RAT" == *"$RAT_LOWER"* ]]; then
-            echo "✅ Contracts already deployed and linked"
-            return 0
-        fi
-    fi
-
     echo "🔧 Deploying new contracts with ADMIN_KEY as owner..."
-    cd /home/jazz/git/optimism/packages/contracts-bedrock
+    cd "$SCRIPT_DIR/packages/contracts-bedrock"
 
     # Check if compiled artifacts exist (instead of compiling)
     DGF_ARTIFACT="forge-artifacts/DisputeGameFactory.sol/DisputeGameFactory.json"
@@ -283,23 +269,12 @@ deploy_contracts_if_needed() {
     DGF_CONTRACT=$NEW_DGF
     RAT_CONTRACT=$NEW_RAT
 
-    # Save to deployed_config.env
-    cd /home/jazz/git/optimism
-    cat > deployed_config.env << EOF
-L1_RPC=$L1_RPC
-L2_RPC=$L2_RPC
-ADMIN_KEY=$ADMIN_KEY
-DEPLOYER_KEY=$DEPLOYER_KEY
-DGF_CONTRACT=$NEW_DGF
-RAT_CONTRACT=$NEW_RAT
-EOF
-    echo "  💾 Updated deployed_config.env"
-
+    cd "$SCRIPT_DIR"
     echo "✅ Contracts deployed and linked successfully!"
 }
 
 # Check and deploy contracts
-deploy_contracts_if_needed
+deploy_contracts
 
 # --- 2. Build Binaries ---
 echo "🔨 Building binaries..."
