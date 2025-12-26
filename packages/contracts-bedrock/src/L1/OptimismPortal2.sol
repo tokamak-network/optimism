@@ -26,6 +26,7 @@ import { IDisputeGame } from "interfaces/dispute/IDisputeGame.sol";
 import { IAnchorStateRegistry } from "interfaces/dispute/IAnchorStateRegistry.sol";
 import { IETHLockbox } from "interfaces/L1/IETHLockbox.sol";
 import { ISuperchainConfig } from "interfaces/L1/ISuperchainConfig.sol";
+import { ISeigManager } from "interfaces/L1/ISeigManager.sol";
 
 /// @custom:proxied true
 /// @title OptimismPortal2
@@ -124,6 +125,10 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
 
     /// @notice Whether the OptimismPortal is using Super Roots or Output Roots.
     bool public superRootsActive;
+
+    /// @notice SeigManager contract address (TON Staking V3)
+    /// @dev Used to notify Bridged TON changes for Type 3 rollups
+    address public seigManager;
 
     /// @notice Emitted when a transaction is deposited from L1 to L2. The parameters of this event
     ///         are read by the rollup node and used to derive deposit transactions on L2.
@@ -379,6 +384,25 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         uint256 ethBalance = address(this).balance;
         ethLockbox.lockETH{ value: ethBalance }();
         emit ETHMigrated(address(ethLockbox), ethBalance);
+    }
+
+    /// @notice Sets the SeigManager contract address for TON Staking V3.
+    /// @param _seigManager The SeigManager contract address.
+    function setSeigManager(address _seigManager) external {
+        _assertOnlyProxyAdminOrProxyAdminOwner();
+        seigManager = _seigManager;
+    }
+
+    /// @notice Notifies SeigManager of Bridged TON balance change.
+    /// @dev Called after TON deposit/withdrawal completes.
+    ///      Uses low-level call to ensure transaction never fails even if SeigManager
+    ///      doesn't exist or function reverts.
+    function _notifySeigManager() internal {
+        if (seigManager != address(0)) {
+            // Low-level call to ensure this never reverts
+            // solhint-disable-next-line avoid-low-level-calls
+            try ISeigManager(seigManager).onBridgedTONChange() {} catch {}
+        }
     }
 
     /// @notice Allows the owner of the ProxyAdmin to migrate the OptimismPortal to use a new
@@ -685,6 +709,9 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         if (!success && tx.origin == Constants.ESTIMATION_ADDRESS) {
             revert OptimismPortal_GasEstimation();
         }
+
+        // Notify SeigManager of Bridged TON change (Type 3 rollups with Native TON)
+        _notifySeigManager();
     }
 
     /// @notice Checks that a withdrawal has been proven and is ready to be finalized.
@@ -785,6 +812,9 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         // Emit a TransactionDeposited event so that the rollup node can derive a deposit
         // transaction for this deposit.
         emit TransactionDeposited(from, _to, DEPOSIT_VERSION, opaqueData);
+
+        // Notify SeigManager of Bridged TON change (Type 3 rollups with Native TON)
+        _notifySeigManager();
     }
 
     /// @notice External getter for the number of proof submitters for a withdrawal hash.

@@ -14,8 +14,6 @@ import { ISemver } from "interfaces/universal/ISemver.sol";
 import { ICrossDomainMessenger } from "interfaces/universal/ICrossDomainMessenger.sol";
 import { ISystemConfig } from "interfaces/L1/ISystemConfig.sol";
 import { ISuperchainConfig } from "interfaces/L1/ISuperchainConfig.sol";
-import { ISeigManager } from "interfaces/L1/ISeigManager.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @custom:proxied true
 /// @title L1StandardBridge
@@ -94,12 +92,6 @@ contract L1StandardBridge is StandardBridge, ProxyAdminOwnedBase, Reinitializabl
 
     /// @notice Address of the SystemConfig contract.
     ISystemConfig public systemConfig;
-
-    /// @notice SeigManager contract address (TON Staking V3)
-    address public seigManager;
-
-    /// @notice TON token address for Bridged TON tracking
-    address public ton;
 
     /// @notice Constructs the L1StandardBridge contract.
     constructor() StandardBridge() ReinitializableBase(2) {
@@ -271,39 +263,6 @@ contract L1StandardBridge is StandardBridge, ProxyAdminOwnedBase, Reinitializabl
         return address(otherBridge);
     }
 
-    /// @notice Sets the SeigManager contract address for TON Staking V3.
-    /// @param _seigManager The SeigManager contract address.
-    function setSeigManager(address _seigManager) external {
-        _assertOnlyProxyAdminOrProxyAdminOwner();
-        seigManager = _seigManager;
-    }
-
-    /// @notice Sets the TON token address.
-    /// @param _ton The TON token address.
-    function setTON(address _ton) external {
-        _assertOnlyProxyAdminOrProxyAdminOwner();
-        ton = _ton;
-    }
-
-    /// @notice Notifies SeigManager of Bridged TON balance change.
-    /// @dev Called after TON deposit/withdrawal completes.
-    ///      Uses low-level call to ensure transaction never fails even if SeigManager
-    ///      doesn't exist or function reverts.
-    function _notifySeigManager() internal {
-        if (seigManager != address(0) && ton != address(0) && address(systemConfig) != address(0)) {
-            uint256 newBalance = IERC20(ton).balanceOf(address(this));
-            // Low-level call to ensure this never reverts
-            // solhint-disable-next-line avoid-low-level-calls
-            seigManager.call(
-                abi.encodeWithSelector(
-                    ISeigManager.onBridgedTONChange.selector,
-                    address(systemConfig),
-                    newBalance
-                )
-            );
-        }
-    }
-
     /// @notice Internal function for initiating an ETH deposit.
     /// @param _from        Address of the sender on L1.
     /// @param _to          Address of the recipient on L2.
@@ -383,11 +342,6 @@ contract L1StandardBridge is StandardBridge, ProxyAdminOwnedBase, Reinitializabl
     {
         emit ERC20DepositInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
         super._emitERC20BridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
-
-        // Notify SeigManager if TON token is deposited (L1 → L2)
-        if (_localToken == ton) {
-            _notifySeigManager();
-        }
     }
 
     /// @inheritdoc StandardBridge
@@ -406,10 +360,5 @@ contract L1StandardBridge is StandardBridge, ProxyAdminOwnedBase, Reinitializabl
     {
         emit ERC20WithdrawalFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);
         super._emitERC20BridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);
-
-        // Notify SeigManager if TON token is withdrawn (L2 → L1)
-        if (_localToken == ton) {
-            _notifySeigManager();
-        }
     }
 }
