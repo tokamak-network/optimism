@@ -128,3 +128,6 @@ gas_report.txt
 *.gz
 kurtosis-devnet/.l1-artifacts-tar-path
 kurtosis-devnet/.l2-artifacts-tar-path
+
+# Devnet allocs binary
+/devnet-allocs
