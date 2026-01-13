@@ -1,120 +1,116 @@
-# RAT Protocol Experiment
-
-Randomized Attention Test (RAT) protocol implementation on Optimism L2 rollup.
+# RAT Protocol - Verification Suite
 
 ## Overview
+This repository hosts the reference implementation and verification suite for the **Randomized Attention Test (RAT) Protocol**, which implements an **Optimistic Closest-Key Mechanism** to secure L2 state validation with minimal gas costs.
+Verification is conducted in two stages:
+1.  **Logic Verification (Foundry)**: Deterministic validation of all scenarios (honest submission, and two disputes).
+2.  **Dynamic E2E (Kurtosis)**: Live integration testing on a containerized Optimism Bedrock network.
 
-RAT is a cryptoeconomic mechanism for randomly selecting and verifying validators in an L2 rollup environment. This branch contains the complete experiment infrastructure for testing RAT protocol performance.
+---
 
-## Architecture
+## Part 1: Logic Verification (Foundry)
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                         KURTOSIS (Infrastructure)                  │
-│   ┌───────────────────────────────────────────────────────────┐   │
-│   │                        L1 (Geth)                          │   │
-│   │   ┌─────────────────┐   ┌─────────────────────────────┐   │   │
-│   │   │ DisputeGame     │   │         RAT Contract        │   │   │
-│   │   │   Factory       │──►│  • triggerAttentionTest()   │   │   │
-│   │   │ • create()      │   │  • submitCorrectEvidence()  │   │   │
-│   │   └────────▲────────┘   └──────────────▲──────────────┘   │   │
-│   └────────────┼───────────────────────────┼──────────────────┘   │
-│   ┌────────────┼───────────────────────────┼──────────────────┐   │
-│   │   L2 (op-geth + op-node) + op-batcher                     │   │
-│   └───────────────────────────────────────────────────────────┘   │
-└────────────────────────────────────────────────────────────────────┘
-         │                                   │
-═════════╪═══════════════════════════════════╪════════════════════════
-         │      EXPERIMENT COMPONENTS        │
-         │                                   │
-   ┌─────┴─────┐                       ┌─────┴─────┐
-   │  rat-     │ create game           │  rat-     │ L2 transactions
-   │ proposer  │───────────►           │  spammer  │──────────────►
-   └───────────┘                       │ (100 TPS) │
-         │                             └───────────┘
-         │ AttentionTriggered event
-         ▼
-   ┌─────────────────────────────────────────────────────┐
-   │              rat-validators (op-challenger ×30)     │
-   │     US (10)          EU (10)         ASIA (10)      │
-   │   20±5ms latency   100±20ms         220±30ms        │
-   └─────────────────────────────────────────────────────┘
-```
+The unified verification script (`RAT_Paper_Verification.t.sol`) simulates the state indexer and validates the protocol's core logic.
 
-## Prerequisites
+### Scenarios Verified
+1.  **Happy Path**: Low-cost submission + Optimistic Refund.
+2.  **Dispute: Suboptimal Key Liar**: Watchdog slashes a lazy validator using Numeric Distance logic.
+3.  **Dispute: Fake Key Liar**: Watchdog proves non-inclusion of a fake key.
 
-- Docker
-- [Kurtosis](https://docs.kurtosis.com/install/)
-- Go 1.21+
-- Python 3.10+ (for visualization)
-
-## Quick Start
-
-### 1. Start Kurtosis Environment
-
+### Execution
 ```bash
-./start_kurtosis.sh
+forge test --match-contract RAT_Paper_Verification -vv
 ```
 
-### 2. Run Full Experiment
+---
 
+## Part 2: Dynamic E2E Verification (Kurtosis)
+
+This procedure validates the protocol on a live L2 network using **Kurtosis** to spin up an ephemeral Optimism Devnet.
+
+### Prerequisites
+- Docker Engine
+- Kurtosis CLI (`brew install kurtosis-tech/kurtosis/kurtosis`)
+- Node.js (for discovery scripts)
+- Foundry (`forge`, `cast`)
+
+### Procedure
+
+#### 1. Start Network
+Launch a local Optimism Devnet with L1 and L2 nodes.
 ```bash
-# Full mode: 50 blocks, 30 validators, 100 TPS
-./run_exp_e_unified.sh --full
-
-# Test mode: 3 blocks, 3 validators (quick validation)
-./run_exp_e_unified.sh
+kurtosis run github.com/ethpandaops/optimism-package
 ```
+*Note the RPC mapping ports from the output (e.g., L1: `:32xxx`, L2: `:32yyy`).*
 
-### 3. Visualize Results
-
+#### 2. Deploy Contracts
+Deploy the RAT contract to L1.
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install pandas matplotlib seaborn numpy
+# Export L1 RPC and Private Key
+export ETH_RPC_URL="http://127.0.0.1:<L1_PORT>"
+export PRIVATE_KEY="<FUNDED_KEY>"
 
-python3 visualize_results.py --input results/exp_e_YYYYMMDD_HHMMSS/
+# Run Deployment Script
+forge script scripts/DeployRAT.s.sol:DeployRAT --broadcast --sender <ADDRESS>
 ```
 
-## Experiment Parameters
+#### 3. Execute Scenario: "Lazy Validator Dispute"
 
-| Parameter | Test Mode | Full Mode |
-|-----------|-----------|-----------|
-| Validators | 3 | 30 |
-| Blocks | 3 | 50 |
-| Spammer TPS | 50±30% | 100±30% |
-| Regions | US only | US, EU, ASIA |
-
-## Output
-
-### Experiment Results
-```
-results/exp_e_YYYYMMDD_HHMMSS/
-├── proposer.log
-├── validator_VAL-*.log
-├── spammer.log
-├── timing_metrics.csv
-└── figures/
-    ├── fig_a_processing_time.pdf
-    ├── fig_b_timing_breakdown.pdf
-    ├── fig_c_proof_timeline.pdf
-    └── fig_d_l2_load.pdf
+**Step A: Trigger RAT**
+The factory (or admin) triggers a test.
+```bash
+cast send <RAT_ADDR> "triggerAttentionTest(address,bytes32,bytes32,uint64)" <GAME_ADDR> <ROOT> <HASH> <BLOCK> --private-key $PRIVATE_KEY
 ```
 
-### Key Metrics
-- **T_proc**: Processing time (network latency simulation)
-- **T_net**: Network time (L1 transaction confirmation)
-- **T_total**: Total response time
+**Step B: Watchdog Discovery**
+The Watchdog runs the discovery script to find the closest key to the generated `Seed`.
+```bash
+# This script dumps the L2 state and calculates numeric distances
+node scripts/find_closest_key.js --rpc http://127.0.0.1:<L2_PORT> --seed <SEED_FROM_EVENT>
+```
+*Output: Found Closest Key: `0x123...` (Distance: 100)*
 
-## Core Components
+**Step C: Lazy Submission (Victim)**
+The Victim submits a suboptimal key (farther distance).
+```bash
+cast send <RAT_ADDR> "submitCandidate(address,bytes32,bytes32,bytes32,bytes32,bytes32)" ... --private-key <VICTIM_KEY>
+```
 
-| Component | Path | Description |
-|-----------|------|-------------|
-| RAT Contract | `packages/contracts-bedrock/src/L1/RAT.sol` | On-chain RAT logic |
-| Proposer | `op-rat/cmd/rat-proposer/` | Creates dispute games |
-| Validator | `op-challenger/game/rat/` | Monitors and responds to RAT |
-| Spammer | `op-rat/cmd/rat-spammer/` | L2 transaction load generator |
+**Step D: Dispute (Watchdog)**
+The Watchdog disputes using the key found in Step B.
+```bash
+# Generate Proof (using standard L1/L2 proving tools or mock for devnet)
+# Call disputeByCloserKey
+cast send <RAT_ADDR> "disputeByCloserKey(address,bytes32,...)" <GAME_ADDR> <CLOSER_KEY> ... --private-key <WATCHDOG_KEY>
+```
 
-## License
+**Step E: Verification**
+Check the event logs to confirm the dispute was successful.
+```bash
+cast events --address <RAT_ADDR> "DisputeSuccessful(address,address,bytes32,uint256,string)"
+```
 
-MIT License - See original Optimism repository for details.
+---
+
+## Part 3: Gas Analysis
+
+The protocol's efficiency is validated by measuring the operational gas costs of key functions using a dedicated test suite.
+
+### Execution
+Run the gas measurement tests:
+```bash
+forge test --match-contract RAT_GasTest -vv
+```
+
+### Reference Costs
+| Function | Gas Cost (Est) | Notes |
+|----------|----------------|-------|
+| `submitCandidate` | **~28,837** | **Optimistic (No Proof)** + Refund. |
+| `disputeByCloserKey` | ~97,805 | Proof Verify + Slashing. |
+| `disputeByNonInclusion` | ~97,733 | Proof of "Other Key" (Vacancy) + Slashing. |
+
+---
+
+## Implementation Details
+- **Numeric Distance**: The protocol uses absolute numeric difference (`|a - b|`) to determine key proximity.
+- **Optimistic Refund**: Bond is refunded immediately upon submission. Disputes recover this bond via explicit slashing.

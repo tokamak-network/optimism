@@ -242,29 +242,26 @@ func (m *RatMonitor) handleSelection(gameAddress common.Address) {
 		}
 	}
 
-	// 1. Get Attention Info
+	// 1. Get Attention Info (v2: includes seed)
 	info, err := m.ratContract.AttentionTests(nil, gameAddress)
 	if err != nil {
 		m.logger.Error("Failed to get AttentionTest info", "err", err)
 		return
 	}
 
-	if info.EvidenceSubmitted {
-		m.logger.Info("Evidence already submitted for this test")
+	// Check status (0=pending, 1=submitted, 2=disputed, 3=finalized)
+	if info.Status != 0 {
+		m.logger.Info("Attention test not in pending state", "status", info.Status)
 		return
 	}
 
-	// 2. Use L2 block number from AttentionInfo (stored when game was created)
+	// 2. Get L2 block header
 	l2BlockNum := info.L2BlockNumber
-	m.logger.Info("Using L2 block from AttentionInfo", "l2BlockNumber", l2BlockNum)
+	m.logger.Info("Using L2 block from AttentionInfo", "l2BlockNumber", l2BlockNum, "seed", common.BytesToHash(info.Seed[:]).Hex())
 	bn := new(big.Int).SetUint64(l2BlockNum)
 
-	// Get Block Header
 	var head *types.Header
-	blk := "latest"
-	if bn != nil {
-		blk = hexutil.EncodeBig(bn)
-	}
+	blk := hexutil.EncodeBig(bn)
 	if err := m.l2Rpc.CallContext(m.ctx, &head, "eth_getBlockByNumber", blk, false); err != nil {
 		m.logger.Error("Failed to get block", "err", err)
 		return
@@ -274,45 +271,38 @@ func (m *RatMonitor) handleSelection(gameAddress common.Address) {
 		return
 	}
 
-	m.logger.Info("Fetching proof from block", "number", head.Number, "hash", head.Hash(), "stateRoot", head.Root)
+	stateRoot := head.Root
+	m.logger.Info("Block info", "number", head.Number, "stateRoot", stateRoot.Hex())
 
-	// 3. Fetch State Trie Node Children
-	stateTrieNode, err := m.getStateTrieNodeChildren(head.Number)
+	// 3. Find closest key to seed using state trie
+	// For now, we use a known account (L2ToL1MessagePasser) as candidate
+	// TODO: Implement proper LevelDB iterator-based closest key search
+	closestKey, proof, err := m.findClosestKeyWithProof(info.Seed, bn)
 	if err != nil {
-		m.logger.Error("Failed to fetch state trie node", "err", err)
+		m.logger.Error("Failed to find closest key", "err", err)
 		return
 	}
 
-	// DEBUG: Compare stateRoot from block header vs from proof RLP
-	stateRootFromRLP := crypto.Keccak256Hash(stateTrieNode)
-	m.logger.Info("🔍 StateRoot Comparison",
-		"blockHeader.Root", head.Root.Hex(),
-		"keccak256(proofRLP)", stateRootFromRLP.Hex(),
-		"match", head.Root == stateRootFromRLP)
+	distance := distance32(closestKey, info.Seed)
+	m.logger.Info("Found closest key", "key", common.BytesToHash(closestKey[:]).Hex(), "distance", distance.String())
 
-	// 4. Fetch Message Passer Storage Root
+	// 4. Get OutputRoot components for verification
 	msgPasserRoot, err := m.getMessagePasserStorageRoot(head.Number)
 	if err != nil {
 		m.logger.Warn("Failed to fetch messagePasserStorageRoot, using zero", "err", err)
 		msgPasserRoot = [32]byte{}
 	}
 
-	// DEBUG: Log all OutputRoot components being submitted
-	m.logger.Info("🔍 Evidence Components",
-		"version", common.Hash{}.Hex(),
-		"stateTrieNode_len", len(stateTrieNode),
-		"stateRootFromRLP", stateRootFromRLP.Hex(),
-		"msgPasserRoot", common.Hash(msgPasserRoot).Hex(),
-		"blockHash", head.Hash().Hex())
-
-	// 5. Pack Evidence
-	abi, _ := bindings.RATMetaData.GetAbi()
-	data, err := abi.Pack("submitCorrectEvidence",
+	// 5. Pack submitCandidate call
+	abiData, _ := bindings.RATMetaData.GetAbi()
+	data, err := abiData.Pack("submitCandidate",
 		gameAddress,
-		[32]byte{}, // version
-		stateTrieNode,
-		msgPasserRoot,
-		head.Hash(),
+		closestKey,
+		stateRoot,                  // _stateRoot
+		[32]byte{},                 // _version (0)
+		msgPasserRoot,              // _messagePasserRoot
+		head.Hash(),                // _blockHash
+		proof,                      // _proof ([][]byte)
 	)
 	if err != nil {
 		m.logger.Error("Failed to pack tx data", "err", err)
@@ -325,16 +315,17 @@ func (m *RatMonitor) handleSelection(gameAddress common.Address) {
 		GasLimit: 2000000,
 	}
 
-	// ===== ICDCS TIMING: T_generated (T_proc = T_generated - T_detected) =====
+	// ===== ICDCS TIMING: T_generated =====
 	tGenerated := time.Now()
 	tProc := tGenerated.Sub(tDetected)
 
-	m.logger.Info("Submitting Evidence Transaction...",
+	m.logger.Info("Submitting Candidate Transaction...",
 		"block", head.Number,
 		"region", m.regionId,
+		"distance", distance.String(),
 		"T_proc_ms", tProc.Milliseconds())
 
-	err = m.txSender.SendAndWaitSimple("submit-evidence", txCandidate)
+	err = m.txSender.SendAndWaitSimple("submit-candidate", txCandidate)
 
 	// ===== ICDCS TIMING: T_confirmed =====
 	tConfirmed := time.Now()
@@ -342,7 +333,7 @@ func (m *RatMonitor) handleSelection(gameAddress common.Address) {
 	tTotal := tConfirmed.Sub(tDetected)
 
 	if err != nil {
-		m.logger.Error("Failed to submit evidence",
+		m.logger.Error("Failed to submit candidate",
 			"err", err,
 			"region", m.regionId,
 			"T_proc_ms", tProc.Milliseconds(),
@@ -351,12 +342,80 @@ func (m *RatMonitor) handleSelection(gameAddress common.Address) {
 		return
 	}
 
-	m.logger.Info("Evidence Submitted Successfully",
+	m.logger.Info("Candidate Submitted Successfully",
 		"region", m.regionId,
 		"game", gameAddress.Hex()[:10],
+		"key", common.BytesToHash(closestKey[:]).Hex()[:18],
 		"T_proc_ms", tProc.Milliseconds(),
 		"T_net_ms", tNet.Milliseconds(),
 		"T_total_ms", tTotal.Milliseconds())
+}
+
+// findClosestKeyWithProof finds the closest state trie key to the target seed
+func (m *RatMonitor) findClosestKeyWithProof(seed [32]byte, blockNum *big.Int) ([32]byte, [][]byte, error) {
+	// For v2 implementation, we need to iterate through state trie keys
+	// Current approach: use known accounts as candidates and pick closest
+
+	candidates := []common.Address{
+		messagePasserAddr,  // L2ToL1MessagePasser
+		common.HexToAddress("0x4200000000000000000000000000000000000000"), // LegacyMessagePasser
+		common.HexToAddress("0x4200000000000000000000000000000000000006"), // WETH
+		common.HexToAddress("0x4200000000000000000000000000000000000007"), // L2CrossDomainMessenger
+		common.HexToAddress("0x4200000000000000000000000000000000000010"), // L2StandardBridge
+		common.HexToAddress("0x4200000000000000000000000000000000000011"), // SequencerFeeVault
+		common.HexToAddress("0x4200000000000000000000000000000000000012"), // OptimismMintableERC20Factory
+		common.HexToAddress("0x4200000000000000000000000000000000000015"), // L1Block
+		common.HexToAddress("0x4200000000000000000000000000000000000018"), // L2ERC721Bridge
+	}
+
+	var closestKey [32]byte
+	var minDistance *big.Int
+	var closestProof [][]byte
+
+	blk := "latest"
+	if blockNum != nil {
+		blk = hexutil.EncodeBig(blockNum)
+	}
+
+	for _, addr := range candidates {
+		// State trie key is keccak256(address)
+		key := crypto.Keccak256Hash(addr.Bytes())
+		dist := distance32(key, seed)
+
+		if minDistance == nil || dist.Cmp(minDistance) < 0 {
+			// Get proof for this address
+			var res rawAccountProof
+			err := m.l2Rpc.CallContext(m.ctx, &res, "eth_getProof", addr, []string{}, blk)
+			if err != nil {
+				m.logger.Warn("Failed to get proof for candidate", "addr", addr.Hex(), "err", err)
+				continue
+			}
+
+			// Convert proof to [][]byte
+			proof := make([][]byte, len(res.AccountProof))
+			for i, p := range res.AccountProof {
+				proof[i] = common.FromHex(p)
+			}
+
+			closestKey = key
+			minDistance = dist
+			closestProof = proof
+		}
+	}
+
+	if minDistance == nil {
+		return [32]byte{}, nil, fmt.Errorf("no valid candidates found")
+	}
+
+	return closestKey, closestProof, nil
+}
+
+// distance32 calculates absolute difference between two bytes32 values
+func distance32(a, b [32]byte) *big.Int {
+	aInt := new(big.Int).SetBytes(a[:])
+	bInt := new(big.Int).SetBytes(b[:])
+	diff := new(big.Int).Sub(aInt, bInt)
+	return diff.Abs(diff)
 }
 
 func (m *RatMonitor) findBlockByOutputRoot(targetRoot [32]byte) (uint64, error) {

@@ -31,6 +31,7 @@ contract DeployRAT is Script {
             60,                            // Period (blocks)
             1 ether,                       // Min Stake
             50000,                         // Probability (50%)
+            5000,                          // Offline Penalty Rate (50%)
             deployer                       // Manager
         );
 

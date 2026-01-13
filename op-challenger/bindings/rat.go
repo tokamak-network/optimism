@@ -29,6 +29,18 @@ var (
 	_ = abi.ConvertType
 )
 
+// RATAttentionInfo is an auto generated low-level Go binding around an user-defined struct.
+type RATAttentionInfo struct {
+	OutputRoot              [32]byte
+	Seed                    [32]byte
+	CandidateKey            [32]byte
+	BondAmount              *big.Int
+	ChallengerAddress       common.Address
+	SubmissionDeadlineBlock uint64
+	L2BlockNumber           uint64
+	Status                  uint8
+}
+
 // RATChallengerInfo is an auto generated low-level Go binding around an user-defined struct.
 type RATChallengerInfo struct {
 	StakingAmount      *big.Int
@@ -39,8 +51,8 @@ type RATChallengerInfo struct {
 
 // RATMetaData contains all meta data concerning the RAT contract.
 var RATMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"attentionTests\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"outputRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bondAmount\",\"type\":\"uint96\",\"internalType\":\"uint96\"},{\"name\":\"challengerAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"submissionDeadlineBlock\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"l2BlockNumber\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"evidenceSubmitted\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"challengers\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"stakingAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"totalSlashedAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"validatorIndex\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"isValid\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"disputeGameFactory\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"contractIDisputeGameFactory\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"evidenceSubmissionPeriod\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getChallengerInfo\",\"inputs\":[{\"name\":\"_challenger\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"tuple\",\"internalType\":\"structRAT.ChallengerInfo\",\"components\":[{\"name\":\"stakingAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"totalSlashedAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"validatorIndex\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"isValid\",\"type\":\"bool\",\"internalType\":\"bool\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getValidChallengerCount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initVersion\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"uint8\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"_disputeGameFactory\",\"type\":\"address\",\"internalType\":\"contractIDisputeGameFactory\"},{\"name\":\"_perTestBondAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_evidenceSubmissionPeriod\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_minimumStakingBalance\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_ratTriggerProbability\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_manager\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"minimumStakingBalance\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"perTestBondAmount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"proxyAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"contractIProxyAdmin\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"proxyAdminOwner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"ratManager\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"ratTriggerProbability\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"resolveClaim\",\"inputs\":[{\"name\":\"_claimant\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setEvidenceSubmissionPeriod\",\"inputs\":[{\"name\":\"_period\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setMinimumStakingBalance\",\"inputs\":[{\"name\":\"_balance\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setPerTestBondAmount\",\"inputs\":[{\"name\":\"_amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setRatTriggerProbability\",\"inputs\":[{\"name\":\"_probability\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"stake\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"submitCorrectEvidence\",\"inputs\":[{\"name\":\"_gameAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_version\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_stateTrieNodeRLP\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"_messagePasserStorageRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_latestBlockhash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"triggerAttentionTest\",\"inputs\":[{\"name\":\"_gameAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_outputRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_blockHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_l2BlockNumber\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"validChallengers\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"version\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"event\",\"name\":\"AttentionTriggered\",\"inputs\":[{\"name\":\"gameAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"challenger\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"BondRefunded\",\"inputs\":[{\"name\":\"gameAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"challenger\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"refundedAmount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChallengerStaked\",\"inputs\":[{\"name\":\"challenger\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CorrectEvidenceSubmitted\",\"inputs\":[{\"name\":\"gameAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"challenger\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"restoredAmount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint8\",\"indexed\":false,\"internalType\":\"uint8\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AttentionTestNotExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChallengerNotExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EvidenceAlreadySubmitted\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EvidenceSubmissionExpired\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InsufficientStakingAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidChallengerAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NoValidChallengers\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotDisputeGameFactory\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotRatManager\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProofVerificationFailed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_NotProxyAdmin\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_NotProxyAdminOrProxyAdminOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_NotProxyAdminOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_NotResolvedDelegateProxy\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_NotSharedProxyAdminOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_ProxyAdminNotFound\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ReinitializableBase_ZeroInitVersion\",\"inputs\":[]}]",
-	Bin: "0x60a060405234801561001057600080fd5b5060026080819052600180556126c861003b60003960008181610324015261114f01526126c86000f3fe60806040526004361061018b5760003560e01c8063acccb08f116100d6578063d2e5bc721161007f578063f2b4e61711610059578063f2b4e61714610581578063fba1d220146105ae578063fd5f97e1146106b857600080fd5b8063d2e5bc7214610536578063dad544e014610556578063e34786591461056b57600080fd5b8063cc57f42b116100b0578063cc57f42b1461048e578063cf60203e146104a3578063cfea71c0146104b957600080fd5b8063acccb08f14610438578063af2162761461044e578063cc4479061461046e57600080fd5b80633e47158c116101385780635df5f96f116101125780635df5f96f146103e557806374343de8146103f857806394d645a81461041857600080fd5b80633e47158c1461035657806351567bc21461036b57806354fd4d501461038f57600080fd5b806336c63d461161016957806336c63d46146102f057806338d38c97146103105780633a4b66f11461034e57600080fd5b806318350f22146101905780631ecbb09c1461027c5780632d433fd1146102ce575b600080fd5b34801561019c57600080fd5b506102386101ab3660046122ad565b6040805160808101825260008082526020820181905291810182905260608101919091525073ffffffffffffffffffffffffffffffffffffffff166000908152600860209081526040918290208251608081018452815481526001820154928101929092526002015463ffffffff81169282019290925264010000000090910460ff161515606082015290565b6040516102739190815181526020808301519082015260408083015163ffffffff169082015260609182015115159181019190915260800190565b60405180910390f35b34801561028857600080fd5b506007546102a99073ffffffffffffffffffffffffffffffffffffffff1681565b60405173ffffffffffffffffffffffffffffffffffffffff9091168152602001610273565b3480156102da57600080fd5b506102ee6102e93660046122d1565b6106d8565b005b3480156102fc57600080fd5b506102ee61030b366004612328565b610c3b565b34801561031c57600080fd5b5060405160ff7f0000000000000000000000000000000000000000000000000000000000000000168152602001610273565b6102ee610d1e565b34801561036257600080fd5b506102a9610f42565b34801561037757600080fd5b5061038160065481565b604051908152602001610273565b34801561039b57600080fd5b506103d86040518060400160405280600c81526020017f312e302e302d626574612e31000000000000000000000000000000000000000081525081565b6040516102739190612341565b6102ee6103f33660046123b4565b61114d565b34801561040457600080fd5b506102a9610413366004612328565b6114e9565b34801561042457600080fd5b506102ee6104333660046122ad565b611520565b34801561044457600080fd5b5061038160045481565b34801561045a57600080fd5b506102ee610469366004612441565b611822565b34801561047a57600080fd5b506102ee610489366004612328565b611c45565b34801561049a57600080fd5b50600a54610381565b3480156104af57600080fd5b5061038160035481565b3480156104c557600080fd5b506105086104d43660046122ad565b60086020526000908152604090208054600182015460029092015490919063ffffffff811690640100000000900460ff1684565b6040516102739493929190938452602084019290925263ffffffff1660408301521515606082015260800190565b34801561054257600080fd5b506102ee610551366004612328565b611dea565b34801561056257600080fd5b506102a9611ead565b34801561057757600080fd5b5061038160055481565b34801561058d57600080fd5b506002546102a99073ffffffffffffffffffffffffffffffffffffffff1681565b3480156105ba57600080fd5b506106556105c93660046122ad565b60096020526000908152604090208054600182015460029092015490916bffffffffffffffffffffffff8116916c0100000000000000000000000090910473ffffffffffffffffffffffffffffffffffffffff169067ffffffffffffffff8082169168010000000000000000810490911690700100000000000000000000000000000000900460ff1686565b604080519687526bffffffffffffffffffffffff909516602087015273ffffffffffffffffffffffffffffffffffffffff9093169385019390935267ffffffffffffffff90811660608501529091166080830152151560a082015260c001610273565b3480156106c457600080fd5b506102ee6106d3366004612328565b611f2a565b60025473ffffffffffffffffffffffffffffffffffffffff163314610729576040517f2a769f9e00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b610731612014565b15610c3557600a546001811115610c33576000816002146107aa5761075760018361256d565b8442604051602001610773929190918252602082015260400190565b6040516020818303038152906040528051906020012060001c61ffff1661079a9190612584565b6107a59060016125bf565b6107ad565b60015b90506000600a82815481106107c4576107c46125d7565b600091825260208083209091015473ffffffffffffffffffffffffffffffffffffffff16808352600890915260408220805460035492945090929091821061080e57600354610810565b815b9050600061081e828461256d565b808555600185018054919250839160009061083a9084906125bf565b909155505067ffffffffffffffff4311156108b6576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601660248201527f426c6f636b206e756d62657220746f6f206c617267650000000000000000000060448201526064015b60405180910390fd5b6040518060c001604052808b8152602001836bffffffffffffffffffffffff1681526020018673ffffffffffffffffffffffffffffffffffffffff168152602001600454436109059190612606565b67ffffffffffffffff1681526020018967ffffffffffffffff16815260200160001515815250600960008d73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000820151816000015560208201518160010160006101000a8154816bffffffffffffffffffffffff02191690836bffffffffffffffffffffffff160217905550604082015181600101600c6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555060608201518160020160006101000a81548167ffffffffffffffff021916908367ffffffffffffffff16021790555060808201518160020160086101000a81548167ffffffffffffffff021916908367ffffffffffffffff16021790555060a08201518160020160106101000a81548160ff0219169083151502179055509050506000600354821015905060008560020160049054906101000a900460ff16905081151581151514610bd0578115610b9357600286810180546401000000007fffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffffff909116179055600a805473ffffffffffffffffffffffffffffffffffffffff8a16600081815260086020526040812090940180547fffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000001663ffffffff909316929092179091558154600181018355919092527fc65a7bb8d6351c1cf70c95a316cc6a92839c986682d98bc35f958f4883f9d2a80180547fffffffffffffffffffffffff0000000000000000000000000000000000000000169091179055610bd0565b6002860180547fffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffffff8116909155610bd090889063ffffffff1661205d565b8673ffffffffffffffffffffffffffffffffffffffff168d73ffffffffffffffffffffffffffffffffffffffff167f8f5f18c2fab75f3bb8637c4702468685d73e9414ddfa43f842ffb1a63e6dd57a60405160405180910390a350505050505050505b505b50505050565b610c43612230565b60008111610cad576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601760248201527f506572696f64206d75737420626520706f73697469766500000000000000000060448201526064016108ad565b61c4e0811115610d19576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152600f60248201527f506572696f6420746f6f206c6f6e67000000000000000000000000000000000060448201526064016108ad565b600455565b600260015403610d8a576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601f60248201527f5265656e7472616e637947756172643a207265656e7472616e742063616c6c0060448201526064016108ad565b600260015534610df6576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601a60248201527f4d757374207374616b6520706f73697469766520616d6f756e7400000000000060448201526064016108ad565b336000908152600860205260408120805490913491839190610e199084906125bf565b90915550506002810154640100000000900460ff16158015610e3e5750600354815410155b15610f06576002810180547fffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffffff81166401000000009081178355600a805463ffffffff167fffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000909316929092171790915580546001810182556000919091527fc65a7bb8d6351c1cf70c95a316cc6a92839c986682d98bc35f958f4883f9d2a80180547fffffffffffffffffffffffff000000000000000000000000000000000000000016331790555b60405134815233907f6f50cc7a01f21c217b2ae66736754596de2004562a26fcc850e70031e5985e8d9060200160405180910390a25060018055565b600080610f6d7fb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d61035490565b905073ffffffffffffffffffffffffffffffffffffffff811615610f9057919050565b6040518060400160405280601a81526020017f4f564d5f4c3143726f7373446f6d61696e4d657373656e676572000000000000815250516002610fd39190612632565b604080513060208201526000918101919091527f4f564d5f4c3143726f7373446f6d61696e4d657373656e676572000000000000919091179061102e906060015b604051602081830303815290604052805190602001205490565b14611065576040517f54e433cd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6040805130602082015260019181019190915260009061108790606001611014565b905073ffffffffffffffffffffffffffffffffffffffff81161561111b578073ffffffffffffffffffffffffffffffffffffffff16638da5cb5b6040518163ffffffff1660e01b8152600401602060405180830381865afa1580156110f0573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611114919061266f565b9250505090565b6040517f332144db00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b7f0000000000000000000000000000000000000000000000000000000000000000600054610100900460ff1615801561118d575060005460ff8083169116105b611219576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201527f647920696e697469616c697a656400000000000000000000000000000000000060648201526084016108ad565b600080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00001660ff8316176101001790556bffffffffffffffffffffffff86106112e5576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602260248201527f426f6e6420616d6f756e7420657863656564732075696e743936206d6178696d60448201527f756d00000000000000000000000000000000000000000000000000000000000060648201526084016108ad565b83861115611375576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603160248201527f426f6e6420616d6f756e742063616e6e6f7420657863656564206d696e696d7560448201527f6d207374616b696e672062616c616e636500000000000000000000000000000060648201526084016108ad565b620186a08311156113e2576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601360248201527f496e76616c69642070726f626162696c6974790000000000000000000000000060448201526064016108ad565b6002805473ffffffffffffffffffffffffffffffffffffffff8981167fffffffffffffffffffffffff00000000000000000000000000000000000000009283161790925560038890556004879055600586905560068590556007805492851692821692909217909155600a805460018101825560009182527fc65a7bb8d6351c1cf70c95a316cc6a92839c986682d98bc35f958f4883f9d2a801805490921690915580547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ff16905560405160ff821681527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a150505050505050565b600a81815481106114f957600080fd5b60009182526020909120015473ffffffffffffffffffffffffffffffffffffffff16905081565b336000908152600960205260409020600101546c01000000000000000000000000900473ffffffffffffffffffffffffffffffffffffffff16801580159061159357508173ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16145b1561181e5733600090815260096020526040902060020154700100000000000000000000000000000000900460ff1661181e573360009081526009602090815260408083206002810180547fffffffffffffffffffffffffffffff00ffffffffffffffffffffffffffffffff16700100000000000000000000000000000000179055600181015473ffffffffffffffffffffffffffffffffffffffff871685526008909352908320805491936bffffffffffffffffffffffff909316929091839183916116619084906125bf565b90915550506002810154600354825464010000000090920460ff169110158115801561168a5750805b1561177e57600283810180546401000000007fffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffffff909116179055600a805473ffffffffffffffffffffffffffffffffffffffff8a16600081815260086020526040812090940180547fffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000001663ffffffff909316929092179091558154600181018355919092527fc65a7bb8d6351c1cf70c95a316cc6a92839c986682d98bc35f958f4883f9d2a80180547fffffffffffffffffffffffff00000000000000000000000000000000000000001690911790556117cb565b818015611789575080155b156117cb576002830180547fffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffffff81169091556117cb90889063ffffffff1661205d565b60405184815273ffffffffffffffffffffffffffffffffffffffff87169033907f4fac74d6b4ed45cb641c8e730951b01c4dbcae0565cf330e909230492bd07d789060200160405180910390a350505050505b5050565b73ffffffffffffffffffffffffffffffffffffffff8086166000908152600960205260409020600181015490916c010000000000000000000000009091041680611898576040517facddc2de00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b73ffffffffffffffffffffffffffffffffffffffff811633146118e7576040517f430a2a2b00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6002820154700100000000000000000000000000000000900460ff161561193a576040517fc355107000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b600282015467ffffffffffffffff164310611981576040517f01136fa500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b845160208087019190912060408051928301899052820181905260608201869052608082018590529060009060a00160405160208183030381529060405280519060200120905083600001548114611a05576040517fd611c31800000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60018401546002850180547fffffffffffffffffffffffffffffff00ffffffffffffffffffffffffffffffff1670010000000000000000000000000000000017905533600090815260086020526040812080546bffffffffffffffffffffffff9093169290918391839190611a7b9084906125bf565b90915550506002810154600354825464010000000090920460ff1691101581158015611aa45750805b15611b8257600283810180546401000000007fffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffffff909116179055600a805433600081815260086020526040812090940180547fffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000001663ffffffff909316929092179091558154600181018355919092527fc65a7bb8d6351c1cf70c95a316cc6a92839c986682d98bc35f958f4883f9d2a80180547fffffffffffffffffffffffff0000000000000000000000000000000000000000169091179055611bcf565b818015611b8d575080155b15611bcf576002830180547fffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffffff8116909155611bcf90339063ffffffff1661205d565b8673ffffffffffffffffffffffffffffffffffffffff168d73ffffffffffffffffffffffffffffffffffffffff167f7954ca3465b792ac0a46ec18f1ed49a20399c01cc510fab6eab44a7f6679f87786604051611c2e91815260200190565b60405180910390a350505050505050505050505050565b611c4d612230565b60008111611cb7576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601c60248201527f426f6e6420616d6f756e74206d75737420626520706f7369746976650000000060448201526064016108ad565b6bffffffffffffffffffffffff811115611d53576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602260248201527f426f6e6420616d6f756e7420657863656564732075696e743936206d6178696d60448201527f756d00000000000000000000000000000000000000000000000000000000000060648201526084016108ad565b600554811115611de5576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603160248201527f426f6e6420616d6f756e742063616e6e6f7420657863656564206d696e696d7560448201527f6d207374616b696e672062616c616e636500000000000000000000000000000060648201526084016108ad565b600355565b60075473ffffffffffffffffffffffffffffffffffffffff163314611e3b576040517fc1de1ba600000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b620186a0811115611ea8576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601360248201527f496e76616c69642070726f626162696c6974790000000000000000000000000060448201526064016108ad565b600655565b6000611eb7610f42565b73ffffffffffffffffffffffffffffffffffffffff16638da5cb5b6040518163ffffffff1660e01b8152600401602060405180830381865afa158015611f01573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611f25919061266f565b905090565b611f32612230565b60008111611f9c576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601860248201527f42616c616e6365206d75737420626520706f736974697665000000000000000060448201526064016108ad565b683635c9adc5dea0000081111561200f576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601160248201527f42616c616e636520746f6f206c6172676500000000000000000000000000000060448201526064016108ad565b600555565b60065460009080820361202957600091505090565b620186a0811061203b57600191505090565b80620186a061204b60014361256d565b612056919040612584565b1091505090565b60008111801561206e5750600a5481105b80156120c357508173ffffffffffffffffffffffffffffffffffffffff16600a828154811061209f5761209f6125d7565b60009182526020909120015473ffffffffffffffffffffffffffffffffffffffff16145b1561181e57600a546000906120da9060019061256d565b90508082146121c2576000600a82815481106120f8576120f86125d7565b600091825260209091200154600a805473ffffffffffffffffffffffffffffffffffffffff9092169250829185908110612134576121346125d7565b600091825260208083209190910180547fffffffffffffffffffffffff00000000000000000000000000000000000000001673ffffffffffffffffffffffffffffffffffffffff94851617905592909116815260089091526040902060020180547fffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000001663ffffffff84161790555b600a8054806121d3576121d361268c565b60008281526020902081017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff90810180547fffffffffffffffffffffffff0000000000000000000000000000000000000000169055019055505050565b33612239611ead565b73ffffffffffffffffffffffffffffffffffffffff1614612286576040517f7f12c64b00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b565b73ffffffffffffffffffffffffffffffffffffffff811681146122aa57600080fd5b50565b6000602082840312156122bf57600080fd5b81356122ca81612288565b9392505050565b600080600080608085870312156122e757600080fd5b84356122f281612288565b93506020850135925060408501359150606085013567ffffffffffffffff8116811461231d57600080fd5b939692955090935050565b60006020828403121561233a57600080fd5b5035919050565b600060208083528351808285015260005b8181101561236e57858101830151858201604001528201612352565b81811115612380576000604083870101525b50601f017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe016929092016040019392505050565b60008060008060008060c087890312156123cd57600080fd5b86356123d881612288565b95506020870135945060408701359350606087013592506080870135915060a087013561240481612288565b809150509295509295509295565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b600080600080600060a0868803121561245957600080fd5b853561246481612288565b945060208601359350604086013567ffffffffffffffff8082111561248857600080fd5b818801915088601f83011261249c57600080fd5b8135818111156124ae576124ae612412565b604051601f82017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0908116603f011681019083821181831017156124f4576124f4612412565b816040528281528b602084870101111561250d57600080fd5b8260208601602083013760009281016020019290925250969995985095966060810135965060800135949350505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b60008282101561257f5761257f61253e565b500390565b6000826125ba577f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b500690565b600082198211156125d2576125d261253e565b500190565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b600067ffffffffffffffff8083168185168083038211156126295761262961253e565b01949350505050565b6000817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff048311821515161561266a5761266a61253e565b500290565b60006020828403121561268157600080fd5b81516122ca81612288565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603160045260246000fdfea164736f6c634300080f000a",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"PENALTY_DENOMINATOR\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"STATUS_DISPUTED\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"uint8\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"STATUS_FINALIZED\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"uint8\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"STATUS_PENDING\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"uint8\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"STATUS_SUBMITTED\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"uint8\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"attentionTests\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"outputRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"seed\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"candidateKey\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bondAmount\",\"type\":\"uint96\",\"internalType\":\"uint96\"},{\"name\":\"challengerAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"submissionDeadlineBlock\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"l2BlockNumber\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"status\",\"type\":\"uint8\",\"internalType\":\"uint8\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"challengers\",\"inputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"stakingAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"totalSlashedAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"validatorIndex\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"isValid\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"disputeByCloserKey\",\"inputs\":[{\"name\":\"_gameAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_closerKey\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_stateRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_version\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_messagePasserRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_blockHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_proof\",\"type\":\"bytes[]\",\"internalType\":\"bytes[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"disputeGameFactory\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"contractIDisputeGameFactory\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"evidenceSubmissionPeriod\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getAttentionTest\",\"inputs\":[{\"name\":\"_gameAddress\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"tuple\",\"internalType\":\"structRAT.AttentionInfo\",\"components\":[{\"name\":\"outputRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"seed\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"candidateKey\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"bondAmount\",\"type\":\"uint96\",\"internalType\":\"uint96\"},{\"name\":\"challengerAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"submissionDeadlineBlock\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"l2BlockNumber\",\"type\":\"uint64\",\"internalType\":\"uint64\"},{\"name\":\"status\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getChallengerInfo\",\"inputs\":[{\"name\":\"_challenger\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"tuple\",\"internalType\":\"structRAT.ChallengerInfo\",\"components\":[{\"name\":\"stakingAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"totalSlashedAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"validatorIndex\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"isValid\",\"type\":\"bool\",\"internalType\":\"bool\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getValidChallengerCount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initVersion\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"uint8\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"_disputeGameFactory\",\"type\":\"address\",\"internalType\":\"contractIDisputeGameFactory\"},{\"name\":\"_perTestBondAmount\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_evidenceSubmissionPeriod\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_minimumStakingBalance\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_ratTriggerProbability\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_offlinePenaltyRate\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"_manager\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"minimumStakingBalance\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"offlinePenaltyRate\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"perTestBondAmount\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"proxyAdmin\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"contractIProxyAdmin\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"proxyAdminOwner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"ratManager\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"ratTriggerProbability\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"resolveClaim\",\"inputs\":[{\"name\":\"_claimant\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setEvidenceSubmissionPeriod\",\"inputs\":[{\"name\":\"_period\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setMinimumStakingBalance\",\"inputs\":[{\"name\":\"_balance\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setOfflinePenaltyRate\",\"inputs\":[{\"name\":\"_rate\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setPerTestBondAmount\",\"inputs\":[{\"name\":\"_amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setRatTriggerProbability\",\"inputs\":[{\"name\":\"_probability\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"stake\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"submitCandidate\",\"inputs\":[{\"name\":\"_gameAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_candidateKey\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_stateRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_version\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_messagePasserRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_blockHash\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_proof\",\"type\":\"bytes[]\",\"internalType\":\"bytes[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"triggerAttentionTest\",\"inputs\":[{\"name\":\"_gameAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_outputRoot\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"_l2BlockNumber\",\"type\":\"uint64\",\"internalType\":\"uint64\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"validChallengers\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"version\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"event\",\"name\":\"AttentionTriggered\",\"inputs\":[{\"name\":\"gameAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"challenger\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"seed\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"BondRefunded\",\"inputs\":[{\"name\":\"gameAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"challenger\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"refundedAmount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"CandidateSubmitted\",\"inputs\":[{\"name\":\"gameAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"challenger\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"candidateKey\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"distance\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChallengerStaked\",\"inputs\":[{\"name\":\"challenger\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"DisputeSuccessful\",\"inputs\":[{\"name\":\"gameAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"disputer\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"key\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"reason\",\"type\":\"string\",\"indexed\":false,\"internalType\":\"string\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint8\",\"indexed\":false,\"internalType\":\"uint8\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OfflinePenalty\",\"inputs\":[{\"name\":\"gameAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"challenger\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"penalty\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SubmissionAccepted\",\"inputs\":[{\"name\":\"gameAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"challenger\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"candidateKey\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AttentionTestNotExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ContentLengthMismatch\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"DeadlineNotPassed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"DeadlinePassed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"EmptyItem\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InsufficientStakingAmount\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidChallengerAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidDataRemainder\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidHeader\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidOutputRootComponents\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidStatus\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"KeyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotCloserKey\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotDisputeGameFactory\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"NotRatManager\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProofVerificationFailed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_NotProxyAdmin\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_NotProxyAdminOrProxyAdminOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_NotProxyAdminOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_NotResolvedDelegateProxy\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_NotSharedProxyAdminOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ProxyAdminOwnedBase_ProxyAdminNotFound\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ReinitializableBase_ZeroInitVersion\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UnexpectedList\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"UnexpectedString\",\"inputs\":[]}]",
+	Bin: "0x60a060405234801561001057600080fd5b50600360808190526001805561420a61003b600039600081816103fd015261111e015261420a6000f3fe6080604052600436106101fe5760003560e01c8063592512ee1161011d578063cf60203e116100b0578063dad544e01161007f578063f2b4e61711610064578063f2b4e617146107eb578063fba1d22014610818578063fd5f97e11461093b57600080fd5b8063dad544e0146107c0578063e3478659146107d557600080fd5b8063cf60203e146105dd578063cfea71c0146105f3578063d2e5bc7214610670578063d586e5401461069057600080fd5b8063acccb08f116100ec578063acccb08f1461057c578063bc5542c014610592578063cc447906146105a8578063cc57f42b146105c857600080fd5b8063592512ee1461050757806374343de81461052757806394d645a814610547578063a207d02e1461056757600080fd5b806339b6e72c11610195578063423d487c11610164578063423d487c1461047157806351567bc21461048657806354fd4d501461049c57806357916ea8146104f257600080fd5b806339b6e72c146104215780633a4b66f1146104345780633c6d0e581461043c5780633e47158c1461045c57600080fd5b80632b0302c7116101d15780632b0302c7146103875780632d433fd1146103ae57806336c63d46146103ce57806338d38c97146103ee57600080fd5b806318350f221461020357806318f139e8146102ef5780631ecbb09c146103135780631eeaaafe14610365575b600080fd5b34801561020f57600080fd5b506102ab61021e366004613bc1565b6040805160808101825260008082526020820181905291810182905260608101919091525073ffffffffffffffffffffffffffffffffffffffff166000908152600960209081526040918290208251608081018452815481526001820154928101929092526002015463ffffffff81169282019290925264010000000090910460ff161515606082015290565b6040516102e69190815181526020808301519082015260408083015163ffffffff169082015260609182015115159181019190915260800190565b60405180910390f35b3480156102fb57600080fd5b5061030560075481565b6040519081526020016102e6565b34801561031f57600080fd5b506008546103409073ffffffffffffffffffffffffffffffffffffffff1681565b60405173ffffffffffffffffffffffffffffffffffffffff90911681526020016102e6565b34801561037157600080fd5b50610385610380366004613bde565b61095b565b005b34801561039357600080fd5b5061039c600181565b60405160ff90911681526020016102e6565b3480156103ba57600080fd5b506103856103c9366004613c96565b610d2a565b3480156103da57600080fd5b506103856103e9366004613ced565b6110f4565b3480156103fa57600080fd5b507f000000000000000000000000000000000000000000000000000000000000000061039c565b61038561042f366004613d06565b61111c565b61038561150f565b34801561044857600080fd5b50610385610457366004613bde565b611733565b34801561046857600080fd5b50610340611aa6565b34801561047d57600080fd5b5061039c600081565b34801561049257600080fd5b5061030560065481565b3480156104a857600080fd5b506104e56040518060400160405280600c81526020017f322e302e302d626574612e31000000000000000000000000000000000000000081525081565b6040516102e69190613d6f565b3480156104fe57600080fd5b5061039c600381565b34801561051357600080fd5b50610385610522366004613ced565b611cb1565b34801561053357600080fd5b50610340610542366004613ced565b611ccd565b34801561055357600080fd5b50610385610562366004613bc1565b611d04565b34801561057357600080fd5b5061039c600281565b34801561058857600080fd5b5061030560045481565b34801561059e57600080fd5b5061030561271081565b3480156105b457600080fd5b506103856105c3366004613ced565b611e5d565b3480156105d457600080fd5b50600b54610305565b3480156105e957600080fd5b5061030560035481565b3480156105ff57600080fd5b5061064261060e366004613bc1565b60096020526000908152604090208054600182015460029092015490919063ffffffff811690640100000000900460ff1684565b6040516102e69493929190938452602084019290925263ffffffff1660408301521515606082015260800190565b34801561067c57600080fd5b5061038561068b366004613ced565b611e9c565b34801561069c57600080fd5b506107b36106ab366004613bc1565b6040805161010081018252600080825260208201819052918101829052606081018290526080810182905260a0810182905260c0810182905260e08101919091525073ffffffffffffffffffffffffffffffffffffffff9081166000908152600a60209081526040918290208251610100810184528154815260018201549281019290925260028101549282019290925260038201546bffffffffffffffffffffffff811660608301526c01000000000000000000000000900490921660808301526004015467ffffffffffffffff80821660a08401526801000000000000000082041660c0830152700100000000000000000000000000000000900460ff1660e082015290565b6040516102e69190613de2565b3480156107cc57600080fd5b50610340611f02565b3480156107e157600080fd5b5061030560055481565b3480156107f757600080fd5b506002546103409073ffffffffffffffffffffffffffffffffffffffff1681565b34801561082457600080fd5b506108cd610833366004613bc1565b600a60205260009081526040902080546001820154600283015460038401546004909401549293919290916bffffffffffffffffffffffff8116916c0100000000000000000000000090910473ffffffffffffffffffffffffffffffffffffffff169067ffffffffffffffff8082169168010000000000000000810490911690700100000000000000000000000000000000900460ff1688565b604080519889526020890197909752958701949094526bffffffffffffffffffffffff909216606086015273ffffffffffffffffffffffffffffffffffffffff16608085015267ffffffffffffffff90811660a08501521660c083015260ff1660e0820152610100016102e6565b34801561094757600080fd5b50610385610956366004613ced565b611f7f565b73ffffffffffffffffffffffffffffffffffffffff88166000908152600a602052604090206004810154700100000000000000000000000000000000900460ff166001146109d5576040517ff525e32000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b600481015467ffffffffffffffff164310610a1c576040517f70f65caa00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b610a298187898888611fae565b6040517fffffffffffffffffffffffffffffffffffffffff00000000000000000000000060608a901b166020820152610a9e906034015b604080517fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0818403018152919052610a988486613ef1565b89612028565b50610ab18160020154826001015461204b565b610abf89836001015461204b565b10610af6576040517f4a96216600000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b600381015473ffffffffffffffffffffffffffffffffffffffff6c010000000000000000000000008204166000908152600960205260408120600754909261271091610b4f916bffffffffffffffffffffffff16614013565b610b59919061407f565b6003840154909150600090610b7d9083906bffffffffffffffffffffffff16614093565b600385015484549192506bffffffffffffffffffffffff1690821115610ba257835491505b81846000016000828254610bb69190614093565b9250508190555081846001016000828254610bd191906140aa565b90915550506004850180547fffffffffffffffffffffffffffffff00ffffffffffffffffffffffffffffffff1670020000000000000000000000000000000017905560405133906108fc8315029083906000818181858888f19350505050158015610c40573d6000803e3d6000fd5b506003850154610c76906c01000000000000000000000000900473ffffffffffffffffffffffffffffffffffffffff168561207b565b3373ffffffffffffffffffffffffffffffffffffffff168d73ffffffffffffffffffffffffffffffffffffffff167fe24011d9c2a9cfdaf96dd5f659a0981ecfd4b3f435f724f06072bbb0e96790a08e84604051610d139291909182526020820152606060408201819052600a908201527f636c6f7365722d6b657900000000000000000000000000000000000000000000608082015260a00190565b60405180910390a350505050505050505050505050565b60025473ffffffffffffffffffffffffffffffffffffffff163314610d7b576040517f2a769f9e00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b610d836121e5565b156110ee57600b5460018111610d9957506110ee565b6000610da6600143614093565b60408051914060208301524290820152606001604051602081830303815290604052805190602001209050600082600214610e0057610de6600184614093565b610df090836140c2565b610dfb9060016140aa565b610e03565b60015b90506000600b8281548110610e1a57610e1a6140d6565b600091825260208083209091015473ffffffffffffffffffffffffffffffffffffffff168083526009909152604082208054600354929450909290918210610e6457600354610e66565b815b9050610e728183614093565b8355600183018054829190600090610e8b9084906140aa565b925050819055506040518061010001604052808b81526020018781526020016000801b8152602001826bffffffffffffffffffffffff1681526020018573ffffffffffffffffffffffffffffffffffffffff16815260200160045443610ef191906140aa565b67ffffffffffffffff1681526020018967ffffffffffffffff168152602001600060ff16815250600a60008d73ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060008201518160000155602082015181600101556040820151816002015560608201518160030160006101000a8154816bffffffffffffffffffffffff02191690836bffffffffffffffffffffffff160217905550608082015181600301600c6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555060a08201518160040160006101000a81548167ffffffffffffffff021916908367ffffffffffffffff16021790555060c08201518160040160086101000a81548167ffffffffffffffff021916908367ffffffffffffffff16021790555060e08201518160040160106101000a81548160ff021916908360ff16021790555090505061107f848461207b565b8373ffffffffffffffffffffffffffffffffffffffff168b73ffffffffffffffffffffffffffffffffffffffff167fdc8f76829b172be4263f60652a5418b7792650e90d058948608a8e10bed3ba1a886040516110de91815260200190565b60405180910390a3505050505050505b50505050565b6110fc61222e565b60008111801561110e575061c4e08111155b61111757600080fd5b600455565b7f0000000000000000000000000000000000000000000000000000000000000000600054610100900460ff1615801561115c575060005460ff8083169116105b6111ed576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201527f647920696e697469616c697a656400000000000000000000000000000000000060648201526084015b60405180910390fd5b600080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00001660ff8316176101001790556bffffffffffffffffffffffff8710611293576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601360248201527f426f6e6420657863656564732075696e7439360000000000000000000000000060448201526064016111e4565b848711156112fd576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601060248201527f426f6e64203e206d696e207374616b650000000000000000000000000000000060448201526064016111e4565b620186a084111561136a576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601360248201527f496e76616c69642070726f626162696c6974790000000000000000000000000060448201526064016111e4565b6127108311156113d6576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601460248201527f496e76616c69642070656e616c7479207261746500000000000000000000000060448201526064016111e4565b6002805473ffffffffffffffffffffffffffffffffffffffff808b167fffffffffffffffffffffffff000000000000000000000000000000000000000092831617909255600389905560048890556005879055600686905560078590556008805492851692909116919091179055600b546000036114a757600b80546001810182556000919091527f0175b7a638427703f0dbe7bb9bbf987a2551717b34e79f33b5b1008d1fa01db90180547fffffffffffffffffffffffff00000000000000000000000000000000000000001690555b600080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00ff16905560405160ff821681527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15050505050505050565b60026001540361157b576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601f60248201527f5265656e7472616e637947756172643a207265656e7472616e742063616c6c0060448201526064016111e4565b6002600155346115e7576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601a60248201527f4d757374207374616b6520706f73697469766520616d6f756e7400000000000060448201526064016111e4565b33600090815260096020526040812080549091349183919061160a9084906140aa565b90915550506002810154640100000000900460ff1615801561162f5750600354815410155b156116f7576002810180547fffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffffff81166401000000009081178355600b805463ffffffff167fffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000909316929092171790915580546001810182556000919091527f0175b7a638427703f0dbe7bb9bbf987a2551717b34e79f33b5b1008d1fa01db90180547fffffffffffffffffffffffff000000000000000000000000000000000000000016331790555b60405134815233907f6f50cc7a01f21c217b2ae66736754596de2004562a26fcc850e70031e5985e8d9060200160405180910390a25060018055565b73ffffffffffffffffffffffffffffffffffffffff8089166000908152600a60205260409020600381015490916c01000000000000000000000000909104166117a8576040517facddc2de00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60038101546c01000000000000000000000000900473ffffffffffffffffffffffffffffffffffffffff16331461180b576040517f430a2a2b00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6004810154700100000000000000000000000000000000900460ff161561185e576040517ff525e32000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b600481015467ffffffffffffffff1643106118a5576040517f70f65caa00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6118b28187898888611fae565b6040517fffffffffffffffffffffffffffffffffffffffff00000000000000000000000060608a901b1660208201526118ed90603401610a60565b50600281018890556004810180547fffffffffffffffffffffffffffffff00ffffffffffffffffffffffffffffffff1670010000000000000000000000000000000017905560075460038201546000916127109161195991906bffffffffffffffffffffffff16614013565b611963919061407f565b60038301549091506000906119879083906bffffffffffffffffffffffff16614093565b336000908152600960205260408120805492935091839183916119ab9084906140aa565b9091555050600181015482116119d557818160010160008282546119cf9190614093565b90915550505b3373ffffffffffffffffffffffffffffffffffffffff168c73ffffffffffffffffffffffffffffffffffffffff167f2f77901e93680b8c6be6143913e2e41e92b7e68009116fb0df1d17aa60e7a1e08d611a338f896001015461204b565b6040805192835260208301919091520160405180910390a36040518b8152339073ffffffffffffffffffffffffffffffffffffffff8e16907fb672d3774e6aace0c2e3d100234dc7722d326e595a24b682168065ec3e286f729060200160405180910390a3505050505050505050505050565b600080611ad17fb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d61035490565b905073ffffffffffffffffffffffffffffffffffffffff811615611af457919050565b6040518060400160405280601a81526020017f4f564d5f4c3143726f7373446f6d61696e4d657373656e676572000000000000815250516002611b379190614013565b604080513060208201526000918101919091527f4f564d5f4c3143726f7373446f6d61696e4d657373656e6765720000000000009190911790611b92906060015b604051602081830303815290604052805190602001205490565b14611bc9576040517f54e433cd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60408051306020820152600191810191909152600090611beb90606001611b78565b905073ffffffffffffffffffffffffffffffffffffffff811615611c7f578073ffffffffffffffffffffffffffffffffffffffff16638da5cb5b6040518163ffffffff1660e01b8152600401602060405180830381865afa158015611c54573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611c789190614105565b9250505090565b6040517f332144db00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b611cb961222e565b612710811115611cc857600080fd5b600755565b600b8181548110611cdd57600080fd5b60009182526020909120015473ffffffffffffffffffffffffffffffffffffffff16905081565b336000908152600a60205260409020600381015473ffffffffffffffffffffffffffffffffffffffff8381166c0100000000000000000000000090920416148015611d6857506004810154700100000000000000000000000000000000900460ff16155b15611e59576004810180547fffffffffffffffffffffffffffffff00ffffffffffffffffffffffffffffffff16700300000000000000000000000000000000179055600381015473ffffffffffffffffffffffffffffffffffffffff8316600090815260096020526040812080546bffffffffffffffffffffffff9093169290918391839190611df99084906140aa565b90915550611e099050848261207b565b60405182815273ffffffffffffffffffffffffffffffffffffffff85169033907f4fac74d6b4ed45cb641c8e730951b01c4dbcae0565cf330e909230492bd07d789060200160405180910390a350505b5050565b611e6561222e565b600081118015611e8057506bffffffffffffffffffffffff81105b8015611e8e57506005548111155b611e9757600080fd5b600355565b60085473ffffffffffffffffffffffffffffffffffffffff163314611eed576040517fc1de1ba600000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b620186a0811115611efd57600080fd5b600655565b6000611f0c611aa6565b73ffffffffffffffffffffffffffffffffffffffff16638da5cb5b6040518163ffffffff1660e01b8152600401602060405180830381865afa158015611f56573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611f7a9190614105565b905090565b611f8761222e565b600081118015611fa05750683635c9adc5dea000008111155b611fa957600080fd5b600555565b6040805160208082018790528183018690526060820185905260808083018590528351808403909101815260a0909201909252805191012085548114612020576040517f6632d35e00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b505050505050565b6060600061203585612286565b90506120428185856122b8565b95945050505050565b6000828280821015612066576120618282614093565b612070565b6120708183614093565b925050505b92915050565b6003548154600283015491111590640100000000900460ff1680801561209f575081155b156120e6576002830180547fffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffffff81169091556120e190859063ffffffff16612d3d565b6110ee565b801580156120f15750815b156110ee57600283810180546401000000007fffffffffffffffffffffffffffffffffffffffffffffffffffffff00ffffffff909116179055600b805473ffffffffffffffffffffffffffffffffffffffff8716600081815260096020526040812090940180547fffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000001663ffffffff909316929092179091558154600181018355919092527f0175b7a638427703f0dbe7bb9bbf987a2551717b34e79f33b5b1008d1fa01db90180547fffffffffffffffffffffffff00000000000000000000000000000000000000001690911790556110ee565b6006546000908082036121fa57600091505090565b620186a0811061220c57600191505090565b80620186a061221c600143614093565b6122279190406140c2565b1091505090565b33612237611f02565b73ffffffffffffffffffffffffffffffffffffffff1614612284576040517f7f12c64b00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b565b606081805190602001206040516020016122a291815260200190565b6040516020818303038152906040529050919050565b60606000845111612325576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601560248201527f4d65726b6c65547269653a20656d707479206b6579000000000000000000000060448201526064016111e4565b600061233084612f10565b9050600061233d86612ffc565b905060008460405160200161235491815260200190565b60405160208183030381529060405290506000805b8451811015612cad576000858281518110612386576123866140d6565b602002602001015190508451831115612421576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602e60248201527f4d65726b6c65547269653a206b657920696e646578206578636565647320746f60448201527f74616c206b6579206c656e67746800000000000000000000000000000000000060648201526084016111e4565b826000036124da578051805160209182012060405161246f9261244992910190815260200190565b604051602081830303815290604052858051602091820120825192909101919091201490565b6124d5576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601d60248201527f4d65726b6c65547269653a20696e76616c696420726f6f74206861736800000060448201526064016111e4565b612631565b80515160201161259057805180516020918201206040516125049261244992910190815260200190565b6124d5576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602760248201527f4d65726b6c65547269653a20696e76616c6964206c6172676520696e7465726e60448201527f616c20686173680000000000000000000000000000000000000000000000000060648201526084016111e4565b805184516020808701919091208251919092012014612631576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602660248201527f4d65726b6c65547269653a20696e76616c696420696e7465726e616c206e6f6460448201527f652068617368000000000000000000000000000000000000000000000000000060648201526084016111e4565b61263d601060016140aa565b8160200151510361281957845183036127b157612677816020015160108151811061266a5761266a6140d6565b602002602001015161305f565b9650600087511161270a576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603b60248201527f4d65726b6c65547269653a2076616c7565206c656e677468206d75737420626560448201527f2067726561746572207468616e207a65726f20286272616e636829000000000060648201526084016111e4565b600186516127189190614093565b82146127a6576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603a60248201527f4d65726b6c65547269653a2076616c7565206e6f6465206d757374206265206c60448201527f617374206e6f646520696e2070726f6f6620286272616e63682900000000000060648201526084016111e4565b505050505050612d36565b60008584815181106127c5576127c56140d6565b602001015160f81c60f81b60f81c9050600082602001518260ff16815181106127f0576127f06140d6565b6020026020010151905061280381613113565b95506128106001866140aa565b94505050612c9a565b600281602001515103612c1257600061283182613138565b9050600081600081518110612848576128486140d6565b016020015160f81c9050600061285f600283614122565b61286a906002614144565b9050600061287b848360ff1661315c565b905060006128898a8961315c565b905060006128978383613192565b905080835114612929576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603a60248201527f4d65726b6c65547269653a20706174682072656d61696e646572206d7573742060448201527f736861726520616c6c206e6962626c65732077697468206b657900000000000060648201526084016111e4565b60ff85166002148061293e575060ff85166003145b15612b2d57808251146129d3576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603d60248201527f4d65726b6c65547269653a206b65792072656d61696e646572206d757374206260448201527f65206964656e746963616c20746f20706174682072656d61696e64657200000060648201526084016111e4565b6129ed876020015160018151811061266a5761266a6140d6565b9c5060008d5111612a80576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603960248201527f4d65726b6c65547269653a2076616c7565206c656e677468206d75737420626560448201527f2067726561746572207468616e207a65726f20286c656166290000000000000060648201526084016111e4565b60018c51612a8e9190614093565b8814612b1c576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603860248201527f4d65726b6c65547269653a2076616c7565206e6f6465206d757374206265206c60448201527f617374206e6f646520696e2070726f6f6620286c65616629000000000000000060648201526084016111e4565b505050505050505050505050612d36565b60ff85161580612b40575060ff85166001145b15612b7f57612b6c8760200151600181518110612b5f57612b5f6140d6565b6020026020010151613113565b9950612b78818a6140aa565b9850612c07565b6040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603260248201527f4d65726b6c65547269653a2072656365697665642061206e6f6465207769746860448201527f20616e20756e6b6e6f776e20707265666978000000000000000000000000000060648201526084016111e4565b505050505050612c9a565b6040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602860248201527f4d65726b6c65547269653a20726563656976656420616e20756e70617273656160448201527f626c65206e6f646500000000000000000000000000000000000000000000000060648201526084016111e4565b5080612ca581614167565b915050612369565b506040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602560248201527f4d65726b6c65547269653a2072616e206f7574206f662070726f6f6620656c6560448201527f6d656e747300000000000000000000000000000000000000000000000000000060648201526084016111e4565b9392505050565b600081118015612d4e5750600b5481105b8015612da357508173ffffffffffffffffffffffffffffffffffffffff16600b8281548110612d7f57612d7f6140d6565b60009182526020909120015473ffffffffffffffffffffffffffffffffffffffff16145b15611e5957600b54600090612dba90600190614093565b9050808214612ea2576000600b8281548110612dd857612dd86140d6565b600091825260209091200154600b805473ffffffffffffffffffffffffffffffffffffffff9092169250829185908110612e1457612e146140d6565b600091825260208083209190910180547fffffffffffffffffffffffff00000000000000000000000000000000000000001673ffffffffffffffffffffffffffffffffffffffff94851617905592909116815260099091526040902060020180547fffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000001663ffffffff84161790555b600b805480612eb357612eb361419f565b60008281526020902081017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff90810180547fffffffffffffffffffffffff0000000000000000000000000000000000000000169055019055505050565b80516060908067ffffffffffffffff811115612f2e57612f2e613e73565b604051908082528060200260200182016040528015612f7357816020015b6040805180820190915260608082526020820152815260200190600190039081612f4c5790505b50915060005b81811015612ff5576040518060400160405280858381518110612f9e57612f9e6140d6565b60200260200101518152602001612fcd868481518110612fc057612fc06140d6565b6020026020010151613246565b815250838281518110612fe257612fe26140d6565b6020908102919091010152600101612f79565b5050919050565b606080604051905082518060011b603f8101601f1916830160405280835250602084016020830160005b83811015613054578060011b82018184015160001a8060041c8253600f811660018301535050600101613026565b509295945050505050565b6060600080600061306f85613259565b91945092509050600081600181111561308a5761308a6141ce565b146130c1576040517f1ff9b2e400000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6130cb82846140aa565b855114613104576040517f5c5537b800000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b612042856020015184846136f7565b6060602082600001511061312f5761312a8261305f565b612075565b6120758261378b565b6060612075613157836020015160008151811061266a5761266a6140d6565b612ffc565b60608251821061317b5750604080516020810190915260008152612075565b612d36838384865161318d9190614093565b6137a1565b60008082518451106131a55782516131a8565b83515b90505b808210801561322f57508282815181106131c7576131c76140d6565b602001015160f81c60f81b7effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1916848381518110613206576132066140d6565b01602001517fff0000000000000000000000000000000000000000000000000000000000000016145b1561323f578160010191506131ab565b5092915050565b606061207561325483613979565b6139e6565b6000806000836000015160000361329c576040517f5ab458fb00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6020840151805160001a607f81116132c15760006001600094509450945050506136f0565b60b781116133d75760006132d6608083614093565b905080876000015111613315576040517f66c9448500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6001838101517fff0000000000000000000000000000000000000000000000000000000000000016908214801561338d57507f80000000000000000000000000000000000000000000000000000000000000007fff000000000000000000000000000000000000000000000000000000000000008216105b156133c4576040517fbabb01dd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b50600195509350600092506136f0915050565b60bf81116135355760006133ec60b783614093565b90508087600001511161342b576040517f66c9448500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60018301517fff0000000000000000000000000000000000000000000000000000000000000016600081900361348d576040517fbabb01dd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b600184015160088302610100031c603781116134d5576040517fbabb01dd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6134df81846140aa565b895111613518576040517f66c9448500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6135238360016140aa565b97509550600094506136f09350505050565b60f7811161359a57600061354a60c083614093565b905080876000015111613589576040517f66c9448500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6001955093508492506136f0915050565b60006135a760f783614093565b9050808760000151116135e6576040517f66c9448500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60018301517fff00000000000000000000000000000000000000000000000000000000000000166000819003613648576040517fbabb01dd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b600184015160088302610100031c60378111613690576040517fbabb01dd00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b61369a81846140aa565b8951116136d3576040517f66c9448500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6136de8360016140aa565b97509550600194506136f09350505050565b9193909250565b60608167ffffffffffffffff81111561371257613712613e73565b6040519080825280601f01601f19166020018201604052801561373c576020820181803683370190505b5090508115612d3657600061375184866140aa565b90506020820160005b8481101561377257828101518282015260200161375a565b84811115613781576000858301525b5050509392505050565b60606120758260200151600084600001516136f7565b60608182601f011015613810576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152600e60248201527f736c6963655f6f766572666c6f7700000000000000000000000000000000000060448201526064016111e4565b82828401101561387c576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152600e60248201527f736c6963655f6f766572666c6f7700000000000000000000000000000000000060448201526064016111e4565b818301845110156138e9576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601160248201527f736c6963655f6f75744f66426f756e647300000000000000000000000000000060448201526064016111e4565b6060821580156139085760405191506000825260208201604052613970565b6040519150601f8416801560200281840101858101878315602002848b0101015b81831015613941578051835260209283019201613929565b5050858452601f017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe016604052505b50949350505050565b604080518082019091526000808252602082015281516000036139c8576040517f5ab458fb00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b50604080518082019091528151815260209182019181019190915290565b606060008060006139f685613259565b919450925090506001816001811115613a1157613a116141ce565b14613a48576040517f4b9c6abe00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b8451613a5483856140aa565b14613a8b576040517f5c5537b800000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b604080516020808252610420820190925290816020015b6040805180820190915260008082526020820152815260200190600190039081613aa25790505093506000835b8651811015613b9057600080613b156040518060400160405280858c60000151613af99190614093565b8152602001858c60200151613b0e91906140aa565b9052613259565b509150915060405180604001604052808383613b3191906140aa565b8152602001848b60200151613b4691906140aa565b815250888581518110613b5b57613b5b6140d6565b6020908102919091010152613b716001856140aa565b9350613b7d81836140aa565b613b8790846140aa565b92505050613acf565b50845250919392505050565b73ffffffffffffffffffffffffffffffffffffffff81168114613bbe57600080fd5b50565b600060208284031215613bd357600080fd5b8135612d3681613b9c565b60008060008060008060008060e0898b031215613bfa57600080fd5b8835613c0581613b9c565b97506020890135965060408901359550606089013594506080890135935060a0890135925060c089013567ffffffffffffffff80821115613c4557600080fd5b818b0191508b601f830112613c5957600080fd5b813581811115613c6857600080fd5b8c60208260051b8501011115613c7d57600080fd5b6020830194508093505050509295985092959890939650565b60008060008060808587031215613cac57600080fd5b8435613cb781613b9c565b93506020850135925060408501359150606085013567ffffffffffffffff81168114613ce257600080fd5b939692955090935050565b600060208284031215613cff57600080fd5b5035919050565b600080600080600080600060e0888a031215613d2157600080fd5b8735613d2c81613b9c565b96506020880135955060408801359450606088013593506080880135925060a0880135915060c0880135613d5f81613b9c565b8091505092959891949750929550565b600060208083528351808285015260005b81811015613d9c57858101830151858201604001528201613d80565b81811115613dae576000604083870101525b50601f017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe016929092016040019392505050565b6000610100820190508251825260208301516020830152604083015160408301526bffffffffffffffffffffffff606084015116606083015273ffffffffffffffffffffffffffffffffffffffff608084015116608083015260a083015167ffffffffffffffff80821660a08501528060c08601511660c0850152505060e083015161323f60e084018260ff169052565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b604051601f82017fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe016810167ffffffffffffffff81118282101715613ee957613ee9613e73565b604052919050565b600067ffffffffffffffff80841115613f0c57613f0c613e73565b8360051b6020613f1d818301613ea2565b868152918501918181019036841115613f3557600080fd5b865b84811015613fd857803586811115613f4f5760008081fd5b8801601f3681830112613f625760008081fd5b813588811115613f7457613f74613e73565b613fa3877fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08484011601613ea2565b91508082523687828501011115613fba5760008081fd5b80878401888401376000908201870152845250918301918301613f37565b50979650505050505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b6000817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff048311821515161561404b5761404b613fe4565b500290565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b60008261408e5761408e614050565b500490565b6000828210156140a5576140a5613fe4565b500390565b600082198211156140bd576140bd613fe4565b500190565b6000826140d1576140d1614050565b500690565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b60006020828403121561411757600080fd5b8151612d3681613b9c565b600060ff83168061413557614135614050565b8060ff84160691505092915050565b600060ff821660ff84168082101561415e5761415e613fe4565b90039392505050565b60007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff820361419857614198613fe4565b5060010190565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603160045260246000fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052602160045260246000fdfea164736f6c634300080f000a",
 }
 
 // RATABI is the input ABI used to generate the binding from.
@@ -210,38 +222,199 @@ func (_RAT *RATTransactorRaw) Transact(opts *bind.TransactOpts, method string, p
 	return _RAT.Contract.contract.Transact(opts, method, params...)
 }
 
+// PENALTYDENOMINATOR is a free data retrieval call binding the contract method 0xbc5542c0.
+//
+// Solidity: function PENALTY_DENOMINATOR() view returns(uint256)
+func (_RAT *RATCaller) PENALTYDENOMINATOR(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _RAT.contract.Call(opts, &out, "PENALTY_DENOMINATOR")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// PENALTYDENOMINATOR is a free data retrieval call binding the contract method 0xbc5542c0.
+//
+// Solidity: function PENALTY_DENOMINATOR() view returns(uint256)
+func (_RAT *RATSession) PENALTYDENOMINATOR() (*big.Int, error) {
+	return _RAT.Contract.PENALTYDENOMINATOR(&_RAT.CallOpts)
+}
+
+// PENALTYDENOMINATOR is a free data retrieval call binding the contract method 0xbc5542c0.
+//
+// Solidity: function PENALTY_DENOMINATOR() view returns(uint256)
+func (_RAT *RATCallerSession) PENALTYDENOMINATOR() (*big.Int, error) {
+	return _RAT.Contract.PENALTYDENOMINATOR(&_RAT.CallOpts)
+}
+
+// STATUSDISPUTED is a free data retrieval call binding the contract method 0xa207d02e.
+//
+// Solidity: function STATUS_DISPUTED() view returns(uint8)
+func (_RAT *RATCaller) STATUSDISPUTED(opts *bind.CallOpts) (uint8, error) {
+	var out []interface{}
+	err := _RAT.contract.Call(opts, &out, "STATUS_DISPUTED")
+
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+
+}
+
+// STATUSDISPUTED is a free data retrieval call binding the contract method 0xa207d02e.
+//
+// Solidity: function STATUS_DISPUTED() view returns(uint8)
+func (_RAT *RATSession) STATUSDISPUTED() (uint8, error) {
+	return _RAT.Contract.STATUSDISPUTED(&_RAT.CallOpts)
+}
+
+// STATUSDISPUTED is a free data retrieval call binding the contract method 0xa207d02e.
+//
+// Solidity: function STATUS_DISPUTED() view returns(uint8)
+func (_RAT *RATCallerSession) STATUSDISPUTED() (uint8, error) {
+	return _RAT.Contract.STATUSDISPUTED(&_RAT.CallOpts)
+}
+
+// STATUSFINALIZED is a free data retrieval call binding the contract method 0x57916ea8.
+//
+// Solidity: function STATUS_FINALIZED() view returns(uint8)
+func (_RAT *RATCaller) STATUSFINALIZED(opts *bind.CallOpts) (uint8, error) {
+	var out []interface{}
+	err := _RAT.contract.Call(opts, &out, "STATUS_FINALIZED")
+
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+
+}
+
+// STATUSFINALIZED is a free data retrieval call binding the contract method 0x57916ea8.
+//
+// Solidity: function STATUS_FINALIZED() view returns(uint8)
+func (_RAT *RATSession) STATUSFINALIZED() (uint8, error) {
+	return _RAT.Contract.STATUSFINALIZED(&_RAT.CallOpts)
+}
+
+// STATUSFINALIZED is a free data retrieval call binding the contract method 0x57916ea8.
+//
+// Solidity: function STATUS_FINALIZED() view returns(uint8)
+func (_RAT *RATCallerSession) STATUSFINALIZED() (uint8, error) {
+	return _RAT.Contract.STATUSFINALIZED(&_RAT.CallOpts)
+}
+
+// STATUSPENDING is a free data retrieval call binding the contract method 0x423d487c.
+//
+// Solidity: function STATUS_PENDING() view returns(uint8)
+func (_RAT *RATCaller) STATUSPENDING(opts *bind.CallOpts) (uint8, error) {
+	var out []interface{}
+	err := _RAT.contract.Call(opts, &out, "STATUS_PENDING")
+
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+
+}
+
+// STATUSPENDING is a free data retrieval call binding the contract method 0x423d487c.
+//
+// Solidity: function STATUS_PENDING() view returns(uint8)
+func (_RAT *RATSession) STATUSPENDING() (uint8, error) {
+	return _RAT.Contract.STATUSPENDING(&_RAT.CallOpts)
+}
+
+// STATUSPENDING is a free data retrieval call binding the contract method 0x423d487c.
+//
+// Solidity: function STATUS_PENDING() view returns(uint8)
+func (_RAT *RATCallerSession) STATUSPENDING() (uint8, error) {
+	return _RAT.Contract.STATUSPENDING(&_RAT.CallOpts)
+}
+
+// STATUSSUBMITTED is a free data retrieval call binding the contract method 0x2b0302c7.
+//
+// Solidity: function STATUS_SUBMITTED() view returns(uint8)
+func (_RAT *RATCaller) STATUSSUBMITTED(opts *bind.CallOpts) (uint8, error) {
+	var out []interface{}
+	err := _RAT.contract.Call(opts, &out, "STATUS_SUBMITTED")
+
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+
+}
+
+// STATUSSUBMITTED is a free data retrieval call binding the contract method 0x2b0302c7.
+//
+// Solidity: function STATUS_SUBMITTED() view returns(uint8)
+func (_RAT *RATSession) STATUSSUBMITTED() (uint8, error) {
+	return _RAT.Contract.STATUSSUBMITTED(&_RAT.CallOpts)
+}
+
+// STATUSSUBMITTED is a free data retrieval call binding the contract method 0x2b0302c7.
+//
+// Solidity: function STATUS_SUBMITTED() view returns(uint8)
+func (_RAT *RATCallerSession) STATUSSUBMITTED() (uint8, error) {
+	return _RAT.Contract.STATUSSUBMITTED(&_RAT.CallOpts)
+}
+
 // AttentionTests is a free data retrieval call binding the contract method 0xfba1d220.
 //
-// Solidity: function attentionTests(address ) view returns(bytes32 outputRoot, uint96 bondAmount, address challengerAddress, uint64 submissionDeadlineBlock, uint64 l2BlockNumber, bool evidenceSubmitted)
+// Solidity: function attentionTests(address ) view returns(bytes32 outputRoot, bytes32 seed, bytes32 candidateKey, uint96 bondAmount, address challengerAddress, uint64 submissionDeadlineBlock, uint64 l2BlockNumber, uint8 status)
 func (_RAT *RATCaller) AttentionTests(opts *bind.CallOpts, arg0 common.Address) (struct {
 	OutputRoot              [32]byte
+	Seed                    [32]byte
+	CandidateKey            [32]byte
 	BondAmount              *big.Int
 	ChallengerAddress       common.Address
 	SubmissionDeadlineBlock uint64
 	L2BlockNumber           uint64
-	EvidenceSubmitted       bool
+	Status                  uint8
 }, error) {
 	var out []interface{}
 	err := _RAT.contract.Call(opts, &out, "attentionTests", arg0)
 
 	outstruct := new(struct {
 		OutputRoot              [32]byte
+		Seed                    [32]byte
+		CandidateKey            [32]byte
 		BondAmount              *big.Int
 		ChallengerAddress       common.Address
 		SubmissionDeadlineBlock uint64
 		L2BlockNumber           uint64
-		EvidenceSubmitted       bool
+		Status                  uint8
 	})
 	if err != nil {
 		return *outstruct, err
 	}
 
 	outstruct.OutputRoot = *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
-	outstruct.BondAmount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-	outstruct.ChallengerAddress = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
-	outstruct.SubmissionDeadlineBlock = *abi.ConvertType(out[3], new(uint64)).(*uint64)
-	outstruct.L2BlockNumber = *abi.ConvertType(out[4], new(uint64)).(*uint64)
-	outstruct.EvidenceSubmitted = *abi.ConvertType(out[5], new(bool)).(*bool)
+	outstruct.Seed = *abi.ConvertType(out[1], new([32]byte)).(*[32]byte)
+	outstruct.CandidateKey = *abi.ConvertType(out[2], new([32]byte)).(*[32]byte)
+	outstruct.BondAmount = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
+	outstruct.ChallengerAddress = *abi.ConvertType(out[4], new(common.Address)).(*common.Address)
+	outstruct.SubmissionDeadlineBlock = *abi.ConvertType(out[5], new(uint64)).(*uint64)
+	outstruct.L2BlockNumber = *abi.ConvertType(out[6], new(uint64)).(*uint64)
+	outstruct.Status = *abi.ConvertType(out[7], new(uint8)).(*uint8)
 
 	return *outstruct, err
 
@@ -249,28 +422,32 @@ func (_RAT *RATCaller) AttentionTests(opts *bind.CallOpts, arg0 common.Address) 
 
 // AttentionTests is a free data retrieval call binding the contract method 0xfba1d220.
 //
-// Solidity: function attentionTests(address ) view returns(bytes32 outputRoot, uint96 bondAmount, address challengerAddress, uint64 submissionDeadlineBlock, uint64 l2BlockNumber, bool evidenceSubmitted)
+// Solidity: function attentionTests(address ) view returns(bytes32 outputRoot, bytes32 seed, bytes32 candidateKey, uint96 bondAmount, address challengerAddress, uint64 submissionDeadlineBlock, uint64 l2BlockNumber, uint8 status)
 func (_RAT *RATSession) AttentionTests(arg0 common.Address) (struct {
 	OutputRoot              [32]byte
+	Seed                    [32]byte
+	CandidateKey            [32]byte
 	BondAmount              *big.Int
 	ChallengerAddress       common.Address
 	SubmissionDeadlineBlock uint64
 	L2BlockNumber           uint64
-	EvidenceSubmitted       bool
+	Status                  uint8
 }, error) {
 	return _RAT.Contract.AttentionTests(&_RAT.CallOpts, arg0)
 }
 
 // AttentionTests is a free data retrieval call binding the contract method 0xfba1d220.
 //
-// Solidity: function attentionTests(address ) view returns(bytes32 outputRoot, uint96 bondAmount, address challengerAddress, uint64 submissionDeadlineBlock, uint64 l2BlockNumber, bool evidenceSubmitted)
+// Solidity: function attentionTests(address ) view returns(bytes32 outputRoot, bytes32 seed, bytes32 candidateKey, uint96 bondAmount, address challengerAddress, uint64 submissionDeadlineBlock, uint64 l2BlockNumber, uint8 status)
 func (_RAT *RATCallerSession) AttentionTests(arg0 common.Address) (struct {
 	OutputRoot              [32]byte
+	Seed                    [32]byte
+	CandidateKey            [32]byte
 	BondAmount              *big.Int
 	ChallengerAddress       common.Address
 	SubmissionDeadlineBlock uint64
 	L2BlockNumber           uint64
-	EvidenceSubmitted       bool
+	Status                  uint8
 }, error) {
 	return _RAT.Contract.AttentionTests(&_RAT.CallOpts, arg0)
 }
@@ -390,6 +567,37 @@ func (_RAT *RATSession) EvidenceSubmissionPeriod() (*big.Int, error) {
 // Solidity: function evidenceSubmissionPeriod() view returns(uint256)
 func (_RAT *RATCallerSession) EvidenceSubmissionPeriod() (*big.Int, error) {
 	return _RAT.Contract.EvidenceSubmissionPeriod(&_RAT.CallOpts)
+}
+
+// GetAttentionTest is a free data retrieval call binding the contract method 0xd586e540.
+//
+// Solidity: function getAttentionTest(address _gameAddress) view returns((bytes32,bytes32,bytes32,uint96,address,uint64,uint64,uint8))
+func (_RAT *RATCaller) GetAttentionTest(opts *bind.CallOpts, _gameAddress common.Address) (RATAttentionInfo, error) {
+	var out []interface{}
+	err := _RAT.contract.Call(opts, &out, "getAttentionTest", _gameAddress)
+
+	if err != nil {
+		return *new(RATAttentionInfo), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(RATAttentionInfo)).(*RATAttentionInfo)
+
+	return out0, err
+
+}
+
+// GetAttentionTest is a free data retrieval call binding the contract method 0xd586e540.
+//
+// Solidity: function getAttentionTest(address _gameAddress) view returns((bytes32,bytes32,bytes32,uint96,address,uint64,uint64,uint8))
+func (_RAT *RATSession) GetAttentionTest(_gameAddress common.Address) (RATAttentionInfo, error) {
+	return _RAT.Contract.GetAttentionTest(&_RAT.CallOpts, _gameAddress)
+}
+
+// GetAttentionTest is a free data retrieval call binding the contract method 0xd586e540.
+//
+// Solidity: function getAttentionTest(address _gameAddress) view returns((bytes32,bytes32,bytes32,uint96,address,uint64,uint64,uint8))
+func (_RAT *RATCallerSession) GetAttentionTest(_gameAddress common.Address) (RATAttentionInfo, error) {
+	return _RAT.Contract.GetAttentionTest(&_RAT.CallOpts, _gameAddress)
 }
 
 // GetChallengerInfo is a free data retrieval call binding the contract method 0x18350f22.
@@ -514,6 +722,37 @@ func (_RAT *RATSession) MinimumStakingBalance() (*big.Int, error) {
 // Solidity: function minimumStakingBalance() view returns(uint256)
 func (_RAT *RATCallerSession) MinimumStakingBalance() (*big.Int, error) {
 	return _RAT.Contract.MinimumStakingBalance(&_RAT.CallOpts)
+}
+
+// OfflinePenaltyRate is a free data retrieval call binding the contract method 0x18f139e8.
+//
+// Solidity: function offlinePenaltyRate() view returns(uint256)
+func (_RAT *RATCaller) OfflinePenaltyRate(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _RAT.contract.Call(opts, &out, "offlinePenaltyRate")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// OfflinePenaltyRate is a free data retrieval call binding the contract method 0x18f139e8.
+//
+// Solidity: function offlinePenaltyRate() view returns(uint256)
+func (_RAT *RATSession) OfflinePenaltyRate() (*big.Int, error) {
+	return _RAT.Contract.OfflinePenaltyRate(&_RAT.CallOpts)
+}
+
+// OfflinePenaltyRate is a free data retrieval call binding the contract method 0x18f139e8.
+//
+// Solidity: function offlinePenaltyRate() view returns(uint256)
+func (_RAT *RATCallerSession) OfflinePenaltyRate() (*big.Int, error) {
+	return _RAT.Contract.OfflinePenaltyRate(&_RAT.CallOpts)
 }
 
 // PerTestBondAmount is a free data retrieval call binding the contract method 0xcf60203e.
@@ -733,25 +972,46 @@ func (_RAT *RATCallerSession) Version() (string, error) {
 	return _RAT.Contract.Version(&_RAT.CallOpts)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x5df5f96f.
+// DisputeByCloserKey is a paid mutator transaction binding the contract method 0x1eeaaafe.
 //
-// Solidity: function initialize(address _disputeGameFactory, uint256 _perTestBondAmount, uint256 _evidenceSubmissionPeriod, uint256 _minimumStakingBalance, uint256 _ratTriggerProbability, address _manager) payable returns()
-func (_RAT *RATTransactor) Initialize(opts *bind.TransactOpts, _disputeGameFactory common.Address, _perTestBondAmount *big.Int, _evidenceSubmissionPeriod *big.Int, _minimumStakingBalance *big.Int, _ratTriggerProbability *big.Int, _manager common.Address) (*types.Transaction, error) {
-	return _RAT.contract.Transact(opts, "initialize", _disputeGameFactory, _perTestBondAmount, _evidenceSubmissionPeriod, _minimumStakingBalance, _ratTriggerProbability, _manager)
+// Solidity: function disputeByCloserKey(address _gameAddress, bytes32 _closerKey, bytes32 _stateRoot, bytes32 _version, bytes32 _messagePasserRoot, bytes32 _blockHash, bytes[] _proof) returns()
+func (_RAT *RATTransactor) DisputeByCloserKey(opts *bind.TransactOpts, _gameAddress common.Address, _closerKey [32]byte, _stateRoot [32]byte, _version [32]byte, _messagePasserRoot [32]byte, _blockHash [32]byte, _proof [][]byte) (*types.Transaction, error) {
+	return _RAT.contract.Transact(opts, "disputeByCloserKey", _gameAddress, _closerKey, _stateRoot, _version, _messagePasserRoot, _blockHash, _proof)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x5df5f96f.
+// DisputeByCloserKey is a paid mutator transaction binding the contract method 0x1eeaaafe.
 //
-// Solidity: function initialize(address _disputeGameFactory, uint256 _perTestBondAmount, uint256 _evidenceSubmissionPeriod, uint256 _minimumStakingBalance, uint256 _ratTriggerProbability, address _manager) payable returns()
-func (_RAT *RATSession) Initialize(_disputeGameFactory common.Address, _perTestBondAmount *big.Int, _evidenceSubmissionPeriod *big.Int, _minimumStakingBalance *big.Int, _ratTriggerProbability *big.Int, _manager common.Address) (*types.Transaction, error) {
-	return _RAT.Contract.Initialize(&_RAT.TransactOpts, _disputeGameFactory, _perTestBondAmount, _evidenceSubmissionPeriod, _minimumStakingBalance, _ratTriggerProbability, _manager)
+// Solidity: function disputeByCloserKey(address _gameAddress, bytes32 _closerKey, bytes32 _stateRoot, bytes32 _version, bytes32 _messagePasserRoot, bytes32 _blockHash, bytes[] _proof) returns()
+func (_RAT *RATSession) DisputeByCloserKey(_gameAddress common.Address, _closerKey [32]byte, _stateRoot [32]byte, _version [32]byte, _messagePasserRoot [32]byte, _blockHash [32]byte, _proof [][]byte) (*types.Transaction, error) {
+	return _RAT.Contract.DisputeByCloserKey(&_RAT.TransactOpts, _gameAddress, _closerKey, _stateRoot, _version, _messagePasserRoot, _blockHash, _proof)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x5df5f96f.
+// DisputeByCloserKey is a paid mutator transaction binding the contract method 0x1eeaaafe.
 //
-// Solidity: function initialize(address _disputeGameFactory, uint256 _perTestBondAmount, uint256 _evidenceSubmissionPeriod, uint256 _minimumStakingBalance, uint256 _ratTriggerProbability, address _manager) payable returns()
-func (_RAT *RATTransactorSession) Initialize(_disputeGameFactory common.Address, _perTestBondAmount *big.Int, _evidenceSubmissionPeriod *big.Int, _minimumStakingBalance *big.Int, _ratTriggerProbability *big.Int, _manager common.Address) (*types.Transaction, error) {
-	return _RAT.Contract.Initialize(&_RAT.TransactOpts, _disputeGameFactory, _perTestBondAmount, _evidenceSubmissionPeriod, _minimumStakingBalance, _ratTriggerProbability, _manager)
+// Solidity: function disputeByCloserKey(address _gameAddress, bytes32 _closerKey, bytes32 _stateRoot, bytes32 _version, bytes32 _messagePasserRoot, bytes32 _blockHash, bytes[] _proof) returns()
+func (_RAT *RATTransactorSession) DisputeByCloserKey(_gameAddress common.Address, _closerKey [32]byte, _stateRoot [32]byte, _version [32]byte, _messagePasserRoot [32]byte, _blockHash [32]byte, _proof [][]byte) (*types.Transaction, error) {
+	return _RAT.Contract.DisputeByCloserKey(&_RAT.TransactOpts, _gameAddress, _closerKey, _stateRoot, _version, _messagePasserRoot, _blockHash, _proof)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0x39b6e72c.
+//
+// Solidity: function initialize(address _disputeGameFactory, uint256 _perTestBondAmount, uint256 _evidenceSubmissionPeriod, uint256 _minimumStakingBalance, uint256 _ratTriggerProbability, uint256 _offlinePenaltyRate, address _manager) payable returns()
+func (_RAT *RATTransactor) Initialize(opts *bind.TransactOpts, _disputeGameFactory common.Address, _perTestBondAmount *big.Int, _evidenceSubmissionPeriod *big.Int, _minimumStakingBalance *big.Int, _ratTriggerProbability *big.Int, _offlinePenaltyRate *big.Int, _manager common.Address) (*types.Transaction, error) {
+	return _RAT.contract.Transact(opts, "initialize", _disputeGameFactory, _perTestBondAmount, _evidenceSubmissionPeriod, _minimumStakingBalance, _ratTriggerProbability, _offlinePenaltyRate, _manager)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0x39b6e72c.
+//
+// Solidity: function initialize(address _disputeGameFactory, uint256 _perTestBondAmount, uint256 _evidenceSubmissionPeriod, uint256 _minimumStakingBalance, uint256 _ratTriggerProbability, uint256 _offlinePenaltyRate, address _manager) payable returns()
+func (_RAT *RATSession) Initialize(_disputeGameFactory common.Address, _perTestBondAmount *big.Int, _evidenceSubmissionPeriod *big.Int, _minimumStakingBalance *big.Int, _ratTriggerProbability *big.Int, _offlinePenaltyRate *big.Int, _manager common.Address) (*types.Transaction, error) {
+	return _RAT.Contract.Initialize(&_RAT.TransactOpts, _disputeGameFactory, _perTestBondAmount, _evidenceSubmissionPeriod, _minimumStakingBalance, _ratTriggerProbability, _offlinePenaltyRate, _manager)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0x39b6e72c.
+//
+// Solidity: function initialize(address _disputeGameFactory, uint256 _perTestBondAmount, uint256 _evidenceSubmissionPeriod, uint256 _minimumStakingBalance, uint256 _ratTriggerProbability, uint256 _offlinePenaltyRate, address _manager) payable returns()
+func (_RAT *RATTransactorSession) Initialize(_disputeGameFactory common.Address, _perTestBondAmount *big.Int, _evidenceSubmissionPeriod *big.Int, _minimumStakingBalance *big.Int, _ratTriggerProbability *big.Int, _offlinePenaltyRate *big.Int, _manager common.Address) (*types.Transaction, error) {
+	return _RAT.Contract.Initialize(&_RAT.TransactOpts, _disputeGameFactory, _perTestBondAmount, _evidenceSubmissionPeriod, _minimumStakingBalance, _ratTriggerProbability, _offlinePenaltyRate, _manager)
 }
 
 // ResolveClaim is a paid mutator transaction binding the contract method 0x94d645a8.
@@ -817,6 +1077,27 @@ func (_RAT *RATTransactorSession) SetMinimumStakingBalance(_balance *big.Int) (*
 	return _RAT.Contract.SetMinimumStakingBalance(&_RAT.TransactOpts, _balance)
 }
 
+// SetOfflinePenaltyRate is a paid mutator transaction binding the contract method 0x592512ee.
+//
+// Solidity: function setOfflinePenaltyRate(uint256 _rate) returns()
+func (_RAT *RATTransactor) SetOfflinePenaltyRate(opts *bind.TransactOpts, _rate *big.Int) (*types.Transaction, error) {
+	return _RAT.contract.Transact(opts, "setOfflinePenaltyRate", _rate)
+}
+
+// SetOfflinePenaltyRate is a paid mutator transaction binding the contract method 0x592512ee.
+//
+// Solidity: function setOfflinePenaltyRate(uint256 _rate) returns()
+func (_RAT *RATSession) SetOfflinePenaltyRate(_rate *big.Int) (*types.Transaction, error) {
+	return _RAT.Contract.SetOfflinePenaltyRate(&_RAT.TransactOpts, _rate)
+}
+
+// SetOfflinePenaltyRate is a paid mutator transaction binding the contract method 0x592512ee.
+//
+// Solidity: function setOfflinePenaltyRate(uint256 _rate) returns()
+func (_RAT *RATTransactorSession) SetOfflinePenaltyRate(_rate *big.Int) (*types.Transaction, error) {
+	return _RAT.Contract.SetOfflinePenaltyRate(&_RAT.TransactOpts, _rate)
+}
+
 // SetPerTestBondAmount is a paid mutator transaction binding the contract method 0xcc447906.
 //
 // Solidity: function setPerTestBondAmount(uint256 _amount) returns()
@@ -880,46 +1161,46 @@ func (_RAT *RATTransactorSession) Stake() (*types.Transaction, error) {
 	return _RAT.Contract.Stake(&_RAT.TransactOpts)
 }
 
-// SubmitCorrectEvidence is a paid mutator transaction binding the contract method 0xaf216276.
+// SubmitCandidate is a paid mutator transaction binding the contract method 0x3c6d0e58.
 //
-// Solidity: function submitCorrectEvidence(address _gameAddress, bytes32 _version, bytes _stateTrieNodeRLP, bytes32 _messagePasserStorageRoot, bytes32 _latestBlockhash) returns()
-func (_RAT *RATTransactor) SubmitCorrectEvidence(opts *bind.TransactOpts, _gameAddress common.Address, _version [32]byte, _stateTrieNodeRLP []byte, _messagePasserStorageRoot [32]byte, _latestBlockhash [32]byte) (*types.Transaction, error) {
-	return _RAT.contract.Transact(opts, "submitCorrectEvidence", _gameAddress, _version, _stateTrieNodeRLP, _messagePasserStorageRoot, _latestBlockhash)
+// Solidity: function submitCandidate(address _gameAddress, bytes32 _candidateKey, bytes32 _stateRoot, bytes32 _version, bytes32 _messagePasserRoot, bytes32 _blockHash, bytes[] _proof) returns()
+func (_RAT *RATTransactor) SubmitCandidate(opts *bind.TransactOpts, _gameAddress common.Address, _candidateKey [32]byte, _stateRoot [32]byte, _version [32]byte, _messagePasserRoot [32]byte, _blockHash [32]byte, _proof [][]byte) (*types.Transaction, error) {
+	return _RAT.contract.Transact(opts, "submitCandidate", _gameAddress, _candidateKey, _stateRoot, _version, _messagePasserRoot, _blockHash, _proof)
 }
 
-// SubmitCorrectEvidence is a paid mutator transaction binding the contract method 0xaf216276.
+// SubmitCandidate is a paid mutator transaction binding the contract method 0x3c6d0e58.
 //
-// Solidity: function submitCorrectEvidence(address _gameAddress, bytes32 _version, bytes _stateTrieNodeRLP, bytes32 _messagePasserStorageRoot, bytes32 _latestBlockhash) returns()
-func (_RAT *RATSession) SubmitCorrectEvidence(_gameAddress common.Address, _version [32]byte, _stateTrieNodeRLP []byte, _messagePasserStorageRoot [32]byte, _latestBlockhash [32]byte) (*types.Transaction, error) {
-	return _RAT.Contract.SubmitCorrectEvidence(&_RAT.TransactOpts, _gameAddress, _version, _stateTrieNodeRLP, _messagePasserStorageRoot, _latestBlockhash)
+// Solidity: function submitCandidate(address _gameAddress, bytes32 _candidateKey, bytes32 _stateRoot, bytes32 _version, bytes32 _messagePasserRoot, bytes32 _blockHash, bytes[] _proof) returns()
+func (_RAT *RATSession) SubmitCandidate(_gameAddress common.Address, _candidateKey [32]byte, _stateRoot [32]byte, _version [32]byte, _messagePasserRoot [32]byte, _blockHash [32]byte, _proof [][]byte) (*types.Transaction, error) {
+	return _RAT.Contract.SubmitCandidate(&_RAT.TransactOpts, _gameAddress, _candidateKey, _stateRoot, _version, _messagePasserRoot, _blockHash, _proof)
 }
 
-// SubmitCorrectEvidence is a paid mutator transaction binding the contract method 0xaf216276.
+// SubmitCandidate is a paid mutator transaction binding the contract method 0x3c6d0e58.
 //
-// Solidity: function submitCorrectEvidence(address _gameAddress, bytes32 _version, bytes _stateTrieNodeRLP, bytes32 _messagePasserStorageRoot, bytes32 _latestBlockhash) returns()
-func (_RAT *RATTransactorSession) SubmitCorrectEvidence(_gameAddress common.Address, _version [32]byte, _stateTrieNodeRLP []byte, _messagePasserStorageRoot [32]byte, _latestBlockhash [32]byte) (*types.Transaction, error) {
-	return _RAT.Contract.SubmitCorrectEvidence(&_RAT.TransactOpts, _gameAddress, _version, _stateTrieNodeRLP, _messagePasserStorageRoot, _latestBlockhash)
-}
-
-// TriggerAttentionTest is a paid mutator transaction binding the contract method 0x2d433fd1.
-//
-// Solidity: function triggerAttentionTest(address _gameAddress, bytes32 _outputRoot, bytes32 _blockHash, uint64 _l2BlockNumber) returns()
-func (_RAT *RATTransactor) TriggerAttentionTest(opts *bind.TransactOpts, _gameAddress common.Address, _outputRoot [32]byte, _blockHash [32]byte, _l2BlockNumber uint64) (*types.Transaction, error) {
-	return _RAT.contract.Transact(opts, "triggerAttentionTest", _gameAddress, _outputRoot, _blockHash, _l2BlockNumber)
+// Solidity: function submitCandidate(address _gameAddress, bytes32 _candidateKey, bytes32 _stateRoot, bytes32 _version, bytes32 _messagePasserRoot, bytes32 _blockHash, bytes[] _proof) returns()
+func (_RAT *RATTransactorSession) SubmitCandidate(_gameAddress common.Address, _candidateKey [32]byte, _stateRoot [32]byte, _version [32]byte, _messagePasserRoot [32]byte, _blockHash [32]byte, _proof [][]byte) (*types.Transaction, error) {
+	return _RAT.Contract.SubmitCandidate(&_RAT.TransactOpts, _gameAddress, _candidateKey, _stateRoot, _version, _messagePasserRoot, _blockHash, _proof)
 }
 
 // TriggerAttentionTest is a paid mutator transaction binding the contract method 0x2d433fd1.
 //
-// Solidity: function triggerAttentionTest(address _gameAddress, bytes32 _outputRoot, bytes32 _blockHash, uint64 _l2BlockNumber) returns()
-func (_RAT *RATSession) TriggerAttentionTest(_gameAddress common.Address, _outputRoot [32]byte, _blockHash [32]byte, _l2BlockNumber uint64) (*types.Transaction, error) {
-	return _RAT.Contract.TriggerAttentionTest(&_RAT.TransactOpts, _gameAddress, _outputRoot, _blockHash, _l2BlockNumber)
+// Solidity: function triggerAttentionTest(address _gameAddress, bytes32 _outputRoot, bytes32 , uint64 _l2BlockNumber) returns()
+func (_RAT *RATTransactor) TriggerAttentionTest(opts *bind.TransactOpts, _gameAddress common.Address, _outputRoot [32]byte, arg2 [32]byte, _l2BlockNumber uint64) (*types.Transaction, error) {
+	return _RAT.contract.Transact(opts, "triggerAttentionTest", _gameAddress, _outputRoot, arg2, _l2BlockNumber)
 }
 
 // TriggerAttentionTest is a paid mutator transaction binding the contract method 0x2d433fd1.
 //
-// Solidity: function triggerAttentionTest(address _gameAddress, bytes32 _outputRoot, bytes32 _blockHash, uint64 _l2BlockNumber) returns()
-func (_RAT *RATTransactorSession) TriggerAttentionTest(_gameAddress common.Address, _outputRoot [32]byte, _blockHash [32]byte, _l2BlockNumber uint64) (*types.Transaction, error) {
-	return _RAT.Contract.TriggerAttentionTest(&_RAT.TransactOpts, _gameAddress, _outputRoot, _blockHash, _l2BlockNumber)
+// Solidity: function triggerAttentionTest(address _gameAddress, bytes32 _outputRoot, bytes32 , uint64 _l2BlockNumber) returns()
+func (_RAT *RATSession) TriggerAttentionTest(_gameAddress common.Address, _outputRoot [32]byte, arg2 [32]byte, _l2BlockNumber uint64) (*types.Transaction, error) {
+	return _RAT.Contract.TriggerAttentionTest(&_RAT.TransactOpts, _gameAddress, _outputRoot, arg2, _l2BlockNumber)
+}
+
+// TriggerAttentionTest is a paid mutator transaction binding the contract method 0x2d433fd1.
+//
+// Solidity: function triggerAttentionTest(address _gameAddress, bytes32 _outputRoot, bytes32 , uint64 _l2BlockNumber) returns()
+func (_RAT *RATTransactorSession) TriggerAttentionTest(_gameAddress common.Address, _outputRoot [32]byte, arg2 [32]byte, _l2BlockNumber uint64) (*types.Transaction, error) {
+	return _RAT.Contract.TriggerAttentionTest(&_RAT.TransactOpts, _gameAddress, _outputRoot, arg2, _l2BlockNumber)
 }
 
 // RATAttentionTriggeredIterator is returned from FilterAttentionTriggered and is used to iterate over the raw logs and unpacked data for AttentionTriggered events raised by the RAT contract.
@@ -993,12 +1274,13 @@ func (it *RATAttentionTriggeredIterator) Close() error {
 type RATAttentionTriggered struct {
 	GameAddress common.Address
 	Challenger  common.Address
+	Seed        [32]byte
 	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterAttentionTriggered is a free log retrieval operation binding the contract event 0x8f5f18c2fab75f3bb8637c4702468685d73e9414ddfa43f842ffb1a63e6dd57a.
+// FilterAttentionTriggered is a free log retrieval operation binding the contract event 0xdc8f76829b172be4263f60652a5418b7792650e90d058948608a8e10bed3ba1a.
 //
-// Solidity: event AttentionTriggered(address indexed gameAddress, address indexed challenger)
+// Solidity: event AttentionTriggered(address indexed gameAddress, address indexed challenger, bytes32 seed)
 func (_RAT *RATFilterer) FilterAttentionTriggered(opts *bind.FilterOpts, gameAddress []common.Address, challenger []common.Address) (*RATAttentionTriggeredIterator, error) {
 
 	var gameAddressRule []interface{}
@@ -1017,9 +1299,9 @@ func (_RAT *RATFilterer) FilterAttentionTriggered(opts *bind.FilterOpts, gameAdd
 	return &RATAttentionTriggeredIterator{contract: _RAT.contract, event: "AttentionTriggered", logs: logs, sub: sub}, nil
 }
 
-// WatchAttentionTriggered is a free log subscription operation binding the contract event 0x8f5f18c2fab75f3bb8637c4702468685d73e9414ddfa43f842ffb1a63e6dd57a.
+// WatchAttentionTriggered is a free log subscription operation binding the contract event 0xdc8f76829b172be4263f60652a5418b7792650e90d058948608a8e10bed3ba1a.
 //
-// Solidity: event AttentionTriggered(address indexed gameAddress, address indexed challenger)
+// Solidity: event AttentionTriggered(address indexed gameAddress, address indexed challenger, bytes32 seed)
 func (_RAT *RATFilterer) WatchAttentionTriggered(opts *bind.WatchOpts, sink chan<- *RATAttentionTriggered, gameAddress []common.Address, challenger []common.Address) (event.Subscription, error) {
 
 	var gameAddressRule []interface{}
@@ -1063,9 +1345,9 @@ func (_RAT *RATFilterer) WatchAttentionTriggered(opts *bind.WatchOpts, sink chan
 	}), nil
 }
 
-// ParseAttentionTriggered is a log parse operation binding the contract event 0x8f5f18c2fab75f3bb8637c4702468685d73e9414ddfa43f842ffb1a63e6dd57a.
+// ParseAttentionTriggered is a log parse operation binding the contract event 0xdc8f76829b172be4263f60652a5418b7792650e90d058948608a8e10bed3ba1a.
 //
-// Solidity: event AttentionTriggered(address indexed gameAddress, address indexed challenger)
+// Solidity: event AttentionTriggered(address indexed gameAddress, address indexed challenger, bytes32 seed)
 func (_RAT *RATFilterer) ParseAttentionTriggered(log types.Log) (*RATAttentionTriggered, error) {
 	event := new(RATAttentionTriggered)
 	if err := _RAT.contract.UnpackLog(event, "AttentionTriggered", log); err != nil {
@@ -1229,6 +1511,161 @@ func (_RAT *RATFilterer) ParseBondRefunded(log types.Log) (*RATBondRefunded, err
 	return event, nil
 }
 
+// RATCandidateSubmittedIterator is returned from FilterCandidateSubmitted and is used to iterate over the raw logs and unpacked data for CandidateSubmitted events raised by the RAT contract.
+type RATCandidateSubmittedIterator struct {
+	Event *RATCandidateSubmitted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *RATCandidateSubmittedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(RATCandidateSubmitted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(RATCandidateSubmitted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *RATCandidateSubmittedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *RATCandidateSubmittedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// RATCandidateSubmitted represents a CandidateSubmitted event raised by the RAT contract.
+type RATCandidateSubmitted struct {
+	GameAddress  common.Address
+	Challenger   common.Address
+	CandidateKey [32]byte
+	Distance     *big.Int
+	Raw          types.Log // Blockchain specific contextual infos
+}
+
+// FilterCandidateSubmitted is a free log retrieval operation binding the contract event 0x2f77901e93680b8c6be6143913e2e41e92b7e68009116fb0df1d17aa60e7a1e0.
+//
+// Solidity: event CandidateSubmitted(address indexed gameAddress, address indexed challenger, bytes32 candidateKey, uint256 distance)
+func (_RAT *RATFilterer) FilterCandidateSubmitted(opts *bind.FilterOpts, gameAddress []common.Address, challenger []common.Address) (*RATCandidateSubmittedIterator, error) {
+
+	var gameAddressRule []interface{}
+	for _, gameAddressItem := range gameAddress {
+		gameAddressRule = append(gameAddressRule, gameAddressItem)
+	}
+	var challengerRule []interface{}
+	for _, challengerItem := range challenger {
+		challengerRule = append(challengerRule, challengerItem)
+	}
+
+	logs, sub, err := _RAT.contract.FilterLogs(opts, "CandidateSubmitted", gameAddressRule, challengerRule)
+	if err != nil {
+		return nil, err
+	}
+	return &RATCandidateSubmittedIterator{contract: _RAT.contract, event: "CandidateSubmitted", logs: logs, sub: sub}, nil
+}
+
+// WatchCandidateSubmitted is a free log subscription operation binding the contract event 0x2f77901e93680b8c6be6143913e2e41e92b7e68009116fb0df1d17aa60e7a1e0.
+//
+// Solidity: event CandidateSubmitted(address indexed gameAddress, address indexed challenger, bytes32 candidateKey, uint256 distance)
+func (_RAT *RATFilterer) WatchCandidateSubmitted(opts *bind.WatchOpts, sink chan<- *RATCandidateSubmitted, gameAddress []common.Address, challenger []common.Address) (event.Subscription, error) {
+
+	var gameAddressRule []interface{}
+	for _, gameAddressItem := range gameAddress {
+		gameAddressRule = append(gameAddressRule, gameAddressItem)
+	}
+	var challengerRule []interface{}
+	for _, challengerItem := range challenger {
+		challengerRule = append(challengerRule, challengerItem)
+	}
+
+	logs, sub, err := _RAT.contract.WatchLogs(opts, "CandidateSubmitted", gameAddressRule, challengerRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(RATCandidateSubmitted)
+				if err := _RAT.contract.UnpackLog(event, "CandidateSubmitted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseCandidateSubmitted is a log parse operation binding the contract event 0x2f77901e93680b8c6be6143913e2e41e92b7e68009116fb0df1d17aa60e7a1e0.
+//
+// Solidity: event CandidateSubmitted(address indexed gameAddress, address indexed challenger, bytes32 candidateKey, uint256 distance)
+func (_RAT *RATFilterer) ParseCandidateSubmitted(log types.Log) (*RATCandidateSubmitted, error) {
+	event := new(RATCandidateSubmitted)
+	if err := _RAT.contract.UnpackLog(event, "CandidateSubmitted", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
 // RATChallengerStakedIterator is returned from FilterChallengerStaked and is used to iterate over the raw logs and unpacked data for ChallengerStaked events raised by the RAT contract.
 type RATChallengerStakedIterator struct {
 	Event *RATChallengerStaked // Event containing the contract specifics and raw log
@@ -1374,9 +1811,9 @@ func (_RAT *RATFilterer) ParseChallengerStaked(log types.Log) (*RATChallengerSta
 	return event, nil
 }
 
-// RATCorrectEvidenceSubmittedIterator is returned from FilterCorrectEvidenceSubmitted and is used to iterate over the raw logs and unpacked data for CorrectEvidenceSubmitted events raised by the RAT contract.
-type RATCorrectEvidenceSubmittedIterator struct {
-	Event *RATCorrectEvidenceSubmitted // Event containing the contract specifics and raw log
+// RATDisputeSuccessfulIterator is returned from FilterDisputeSuccessful and is used to iterate over the raw logs and unpacked data for DisputeSuccessful events raised by the RAT contract.
+type RATDisputeSuccessfulIterator struct {
+	Event *RATDisputeSuccessful // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1390,7 +1827,7 @@ type RATCorrectEvidenceSubmittedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *RATCorrectEvidenceSubmittedIterator) Next() bool {
+func (it *RATDisputeSuccessfulIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1399,7 +1836,7 @@ func (it *RATCorrectEvidenceSubmittedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(RATCorrectEvidenceSubmitted)
+			it.Event = new(RATDisputeSuccessful)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1414,7 +1851,7 @@ func (it *RATCorrectEvidenceSubmittedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(RATCorrectEvidenceSubmitted)
+		it.Event = new(RATDisputeSuccessful)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1430,61 +1867,63 @@ func (it *RATCorrectEvidenceSubmittedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *RATCorrectEvidenceSubmittedIterator) Error() error {
+func (it *RATDisputeSuccessfulIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *RATCorrectEvidenceSubmittedIterator) Close() error {
+func (it *RATDisputeSuccessfulIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// RATCorrectEvidenceSubmitted represents a CorrectEvidenceSubmitted event raised by the RAT contract.
-type RATCorrectEvidenceSubmitted struct {
-	GameAddress    common.Address
-	Challenger     common.Address
-	RestoredAmount *big.Int
-	Raw            types.Log // Blockchain specific contextual infos
+// RATDisputeSuccessful represents a DisputeSuccessful event raised by the RAT contract.
+type RATDisputeSuccessful struct {
+	GameAddress common.Address
+	Disputer    common.Address
+	Key         [32]byte
+	Amount      *big.Int
+	Reason      string
+	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterCorrectEvidenceSubmitted is a free log retrieval operation binding the contract event 0x7954ca3465b792ac0a46ec18f1ed49a20399c01cc510fab6eab44a7f6679f877.
+// FilterDisputeSuccessful is a free log retrieval operation binding the contract event 0xe24011d9c2a9cfdaf96dd5f659a0981ecfd4b3f435f724f06072bbb0e96790a0.
 //
-// Solidity: event CorrectEvidenceSubmitted(address indexed gameAddress, address indexed challenger, uint256 restoredAmount)
-func (_RAT *RATFilterer) FilterCorrectEvidenceSubmitted(opts *bind.FilterOpts, gameAddress []common.Address, challenger []common.Address) (*RATCorrectEvidenceSubmittedIterator, error) {
+// Solidity: event DisputeSuccessful(address indexed gameAddress, address indexed disputer, bytes32 key, uint256 amount, string reason)
+func (_RAT *RATFilterer) FilterDisputeSuccessful(opts *bind.FilterOpts, gameAddress []common.Address, disputer []common.Address) (*RATDisputeSuccessfulIterator, error) {
 
 	var gameAddressRule []interface{}
 	for _, gameAddressItem := range gameAddress {
 		gameAddressRule = append(gameAddressRule, gameAddressItem)
 	}
-	var challengerRule []interface{}
-	for _, challengerItem := range challenger {
-		challengerRule = append(challengerRule, challengerItem)
+	var disputerRule []interface{}
+	for _, disputerItem := range disputer {
+		disputerRule = append(disputerRule, disputerItem)
 	}
 
-	logs, sub, err := _RAT.contract.FilterLogs(opts, "CorrectEvidenceSubmitted", gameAddressRule, challengerRule)
+	logs, sub, err := _RAT.contract.FilterLogs(opts, "DisputeSuccessful", gameAddressRule, disputerRule)
 	if err != nil {
 		return nil, err
 	}
-	return &RATCorrectEvidenceSubmittedIterator{contract: _RAT.contract, event: "CorrectEvidenceSubmitted", logs: logs, sub: sub}, nil
+	return &RATDisputeSuccessfulIterator{contract: _RAT.contract, event: "DisputeSuccessful", logs: logs, sub: sub}, nil
 }
 
-// WatchCorrectEvidenceSubmitted is a free log subscription operation binding the contract event 0x7954ca3465b792ac0a46ec18f1ed49a20399c01cc510fab6eab44a7f6679f877.
+// WatchDisputeSuccessful is a free log subscription operation binding the contract event 0xe24011d9c2a9cfdaf96dd5f659a0981ecfd4b3f435f724f06072bbb0e96790a0.
 //
-// Solidity: event CorrectEvidenceSubmitted(address indexed gameAddress, address indexed challenger, uint256 restoredAmount)
-func (_RAT *RATFilterer) WatchCorrectEvidenceSubmitted(opts *bind.WatchOpts, sink chan<- *RATCorrectEvidenceSubmitted, gameAddress []common.Address, challenger []common.Address) (event.Subscription, error) {
+// Solidity: event DisputeSuccessful(address indexed gameAddress, address indexed disputer, bytes32 key, uint256 amount, string reason)
+func (_RAT *RATFilterer) WatchDisputeSuccessful(opts *bind.WatchOpts, sink chan<- *RATDisputeSuccessful, gameAddress []common.Address, disputer []common.Address) (event.Subscription, error) {
 
 	var gameAddressRule []interface{}
 	for _, gameAddressItem := range gameAddress {
 		gameAddressRule = append(gameAddressRule, gameAddressItem)
 	}
-	var challengerRule []interface{}
-	for _, challengerItem := range challenger {
-		challengerRule = append(challengerRule, challengerItem)
+	var disputerRule []interface{}
+	for _, disputerItem := range disputer {
+		disputerRule = append(disputerRule, disputerItem)
 	}
 
-	logs, sub, err := _RAT.contract.WatchLogs(opts, "CorrectEvidenceSubmitted", gameAddressRule, challengerRule)
+	logs, sub, err := _RAT.contract.WatchLogs(opts, "DisputeSuccessful", gameAddressRule, disputerRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1494,8 +1933,8 @@ func (_RAT *RATFilterer) WatchCorrectEvidenceSubmitted(opts *bind.WatchOpts, sin
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(RATCorrectEvidenceSubmitted)
-				if err := _RAT.contract.UnpackLog(event, "CorrectEvidenceSubmitted", log); err != nil {
+				event := new(RATDisputeSuccessful)
+				if err := _RAT.contract.UnpackLog(event, "DisputeSuccessful", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1516,12 +1955,12 @@ func (_RAT *RATFilterer) WatchCorrectEvidenceSubmitted(opts *bind.WatchOpts, sin
 	}), nil
 }
 
-// ParseCorrectEvidenceSubmitted is a log parse operation binding the contract event 0x7954ca3465b792ac0a46ec18f1ed49a20399c01cc510fab6eab44a7f6679f877.
+// ParseDisputeSuccessful is a log parse operation binding the contract event 0xe24011d9c2a9cfdaf96dd5f659a0981ecfd4b3f435f724f06072bbb0e96790a0.
 //
-// Solidity: event CorrectEvidenceSubmitted(address indexed gameAddress, address indexed challenger, uint256 restoredAmount)
-func (_RAT *RATFilterer) ParseCorrectEvidenceSubmitted(log types.Log) (*RATCorrectEvidenceSubmitted, error) {
-	event := new(RATCorrectEvidenceSubmitted)
-	if err := _RAT.contract.UnpackLog(event, "CorrectEvidenceSubmitted", log); err != nil {
+// Solidity: event DisputeSuccessful(address indexed gameAddress, address indexed disputer, bytes32 key, uint256 amount, string reason)
+func (_RAT *RATFilterer) ParseDisputeSuccessful(log types.Log) (*RATDisputeSuccessful, error) {
+	event := new(RATDisputeSuccessful)
+	if err := _RAT.contract.UnpackLog(event, "DisputeSuccessful", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1656,6 +2095,314 @@ func (_RAT *RATFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *RAT
 func (_RAT *RATFilterer) ParseInitialized(log types.Log) (*RATInitialized, error) {
 	event := new(RATInitialized)
 	if err := _RAT.contract.UnpackLog(event, "Initialized", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// RATOfflinePenaltyIterator is returned from FilterOfflinePenalty and is used to iterate over the raw logs and unpacked data for OfflinePenalty events raised by the RAT contract.
+type RATOfflinePenaltyIterator struct {
+	Event *RATOfflinePenalty // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *RATOfflinePenaltyIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(RATOfflinePenalty)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(RATOfflinePenalty)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *RATOfflinePenaltyIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *RATOfflinePenaltyIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// RATOfflinePenalty represents a OfflinePenalty event raised by the RAT contract.
+type RATOfflinePenalty struct {
+	GameAddress common.Address
+	Challenger  common.Address
+	Penalty     *big.Int
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterOfflinePenalty is a free log retrieval operation binding the contract event 0xe6426550daff86c28496f7d9771ddf7d32d7dc495ef94b0791c5c0302b9a22ce.
+//
+// Solidity: event OfflinePenalty(address indexed gameAddress, address indexed challenger, uint256 penalty)
+func (_RAT *RATFilterer) FilterOfflinePenalty(opts *bind.FilterOpts, gameAddress []common.Address, challenger []common.Address) (*RATOfflinePenaltyIterator, error) {
+
+	var gameAddressRule []interface{}
+	for _, gameAddressItem := range gameAddress {
+		gameAddressRule = append(gameAddressRule, gameAddressItem)
+	}
+	var challengerRule []interface{}
+	for _, challengerItem := range challenger {
+		challengerRule = append(challengerRule, challengerItem)
+	}
+
+	logs, sub, err := _RAT.contract.FilterLogs(opts, "OfflinePenalty", gameAddressRule, challengerRule)
+	if err != nil {
+		return nil, err
+	}
+	return &RATOfflinePenaltyIterator{contract: _RAT.contract, event: "OfflinePenalty", logs: logs, sub: sub}, nil
+}
+
+// WatchOfflinePenalty is a free log subscription operation binding the contract event 0xe6426550daff86c28496f7d9771ddf7d32d7dc495ef94b0791c5c0302b9a22ce.
+//
+// Solidity: event OfflinePenalty(address indexed gameAddress, address indexed challenger, uint256 penalty)
+func (_RAT *RATFilterer) WatchOfflinePenalty(opts *bind.WatchOpts, sink chan<- *RATOfflinePenalty, gameAddress []common.Address, challenger []common.Address) (event.Subscription, error) {
+
+	var gameAddressRule []interface{}
+	for _, gameAddressItem := range gameAddress {
+		gameAddressRule = append(gameAddressRule, gameAddressItem)
+	}
+	var challengerRule []interface{}
+	for _, challengerItem := range challenger {
+		challengerRule = append(challengerRule, challengerItem)
+	}
+
+	logs, sub, err := _RAT.contract.WatchLogs(opts, "OfflinePenalty", gameAddressRule, challengerRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(RATOfflinePenalty)
+				if err := _RAT.contract.UnpackLog(event, "OfflinePenalty", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOfflinePenalty is a log parse operation binding the contract event 0xe6426550daff86c28496f7d9771ddf7d32d7dc495ef94b0791c5c0302b9a22ce.
+//
+// Solidity: event OfflinePenalty(address indexed gameAddress, address indexed challenger, uint256 penalty)
+func (_RAT *RATFilterer) ParseOfflinePenalty(log types.Log) (*RATOfflinePenalty, error) {
+	event := new(RATOfflinePenalty)
+	if err := _RAT.contract.UnpackLog(event, "OfflinePenalty", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// RATSubmissionAcceptedIterator is returned from FilterSubmissionAccepted and is used to iterate over the raw logs and unpacked data for SubmissionAccepted events raised by the RAT contract.
+type RATSubmissionAcceptedIterator struct {
+	Event *RATSubmissionAccepted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *RATSubmissionAcceptedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(RATSubmissionAccepted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(RATSubmissionAccepted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *RATSubmissionAcceptedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *RATSubmissionAcceptedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// RATSubmissionAccepted represents a SubmissionAccepted event raised by the RAT contract.
+type RATSubmissionAccepted struct {
+	GameAddress  common.Address
+	Challenger   common.Address
+	CandidateKey [32]byte
+	Raw          types.Log // Blockchain specific contextual infos
+}
+
+// FilterSubmissionAccepted is a free log retrieval operation binding the contract event 0xb672d3774e6aace0c2e3d100234dc7722d326e595a24b682168065ec3e286f72.
+//
+// Solidity: event SubmissionAccepted(address indexed gameAddress, address indexed challenger, bytes32 candidateKey)
+func (_RAT *RATFilterer) FilterSubmissionAccepted(opts *bind.FilterOpts, gameAddress []common.Address, challenger []common.Address) (*RATSubmissionAcceptedIterator, error) {
+
+	var gameAddressRule []interface{}
+	for _, gameAddressItem := range gameAddress {
+		gameAddressRule = append(gameAddressRule, gameAddressItem)
+	}
+	var challengerRule []interface{}
+	for _, challengerItem := range challenger {
+		challengerRule = append(challengerRule, challengerItem)
+	}
+
+	logs, sub, err := _RAT.contract.FilterLogs(opts, "SubmissionAccepted", gameAddressRule, challengerRule)
+	if err != nil {
+		return nil, err
+	}
+	return &RATSubmissionAcceptedIterator{contract: _RAT.contract, event: "SubmissionAccepted", logs: logs, sub: sub}, nil
+}
+
+// WatchSubmissionAccepted is a free log subscription operation binding the contract event 0xb672d3774e6aace0c2e3d100234dc7722d326e595a24b682168065ec3e286f72.
+//
+// Solidity: event SubmissionAccepted(address indexed gameAddress, address indexed challenger, bytes32 candidateKey)
+func (_RAT *RATFilterer) WatchSubmissionAccepted(opts *bind.WatchOpts, sink chan<- *RATSubmissionAccepted, gameAddress []common.Address, challenger []common.Address) (event.Subscription, error) {
+
+	var gameAddressRule []interface{}
+	for _, gameAddressItem := range gameAddress {
+		gameAddressRule = append(gameAddressRule, gameAddressItem)
+	}
+	var challengerRule []interface{}
+	for _, challengerItem := range challenger {
+		challengerRule = append(challengerRule, challengerItem)
+	}
+
+	logs, sub, err := _RAT.contract.WatchLogs(opts, "SubmissionAccepted", gameAddressRule, challengerRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(RATSubmissionAccepted)
+				if err := _RAT.contract.UnpackLog(event, "SubmissionAccepted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseSubmissionAccepted is a log parse operation binding the contract event 0xb672d3774e6aace0c2e3d100234dc7722d326e595a24b682168065ec3e286f72.
+//
+// Solidity: event SubmissionAccepted(address indexed gameAddress, address indexed challenger, bytes32 candidateKey)
+func (_RAT *RATFilterer) ParseSubmissionAccepted(log types.Log) (*RATSubmissionAccepted, error) {
+	event := new(RATSubmissionAccepted)
+	if err := _RAT.contract.UnpackLog(event, "SubmissionAccepted", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

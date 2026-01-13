@@ -9,197 +9,153 @@ import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable
 
 // Libraries
 import { GameId, LibGameId } from "src/dispute/lib/Types.sol";
+import { SecureMerkleTrie } from "src/libraries/trie/SecureMerkleTrie.sol";
 
 // Interfaces
 import { ISemver } from "interfaces/universal/ISemver.sol";
 import { IDisputeGameFactory } from "interfaces/dispute/IDisputeGameFactory.sol";
 
 /// @custom:proxied true
-/// @title RAT (Original Version)
-/// @notice Randomized Attention Test contract for challenger monitoring and testing - Original Implementation
+/// @title RAT (Randomized Attention Test)
+/// @notice RAT Protocol v2 - Closest-key mechanism with dispute system
 contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, ReentrancyGuard, ISemver {
-    /// @notice Challenger information structure
-    /// @dev Packed to minimize storage slots
-    struct ChallengerInfo {
-        uint256 stakingAmount;      // Slot 1: 32 bytes
-        uint256 totalSlashedAmount; // Slot 2: 32 bytes (total slashed amount for this challenger)
-        uint32 validatorIndex;      // Slot 3: 4 bytes
-        bool isValid;               // Slot 3: 1 byte (packed)
-    }
 
-    /// @notice Attention test information structure
-    /// @dev Packed to minimize storage slots - 3 slots total
-    struct AttentionInfo {
-        bytes32 outputRoot;              // Slot 1: 32 bytes (the OutputRoot being challenged)
-        uint96 bondAmount;               // Slot 2: 12 bytes (packed with challengerAddress)
-        address challengerAddress;       // Slot 2: 20 bytes (packed with bondAmount)
-        uint64 submissionDeadlineBlock;  // Slot 3: 8 bytes (L1 block deadline for evidence)
-        uint64 l2BlockNumber;            // Slot 3: 8 bytes (L2 block number for proof data)
-        bool evidenceSubmitted;          // Slot 3: 1 byte (packed)
-    }
-
-    /// @notice Emitted when a challenger stakes ETH
-    event ChallengerStaked(address indexed challenger, uint256 amount);
-
-    /// @notice Emitted when attention test is triggered
-    event AttentionTriggered(address indexed gameAddress, address indexed challenger);
-
-    /// @notice Emitted when correct evidence is submitted
-    event CorrectEvidenceSubmitted(
-        address indexed gameAddress,
-        address indexed challenger,
-        uint256 restoredAmount
-    );
-
-    /// @notice Emitted when bonded amount is refunded through claim resolution
-    event BondRefunded(address indexed gameAddress, address indexed challenger, uint256 refundedAmount);
+    // ============ Constants ============
 
     /// @notice Semantic version
-    /// @custom:semver 1.0.0-beta.1
-    string public constant version = "1.0.0-beta.1";
-
-    /// @notice DisputeGameFactory contract address
-    IDisputeGameFactory public disputeGameFactory;
-
-    /// @notice Bond amount per attention test
-    uint256 public perTestBondAmount;
-
-    /// @notice Evidence submission period in blocks
-    uint256 public evidenceSubmissionPeriod;
-
-    /// @notice Minimum staking balance required
-    uint256 public minimumStakingBalance;
+    /// @custom:semver 2.0.0-beta.1
+    string public constant version = "2.0.0-beta.1";
 
     /// @notice Maximum probability value (100,000 for extended probability range)
     uint256 private constant MAX_PROBABILITY = 100_000;
 
-    /// @notice Probability for triggering RAT (0-50400, where 50400 = weekly)
-    uint256 public ratTriggerProbability;
+    /// @notice Penalty rate denominator (10000 = 100%)
+    uint256 public constant PENALTY_DENOMINATOR = 10000;
 
-    /// @notice Manager address that can modify RAT parameters
+    /// @notice Status constants
+    uint8 public constant STATUS_PENDING = 0;
+    uint8 public constant STATUS_SUBMITTED = 1;
+    uint8 public constant STATUS_DISPUTED = 2;
+    uint8 public constant STATUS_FINALIZED = 3;
+
+    // ============ Structs ============
+
+    /// @notice Challenger information structure
+    struct ChallengerInfo {
+        uint256 stakingAmount;
+        uint256 totalSlashedAmount;
+        uint32 validatorIndex;
+        bool isValid;
+    }
+
+    /// @notice Attention test information structure (v2)
+    struct AttentionInfo {
+        bytes32 outputRoot;              // OutputRoot for verification
+        bytes32 seed;                    // Random seed = H(blockhash || timestamp)
+        bytes32 candidateKey;            // Submitted candidate key
+        uint96 bondAmount;
+        address challengerAddress;
+        uint64 submissionDeadlineBlock;
+        uint64 l2BlockNumber;
+        uint8 status;                    // 0=pending, 1=submitted, 2=disputed, 3=finalized
+    }
+
+    // ============ Events ============
+
+    event ChallengerStaked(address indexed challenger, uint256 amount);
+    event AttentionTriggered(address indexed gameAddress, address indexed challenger, bytes32 seed);
+    event CandidateSubmitted(address indexed gameAddress, address indexed challenger, bytes32 candidateKey, uint256 distance);
+    event DisputeSuccessful(address indexed gameAddress, address indexed disputer, bytes32 key, uint256 amount, string reason);
+    event OfflinePenalty(address indexed gameAddress, address indexed challenger, uint256 penalty);
+    event SubmissionAccepted(address indexed gameAddress, address indexed challenger, bytes32 candidateKey);
+    event BondRefunded(address indexed gameAddress, address indexed challenger, uint256 refundedAmount);
+
+    // ============ Errors ============
+
+    error NotDisputeGameFactory();
+    error NotRatManager();
+    error AttentionTestNotExists();
+    error InvalidChallengerAddress();
+    error InvalidStatus();
+    error DeadlinePassed();
+    error DeadlineNotPassed();
+    error ProofVerificationFailed();
+    error InvalidOutputRootComponents();
+    error KeyExists();
+    error NotCloserKey();
+    error InsufficientStakingAmount();
+    error InvalidKey();
+
+    // ============ State Variables ============
+
+    IDisputeGameFactory public disputeGameFactory;
+    uint256 public perTestBondAmount;
+    uint256 public evidenceSubmissionPeriod;
+    uint256 public minimumStakingBalance;
+    uint256 public ratTriggerProbability;
+    uint256 public offlinePenaltyRate;  // basis points (e.g., 1000 = 10%)
     address public ratManager;
 
-    /// @notice Mapping from challenger address to challenger info
     mapping(address => ChallengerInfo) public challengers;
-
-    /// @notice Mapping from FaultDisputeGame address to attention info
     mapping(address => AttentionInfo) public attentionTests;
-
-    /// @notice Array of valid challengers (index 0 is reserved for "not found")
     address[] public validChallengers;
 
+    // ============ Modifiers ============
 
-    /// @notice Error thrown when caller is not the DisputeGameFactory
-    error NotDisputeGameFactory();
-
-    /// @notice Error thrown when challenger does not exist
-    error ChallengerNotExists();
-
-    /// @notice Error thrown when evidence submission period has expired
-    error EvidenceSubmissionExpired();
-
-    /// @notice Error thrown when caller is not the ratManager
-    error NotRatManager();
-
-    /// @notice Error thrown when evidence has already been submitted
-    error EvidenceAlreadySubmitted();
-
-    /// @notice Error thrown when caller is not the correct challenger
-    error InvalidChallengerAddress();
-
-
-
-    /// @notice Error thrown when proof verification fails
-    error ProofVerificationFailed();
-
-    /// @notice Error thrown when attention test does not exist
-    error AttentionTestNotExists();
-
-    /// @notice Error thrown when insufficient staking amount
-    error InsufficientStakingAmount();
-
-    /// @notice Error thrown when there are no valid challengers available
-    error NoValidChallengers();
-
-    /// @notice Modifier to restrict access to DisputeGameFactory only
     modifier onlyDisputeGameFactory() {
         if (msg.sender != address(disputeGameFactory)) revert NotDisputeGameFactory();
         _;
     }
 
-    /// @notice Modifier to restrict access to manager only
-    modifier onlyManager() {
-        if (msg.sender != ratManager) revert NotRatManager();
-        _;
-    }
-
-    /// @notice Modifier to restrict access to RAT manager only
     modifier onlyRatManager() {
         if (msg.sender != ratManager) revert NotRatManager();
         _;
     }
 
-    /// @notice Constructs the RAT contract
-    /// @dev For TESTING/DEVELOPMENT purposes, `_disableInitializers()` is commented out.
-    ///      This allows direct deployment followed by `initialize()` call.
-    ///
-    ///      For PRODUCTION deployment, you MUST:
-    ///      1. Uncomment `_disableInitializers()` below
-    ///      2. Deploy this contract as an implementation (not directly used)
-    ///      3. Deploy a Proxy contract pointing to this implementation
-    ///      4. Call `initialize()` through the Proxy
-    ///
-    ///      Why `_disableInitializers()` matters:
-    ///      - Prevents attackers from directly calling initialize() on the implementation
-    ///      - Ensures all state is stored in the Proxy, not the implementation
-    ///      - Standard OpenZeppelin UUPS/Transparent proxy security pattern
-    constructor() ReinitializableBase(2) {
-        // UNCOMMENT FOR PRODUCTION:
-        // _disableInitializers();
+    // ============ Constructor ============
+
+    constructor() ReinitializableBase(3) {
+        // _disableInitializers(); // Uncomment for production
     }
 
-    /// @notice Initializes the contract
-    /// @param _disputeGameFactory Address of the DisputeGameFactory contract
-    /// @param _perTestBondAmount Bond amount per attention test
-    /// @param _evidenceSubmissionPeriod Evidence submission period in blocks
-    /// @param _minimumStakingBalance Minimum staking balance required
-    /// @param _ratTriggerProbability Initial RAT trigger probability (0-50400)
-    /// @param _manager Address of the manager who can modify RAT parameters
+    // ============ Initialize ============
+
     function initialize(
         IDisputeGameFactory _disputeGameFactory,
         uint256 _perTestBondAmount,
         uint256 _evidenceSubmissionPeriod,
         uint256 _minimumStakingBalance,
         uint256 _ratTriggerProbability,
+        uint256 _offlinePenaltyRate,
         address _manager
-    )
-        public
-        payable
-        reinitializer(initVersion())
-    {
-        require(_perTestBondAmount < type(uint96).max, "Bond amount exceeds uint96 maximum");
-        require(_perTestBondAmount <= _minimumStakingBalance, "Bond amount cannot exceed minimum staking balance");
+    ) public payable reinitializer(initVersion()) {
+        require(_perTestBondAmount < type(uint96).max, "Bond exceeds uint96");
+        require(_perTestBondAmount <= _minimumStakingBalance, "Bond > min stake");
         require(_ratTriggerProbability <= MAX_PROBABILITY, "Invalid probability");
+        require(_offlinePenaltyRate <= PENALTY_DENOMINATOR, "Invalid penalty rate");
+
         disputeGameFactory = _disputeGameFactory;
         perTestBondAmount = _perTestBondAmount;
         evidenceSubmissionPeriod = _evidenceSubmissionPeriod;
         minimumStakingBalance = _minimumStakingBalance;
         ratTriggerProbability = _ratTriggerProbability;
+        offlinePenaltyRate = _offlinePenaltyRate;
         ratManager = _manager;
 
-        // Initialize validChallengers with a dummy element at index 0
-        validChallengers.push(address(0));
+        if (validChallengers.length == 0) {
+            validChallengers.push(address(0)); // Dummy at index 0
+        }
     }
 
-    /// @notice Allows challengers to stake ETH
+    // ============ Staking ============
+
     function stake() external payable nonReentrant {
         require(msg.value > 0, "Must stake positive amount");
 
         ChallengerInfo storage challenger = challengers[msg.sender];
-
         challenger.stakingAmount += msg.value;
-        // Check if challenger meets per-test bond requirement
-        if (!challenger.isValid && (challenger.stakingAmount >= perTestBondAmount)) {
+
+        if (!challenger.isValid && challenger.stakingAmount >= perTestBondAmount) {
             challenger.isValid = true;
             challenger.validatorIndex = uint32(validChallengers.length);
             validChallengers.push(msg.sender);
@@ -208,237 +164,248 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         emit ChallengerStaked(msg.sender, msg.value);
     }
 
-    /// @notice Gets challenger information
-    /// @param _challenger Address of the challenger
-    /// @return Challenger information
+    // ============ Core Protocol ============
+
+    /// @notice Triggers attention test (called by DisputeGameFactory)
+    function triggerAttentionTest(
+        address _gameAddress,
+        bytes32 _outputRoot,
+        bytes32, // _blockHash unused (we use L1 blockhash for security)
+        uint64 _l2BlockNumber
+    ) external onlyDisputeGameFactory {
+        if (!shouldTriggerRAT()) return;
+
+        uint256 numValidators = validChallengers.length;
+        if (numValidators <= 1) return;
+
+        // Generate seed per paper: H(blockhash(n-1) || timestamp)
+        bytes32 seed = keccak256(abi.encodePacked(
+            blockhash(block.number - 1),
+            block.timestamp
+        ));
+
+        // Select validator: seed mod N (avoiding index 0)
+        uint256 selectedIndex = numValidators == 2 ? 1 :
+            (uint256(seed) % (numValidators - 1)) + 1;
+        address selectedChallenger = validChallengers[selectedIndex];
+
+        ChallengerInfo storage challengerInfo = challengers[selectedChallenger];
+
+        // 1. Calculate Full Bond
+        uint256 stakeAmt = challengerInfo.stakingAmount;
+        uint256 bondAmt = stakeAmt < perTestBondAmount ? stakeAmt : perTestBondAmount;
+
+        // 2. Calculate Penalty (Upfront Slash)
+        uint256 penalty = (bondAmt * offlinePenaltyRate) / PENALTY_DENOMINATOR;
+
+        // 3. Deduct Bond (Penalty is implicitly slashed if not refunded)
+        challengerInfo.stakingAmount = stakeAmt - bondAmt;
+        challengerInfo.totalSlashedAmount += penalty;
+
+        // Store attention test
+        attentionTests[_gameAddress] = AttentionInfo({
+            outputRoot: _outputRoot,
+            seed: seed,
+            candidateKey: bytes32(0),
+            bondAmount: uint96(bondAmt),
+            challengerAddress: selectedChallenger,
+            submissionDeadlineBlock: uint64(block.number + evidenceSubmissionPeriod),
+            l2BlockNumber: _l2BlockNumber,
+            status: STATUS_PENDING
+        });
+
+        // Update validity
+        _updateValidity(selectedChallenger, challengerInfo);
+
+        emit AttentionTriggered(_gameAddress, selectedChallenger, seed);
+        emit OfflinePenalty(_gameAddress, selectedChallenger, penalty);
+    }
+
+    /// @notice Submit candidate key with inclusion proof
+    /// @dev Verifies inclusion and refunds bond immediately (assuming no withdrawal allowed).
+    function submitCandidate(
+        address _gameAddress,
+        bytes32 _candidateKey,
+        bytes32 _stateRoot,
+        bytes32 _version,
+        bytes32 _messagePasserRoot,
+        bytes32 _blockHash
+    ) external {
+        AttentionInfo storage test = attentionTests[_gameAddress];
+
+        if (test.challengerAddress == address(0)) revert AttentionTestNotExists();
+        if (test.challengerAddress != msg.sender) revert InvalidChallengerAddress();
+        if (test.status != STATUS_PENDING) revert InvalidStatus();
+        if (block.number >= test.submissionDeadlineBlock) revert DeadlinePassed();
+
+        _verifyComponents(test, _version, _stateRoot, _messagePasserRoot, _blockHash);
+
+        // Optimistic: We do NOT verify proof here. We assume it's valid.
+        test.candidateKey = _candidateKey;
+        test.status = STATUS_SUBMITTED;
+
+        // Refund the Penalty (Reward for responding)
+        // Since we deducted the full bond in triggerAttentionTest,
+        // we now refund the full bond amount to reward the timely response.
+
+        uint256 penalty = (test.bondAmount * offlinePenaltyRate) / PENALTY_DENOMINATOR;
+
+        ChallengerInfo storage challenger = challengers[msg.sender];
+        challenger.stakingAmount += test.bondAmount; // Full Refund of Bond
+
+        // Revert stats update for penalty since we refunded it
+        if (challenger.totalSlashedAmount >= penalty) {
+            challenger.totalSlashedAmount -= penalty;
+        }
+
+        _updateValidity(msg.sender, challenger);
+
+        emit CandidateSubmitted(_gameAddress, msg.sender, _candidateKey, _distance(_candidateKey, test.seed));
+        emit SubmissionAccepted(_gameAddress, msg.sender, _candidateKey);
+    }
+
+
+
+    function disputeByNonInclusion(
+        address _gameAddress,
+        bytes32 _key, // The key asserted to NOT exist
+        bytes32 _stateRoot,
+        bytes32 _version,
+        bytes32 _messagePasserRoot,
+        bytes32 _blockHash,
+        bytes[] calldata _proof
+    ) external {
+        AttentionInfo storage test = attentionTests[_gameAddress];
+        if (test.status != STATUS_SUBMITTED) revert InvalidStatus();
+        if (block.number >= test.submissionDeadlineBlock) revert DeadlinePassed();
+        if (test.candidateKey != _key) revert InvalidKey(); // Must dispute the candidate key itself
+
+        _verifyComponents(test, _version, _stateRoot, _messagePasserRoot, _blockHash);
+
+        // Verify Non-Inclusion
+        _verifyNonInclusion(address(uint160(uint256(_key))), _proof, _stateRoot);
+
+        // SLASHING
+        _slashChallenger(test.challengerAddress, test.bondAmount);
+
+        test.status = STATUS_DISPUTED;
+        payable(msg.sender).transfer(test.bondAmount);
+
+        // No validity update needed here as slash handles it?
+        // _slashChallenger calls _updateValidity.
+        // Wait, _slashChallenger does call _updateValidity.
+
+        emit DisputeSuccessful(_gameAddress, msg.sender, _key, test.bondAmount, "non-inclusion");
+    }
+
+    /// @notice External wrapper to allow try/catch on internal library call (For Non-Inclusion Check)
+    function verifyInclusionWrapper(address _keyAddr, bytes[] calldata _proof, bytes32 _root) external pure virtual returns (bytes memory) {
+        return SecureMerkleTrie.get(abi.encodePacked(_keyAddr), _proof, _root);
+    }
+
+    /// @notice Internal virtual helper for existence check (Testable)
+    function _verifyExistence(bytes memory _keyBlob, bytes[] calldata _proof, bytes32 _root) internal virtual {
+         SecureMerkleTrie.get(_keyBlob, _proof, _root);
+    }
+
+    function _verifyNonInclusion(address _keyAddr, bytes[] calldata _proof, bytes32 _root) internal virtual {
+        // Wrapper for try/catch mechanism
+        try this.verifyInclusionWrapper(_keyAddr, _proof, _root) returns (bytes memory) {
+            // If get succeeds, the key EXISTS.
+            revert KeyExists();
+        } catch {
+            // If get reverts, we assume it's because the key is missing.
+        }
+    }
+
+    /// @notice Dispute by submitting strictly closer key
+    function disputeByCloserKey(
+        address _gameAddress,
+        bytes32 _closerKey,
+        bytes32 _stateRoot,
+        bytes32 _version,
+        bytes32 _messagePasserRoot,
+        bytes32 _blockHash,
+        bytes[] calldata _proof
+    ) external {
+        AttentionInfo storage test = attentionTests[_gameAddress];
+
+        if (test.status != STATUS_SUBMITTED) revert InvalidStatus();
+        // User requested: Dispute allowed within same deadline? (Last minute bug remains but user accepted risk)
+        if (block.number >= test.submissionDeadlineBlock) revert DeadlinePassed();
+
+        _verifyComponents(test, _version, _stateRoot, _messagePasserRoot, _blockHash);
+
+        // Verify inclusion of closer key
+        // Note: Cast to address for Account Trie verification
+        _verifyExistence(abi.encodePacked(address(uint160(uint256(_closerKey)))), _proof, _stateRoot);
+
+        // Verify strictly closer
+        if (_distance(_closerKey, test.seed) >= _distance(test.candidateKey, test.seed)) {
+            revert NotCloserKey();
+        }
+
+        // SLASHING
+        uint256 totalSlash = test.bondAmount;
+        _slashChallenger(test.challengerAddress, totalSlash);
+
+        test.status = STATUS_DISPUTED;
+
+        // Reward Disputer with full bond amount
+        payable(msg.sender).transfer(totalSlash);
+
+        emit DisputeSuccessful(_gameAddress, msg.sender, _closerKey, totalSlash, "closer-key");
+    }
+
+
+
+    // ============ View Functions ============
+
     function getChallengerInfo(address _challenger) external view returns (ChallengerInfo memory) {
         return challengers[_challenger];
     }
 
-
-
-    /// @notice Gets number of valid challengers
-    /// @return Number of valid challengers
     function getValidChallengerCount() external view returns (uint256) {
         return validChallengers.length;
     }
 
-
-
-    /// @notice Triggers attention test (called by DisputeGameFactory)
-    /// @param _gameAddress Game contract address
-    /// @param _outputRoot Output root to be verified
-    /// @param _blockHash Block hash for validator selection
-    /// @param _l2BlockNumber L2 block number used to generate the output root
-    function triggerAttentionTest(
-        address _gameAddress,
-        bytes32 _outputRoot,
-        bytes32 _blockHash,
-        uint64 _l2BlockNumber
-    )
-        external
-        onlyDisputeGameFactory
-    {
-        // First check if RAT should be triggered based on probability
-        if (!shouldTriggerRAT()) return;
-
-        uint256 validChallengersLength = validChallengers.length;
-        if (validChallengersLength > 1) {
-
-            // Optimize challenger selection
-            uint256 selectedIndex = validChallengersLength == 2 ? 1 :
-               ((uint256(keccak256(abi.encodePacked(_blockHash, block.timestamp))) & 0xFFFF) % (validChallengersLength-1) )+1; // -1 to exclude the dummy address(0)
-
-            address selectedChallenger = validChallengers[selectedIndex];
-
-            ChallengerInfo storage challengerInfo = challengers[selectedChallenger];
-
-            // Calculate bond amount and update challenger (gas-optimized)
-            uint256 stakingAmount = challengerInfo.stakingAmount;
-            uint256 bondAmount = stakingAmount < perTestBondAmount ? stakingAmount : perTestBondAmount;
-            uint256 newStakingAmount = stakingAmount - bondAmount;
-
-            // Bond the challenger
-            challengerInfo.stakingAmount = newStakingAmount;
-            challengerInfo.totalSlashedAmount += bondAmount;
-
-            // Validate block number
-            require(block.number <= type(uint64).max, "Block number too large");
-
-            // Store attention test info
-            attentionTests[_gameAddress] = AttentionInfo({
-                outputRoot: _outputRoot,
-                bondAmount: uint96(bondAmount),
-                challengerAddress: selectedChallenger,
-                submissionDeadlineBlock: uint64(block.number) + uint64(evidenceSubmissionPeriod),
-                l2BlockNumber: _l2BlockNumber,
-                evidenceSubmitted: false
-            });
-
-            // Check if challenger is still valid (gas-optimized)
-            bool shouldBeValid = newStakingAmount >= perTestBondAmount;
-            bool currentIsValid = challengerInfo.isValid;
-
-            if (currentIsValid != shouldBeValid) {
-                if (shouldBeValid) {
-                    // invalid → valid
-                    challengerInfo.isValid = true;
-                    _addToValidChallengers(selectedChallenger, uint32(validChallengers.length));
-                } else {
-                    // valid → invalid
-                    challengerInfo.isValid = false;
-                    _removeFromValidChallengers(selectedChallenger, challengerInfo.validatorIndex);
-                }
-            }
-
-            emit AttentionTriggered(_gameAddress, selectedChallenger);
-        }
+    function getAttentionTest(address _gameAddress) external view returns (AttentionInfo memory) {
+        return attentionTests[_gameAddress];
     }
 
-    /// @notice Submits correct evidence for attention test
-    /// @dev Requires raw RLP-encoded state trie root node as proof of execution
-    /// @param _gameAddress Game contract address
-    /// @param _version Version of the output root (always 0)
-    /// @param _stateTrieNodeRLP Raw RLP-encoded state trie root node
-    /// @param _messagePasserStorageRoot Root of the message passer storage trie
-    /// @param _latestBlockhash Hash of the block this output was generated from
-    function submitCorrectEvidence(
-        address _gameAddress,
-        bytes32 _version,
-        bytes memory _stateTrieNodeRLP,
-        bytes32 _messagePasserStorageRoot,
-        bytes32 _latestBlockhash
-    )
-        external
-    {
-        AttentionInfo storage attentionTest = attentionTests[_gameAddress];
+    // ============ Admin Functions ============
 
-        // Early validation with cached values (gas optimization)
-        address challengerAddress = attentionTest.challengerAddress;
-        if (challengerAddress == address(0)) revert AttentionTestNotExists();
-        if (challengerAddress != msg.sender) revert InvalidChallengerAddress();
-        if (attentionTest.evidenceSubmitted) revert EvidenceAlreadySubmitted();
-
-        // Time validation - deadline is pre-calculated at trigger time
-        if (block.number >= attentionTest.submissionDeadlineBlock) revert EvidenceSubmissionExpired();
-
-        // Step 1: Hash raw RLP to reconstruct stateRoot
-        bytes32 reconstructedStateRoot = keccak256(_stateTrieNodeRLP);
-
-        // Step 2: Compute OutputRootProof (Optimism standard)
-        bytes32 computedRoot = keccak256(
-            abi.encode(
-                _version,
-                reconstructedStateRoot,
-                _messagePasserStorageRoot,
-                _latestBlockhash
-            )
-        );
-
-        // Verify computed OutputRoot matches expected
-        if (computedRoot != attentionTest.outputRoot) revert ProofVerificationFailed();
-
-        // Cache values for gas optimization
-        uint256 bond = uint256(attentionTest.bondAmount);
-        attentionTest.evidenceSubmitted = true;
-
-        // Update challenger staking amount
-        ChallengerInfo storage challengerInfo = challengers[msg.sender];
-        challengerInfo.stakingAmount += bond;
-
-        // Update challenger validity (gas optimized)
-        bool currentIsValid = challengerInfo.isValid;
-        bool shouldBeValid = challengerInfo.stakingAmount >= perTestBondAmount;
-
-        if (!currentIsValid && shouldBeValid) {
-            // invalid → valid
-            challengerInfo.isValid = true;
-            _addToValidChallengers(msg.sender, uint32(validChallengers.length));
-        } else if (currentIsValid && !shouldBeValid) {
-            // valid → invalid
-            challengerInfo.isValid = false;
-            _removeFromValidChallengers(msg.sender, challengerInfo.validatorIndex);
-        }
-
-        emit CorrectEvidenceSubmitted(
-            _gameAddress,
-            challengerAddress,
-            bond
-        );
-    }
-
-    /// @notice Called when a claim is resolved in FaultDisputeGame
-    /// @param _claimant Address receiving the bond refund
-    function resolveClaim(address _claimant) external {
-        // Early validation with caching
-        address challengerAddress = attentionTests[msg.sender].challengerAddress;
-        if (challengerAddress != address(0) && challengerAddress == _claimant) {
-            // bool evidenceSubmitted = attentionTests[msg.sender].evidenceSubmitted;
-            if (!attentionTests[msg.sender].evidenceSubmitted) {
-                AttentionInfo storage attentionTest = attentionTests[msg.sender];
-
-                // Mark evidence as submitted and refund bond amount
-                attentionTest.evidenceSubmitted = true;
-                uint256 bond = uint256(attentionTest.bondAmount);
-
-                ChallengerInfo storage challengerInfo = challengers[_claimant];
-                challengerInfo.stakingAmount += bond;
-
-                // Update challenger validity
-                bool currentIsValid = challengerInfo.isValid;
-                bool shouldBeValid = challengerInfo.stakingAmount >= perTestBondAmount;
-
-                if (!currentIsValid && shouldBeValid) {
-                    // invalid → valid
-                    challengerInfo.isValid = true;
-                    _addToValidChallengers(_claimant, uint32(validChallengers.length));
-                } else if (currentIsValid && !shouldBeValid) {
-                    // valid → invalid
-                    challengerInfo.isValid = false;
-                    _removeFromValidChallengers(_claimant, challengerInfo.validatorIndex);
-                }
-
-                emit BondRefunded(msg.sender, challengerAddress, bond);
-            }
-        }
-    }
-
-    /// @notice Sets the per-test bond amount (only proxy admin owner)
-    /// @param _amount New bond amount
     function setPerTestBondAmount(uint256 _amount) external {
         _assertOnlyProxyAdminOwner();
-        require(_amount > 0, "Bond amount must be positive");
-        require(_amount <= type(uint96).max, "Bond amount exceeds uint96 maximum");
-        require(_amount <= minimumStakingBalance, "Bond amount cannot exceed minimum staking balance");
+        require(_amount > 0 && _amount < type(uint96).max && _amount <= minimumStakingBalance);
         perTestBondAmount = _amount;
     }
 
-    /// @notice Sets the evidence submission period (only proxy admin owner)
-    /// @param _period New submission period in blocks
     function setEvidenceSubmissionPeriod(uint256 _period) external {
         _assertOnlyProxyAdminOwner();
-        require(_period > 0, "Period must be positive");
-        require(_period <= 50400, "Period too long");
+        require(_period > 0 && _period <= 50400);
         evidenceSubmissionPeriod = _period;
     }
 
-    /// @notice Sets the minimum staking balance (only proxy admin owner)
-    /// @param _balance New minimum staking balance
     function setMinimumStakingBalance(uint256 _balance) external {
         _assertOnlyProxyAdminOwner();
-        require(_balance > 0, "Balance must be positive");
-        require(_balance <= 1000 ether, "Balance too large");
+        require(_balance > 0 && _balance <= 1000 ether);
         minimumStakingBalance = _balance;
     }
 
-    /// @notice Sets the RAT trigger probability (only manager)
-    /// @param _probability New trigger probability (0-50400)
+    function setOfflinePenaltyRate(uint256 _rate) external {
+        _assertOnlyProxyAdminOwner();
+        require(_rate <= PENALTY_DENOMINATOR);
+        offlinePenaltyRate = _rate;
+    }
+
     function setRatTriggerProbability(uint256 _probability) external onlyRatManager {
-        require(_probability <= MAX_PROBABILITY, "Invalid probability");
+        require(_probability <= MAX_PROBABILITY);
         ratTriggerProbability = _probability;
     }
 
-    /// @notice Check if RAT should trigger based on probability
+    // ============ Internal Functions ============
+
     function shouldTriggerRAT() internal view returns (bool) {
         uint256 prob = ratTriggerProbability;
         if (prob == 0) return false;
@@ -446,22 +413,57 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         return uint256(blockhash(block.number - 1)) % MAX_PROBABILITY < prob;
     }
 
+    function _verifyComponents(
+        AttentionInfo storage test,
+        bytes32 _version,
+        bytes32 _stateRoot,
+        bytes32 _messagePasserRoot,
+        bytes32 _blockHash
+    ) internal view {
+        bytes32 computed = keccak256(abi.encode(_version, _stateRoot, _messagePasserRoot, _blockHash));
+        if (computed != test.outputRoot) revert InvalidOutputRootComponents();
+    }
+
+    function _distance(bytes32 a, bytes32 b) internal pure returns (uint256) {
+        uint256 x = uint256(a);
+        uint256 y = uint256(b);
+        return x >= y ? x - y : y - x;
+    }
 
 
-    /// @notice Internal function to add challenger to valid list
-    /// @param _challenger Address of the challenger
-    /// @param _index Index to assign to the challenger
+
+    function _slashChallenger(address _challengerAddr, uint256 _amount) internal {
+        ChallengerInfo storage challenger = challengers[_challengerAddr];
+
+        if (challenger.stakingAmount < _amount) {
+            _amount = challenger.stakingAmount;
+        }
+        challenger.stakingAmount -= _amount;
+        challenger.totalSlashedAmount += _amount;
+
+        _updateValidity(_challengerAddr, challenger);
+    }
+
+    function _updateValidity(address _challenger, ChallengerInfo storage _info) internal {
+        bool shouldBeValid = _info.stakingAmount >= perTestBondAmount;
+        bool currentIsValid = _info.isValid;
+
+        if (currentIsValid && !shouldBeValid) {
+            _info.isValid = false;
+            _removeFromValidChallengers(_challenger, _info.validatorIndex);
+        } else if (!currentIsValid && shouldBeValid) {
+            _info.isValid = true;
+            _addToValidChallengers(_challenger, uint32(validChallengers.length));
+        }
+    }
+
     function _addToValidChallengers(address _challenger, uint32 _index) internal {
         challengers[_challenger].validatorIndex = _index;
         validChallengers.push(_challenger);
     }
 
-    /// @notice Internal function to remove challenger from valid list
-    /// @param _challenger Address of the challenger
-    /// @param _index Index of the challenger in validChallengers array
     function _removeFromValidChallengers(address _challenger, uint256 _index) internal {
         if (_index > 0 && _index < validChallengers.length && validChallengers[_index] == _challenger) {
-            // Replace with last element and pop (gas-optimized)
             uint256 lastIndex = validChallengers.length - 1;
             if (_index != lastIndex) {
                 address lastChallenger = validChallengers[lastIndex];
@@ -472,5 +474,18 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         }
     }
 
+    /// @notice Called when a claim is resolved in FaultDisputeGame (backward compatibility)
+    function resolveClaim(address _claimant) external {
+        AttentionInfo storage test = attentionTests[msg.sender];
+        if (test.challengerAddress == _claimant && test.status == STATUS_PENDING) {
+            test.status = STATUS_FINALIZED;
+            uint256 bond = test.bondAmount;
 
+            ChallengerInfo storage challenger = challengers[_claimant];
+            challenger.stakingAmount += bond;
+            _updateValidity(_claimant, challenger);
+
+            emit BondRefunded(msg.sender, _claimant, bond);
+        }
+    }
 }
