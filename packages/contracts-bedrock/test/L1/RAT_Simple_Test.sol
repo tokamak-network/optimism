@@ -18,6 +18,7 @@ contract RAT_Simple_Test is CommonTest {
     uint256 public constant SLASH_BOND_AMOUNT = 1 ether;
     uint256 public constant EVIDENCE_SUBMISSION_PERIOD = 100;
     uint256 public constant MINIMUM_STAKE_AMOUNT = 2 ether;
+    uint256 public constant OFFLINE_PENALTY_RATE = 5000; // 50%
 
     function setUp() public override {
         super.setUp();
@@ -51,6 +52,7 @@ contract RAT_Simple_Test is CommonTest {
                     EVIDENCE_SUBMISSION_PERIOD,
                     MINIMUM_STAKE_AMOUNT,
                     100000, // 100% default probability (MAX_PROBABILITY)
+                    OFFLINE_PENALTY_RATE,
                     ratProxyAdmin // manager address
                 )
             )
@@ -104,24 +106,26 @@ contract RAT_Simple_Test is CommonTest {
 
         // Test triggerAttentionTest with 100% probability
         address gameAddress = address(0x5678);
+        bytes32 version = bytes32(0);
         bytes32 stateRoot = keccak256("test_state_root");
-        bytes32 blockHash = blockhash(block.number - 1);
+        bytes32 messagePasserRoot = keccak256("msgPasserRoot");
+        bytes32 blockHash = keccak256("blockHash");
+        bytes32 outputRoot = keccak256(abi.encode(version, stateRoot, messagePasserRoot, blockHash));
 
         vm.prank(address(disputeGameFactory)); // Use actual disputeGameFactory address
         uint256 gasStart = gasleft();
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash, uint64(block.number));
+        rat.triggerAttentionTest(gameAddress, outputRoot, bytes32(0), uint64(block.number));
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT triggerAttentionTest() gas used (100% probability)", gasUsed);
 
         // Verify attention test was created
-        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
-        assertEq(storedStateRoot, stateRoot, "Attention test should be created");
+        RAT.AttentionInfo memory info = rat.getAttentionTest(gameAddress);
+        assertEq(info.outputRoot, outputRoot, "Attention test should be created");
 
         // Verify challenger was selected
-        (, , address selectedChallenger, , , ) = rat.attentionTests(gameAddress);
-        assertTrue(selectedChallenger != address(0), "Challenger should be selected");
-        emit log_named_address("Selected challenger", selectedChallenger);
+        assertTrue(info.challengerAddress != address(0), "Challenger should be selected");
+        emit log_named_address("Selected challenger", info.challengerAddress);
     }
 
     /// @notice Test triggerAttentionTest() with low probability (1%) - should not trigger
@@ -138,19 +142,22 @@ contract RAT_Simple_Test is CommonTest {
 
         // Test triggerAttentionTest with 1% probability
         address gameAddress = address(0x5678);
+        bytes32 version = bytes32(0);
         bytes32 stateRoot = keccak256("test_state_root");
-        bytes32 blockHash = blockhash(block.number - 1);
+        bytes32 messagePasserRoot = keccak256("msgPasserRoot");
+        bytes32 blockHash = keccak256("blockHash");
+        bytes32 outputRoot = keccak256(abi.encode(version, stateRoot, messagePasserRoot, blockHash));
 
         vm.prank(address(disputeGameFactory));
         uint256 gasStart = gasleft();
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash, uint64(block.number));
+        rat.triggerAttentionTest(gameAddress, outputRoot, bytes32(0), uint64(block.number));
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT triggerAttentionTest() gas used (1% probability)", gasUsed);
 
         // Verify attention test was NOT created (RAT should not trigger)
-        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
-        assertEq(storedStateRoot, bytes32(0), "Attention test should NOT be created with low probability");
+        RAT.AttentionInfo memory info = rat.getAttentionTest(gameAddress);
+        assertEq(info.outputRoot, bytes32(0), "Attention test should NOT be created with low probability");
 
         emit log_string("RAT did not trigger with 1% probability - early return");
     }
@@ -169,25 +176,28 @@ contract RAT_Simple_Test is CommonTest {
 
         // Test triggerAttentionTest with 0% probability
         address gameAddress = address(0x5678);
+        bytes32 version = bytes32(0);
         bytes32 stateRoot = keccak256("test_state_root");
-        bytes32 blockHash = blockhash(block.number - 1);
+        bytes32 messagePasserRoot = keccak256("msgPasserRoot");
+        bytes32 blockHash = keccak256("blockHash");
+        bytes32 outputRoot = keccak256(abi.encode(version, stateRoot, messagePasserRoot, blockHash));
 
         vm.prank(address(disputeGameFactory));
         uint256 gasStart = gasleft();
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash, uint64(block.number));
+        rat.triggerAttentionTest(gameAddress, outputRoot, bytes32(0), uint64(block.number));
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT triggerAttentionTest() gas used (0% probability)", gasUsed);
 
         // Verify attention test was NOT created (RAT should not trigger)
-        (bytes32 storedStateRoot, , , , ) = rat.attentionTests(gameAddress);
-        assertEq(storedStateRoot, bytes32(0), "Attention test should NOT be created with 0% probability");
+        RAT.AttentionInfo memory info = rat.getAttentionTest(gameAddress);
+        assertEq(info.outputRoot, bytes32(0), "Attention test should NOT be created with 0% probability");
 
         emit log_string("RAT did not trigger with 0% probability - early return");
     }
 
-    /// @notice Test submitCorrectEvidence() function gas usage
-    function test_submitCorrectEvidence_gas_measurement() public {
+    /// @notice Test submitCandidate() function gas usage
+    function test_submitCandidate_gas_measurement() public {
         // Setup challenger and trigger attention test
         address challenger = address(0x1234);
         vm.deal(challenger, 10 ether);
@@ -196,37 +206,42 @@ contract RAT_Simple_Test is CommonTest {
 
         // Setup OutputRoot verification data
         bytes32 version = bytes32(0);
-        bytes memory stateTrieNodeRLP = hex"f8918080a0abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234abcd1234a0ef561234ef561234ef561234ef561234ef561234ef561234ef561234ef5612348080808080808080808080";
+        bytes32 stateRoot = keccak256("stateRoot");
         bytes32 messagePasserStorageRoot = keccak256("msgPasserRoot");
         bytes32 latestBlockhash = keccak256("blockHash");
 
-        bytes32 stateRoot = keccak256(stateTrieNodeRLP);
         bytes32 outputRoot = keccak256(abi.encode(version, stateRoot, messagePasserStorageRoot, latestBlockhash));
-        bytes32 blockHash = blockhash(block.number - 1);
 
         // Trigger attention test with the matching outputRoot
         address gameAddress = address(0x5678);
         vm.prank(address(disputeGameFactory));
-        rat.triggerAttentionTest(gameAddress, outputRoot, blockHash, uint64(block.number));
+        rat.triggerAttentionTest(gameAddress, outputRoot, bytes32(0), uint64(block.number));
 
         // Get selected challenger
-        (, , address selectedChallenger, , , ) = rat.attentionTests(gameAddress);
-        require(selectedChallenger != address(0), "No challenger selected");
+        RAT.AttentionInfo memory info = rat.getAttentionTest(gameAddress);
+        require(info.challengerAddress != address(0), "No challenger selected");
 
         // Verify the proof matches (for debugging)
         emit log_named_bytes32("Expected outputRoot", outputRoot);
-        emit log_named_bytes32("State root from RLP", stateRoot);
+        emit log_named_bytes32("State root", stateRoot);
 
-        vm.prank(selectedChallenger);
+        vm.prank(info.challengerAddress);
         uint256 gasStart = gasleft();
-        rat.submitCorrectEvidence(gameAddress, version, stateTrieNodeRLP, messagePasserStorageRoot, latestBlockhash);
+        rat.submitCandidate(
+            gameAddress,
+            bytes32(uint256(uint160(address(0x1234)))),
+            stateRoot,
+            version,
+            messagePasserStorageRoot,
+            latestBlockhash
+        );
         uint256 gasUsed = gasStart - gasleft();
 
-        emit log_named_uint("RAT submitCorrectEvidence() gas used", gasUsed);
+        emit log_named_uint("RAT submitCandidate() gas used", gasUsed);
 
         // Verify evidence was submitted
-        (, , , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
-        assertTrue(evidenceSubmitted, "Evidence should be submitted");
+        info = rat.getAttentionTest(gameAddress);
+        assertEq(info.status, rat.STATUS_SUBMITTED(), "Candidate should be submitted");
     }
 
     /// @notice Test resolveClaim() function gas usage
@@ -239,27 +254,30 @@ contract RAT_Simple_Test is CommonTest {
 
         // Trigger attention test first
         address gameAddress = address(0x5678);
+        bytes32 version = bytes32(0);
         bytes32 stateRoot = keccak256("test_state_root");
-        bytes32 blockHash = blockhash(block.number - 1);
+        bytes32 messagePasserRoot = keccak256("msgPasserRoot");
+        bytes32 blockHash = keccak256("blockHash");
+        bytes32 outputRoot = keccak256(abi.encode(version, stateRoot, messagePasserRoot, blockHash));
 
         vm.prank(address(disputeGameFactory));
-        rat.triggerAttentionTest(gameAddress, stateRoot, blockHash, uint64(block.number));
+        rat.triggerAttentionTest(gameAddress, outputRoot, bytes32(0), uint64(block.number));
 
         // Get selected challenger
-        (, , address selectedChallenger, , , ) = rat.attentionTests(gameAddress);
-        require(selectedChallenger != address(0), "No challenger selected");
+        RAT.AttentionInfo memory info = rat.getAttentionTest(gameAddress);
+        require(info.challengerAddress != address(0), "No challenger selected");
 
         // Test resolveClaim
         vm.prank(gameAddress);
         uint256 gasStart = gasleft();
-        rat.resolveClaim(selectedChallenger);
+        rat.resolveClaim(info.challengerAddress);
         uint256 gasUsed = gasStart - gasleft();
 
         emit log_named_uint("RAT resolveClaim() gas used", gasUsed);
 
         // Verify claim was resolved
-        (, , , , , bool evidenceSubmitted) = rat.attentionTests(gameAddress);
-        assertTrue(evidenceSubmitted, "Evidence should be submitted");
+        info = rat.getAttentionTest(gameAddress);
+        assertEq(info.status, rat.STATUS_FINALIZED(), "Claim should be finalized");
     }
 
     /// @notice Test all functions with 100% probability
@@ -270,7 +288,7 @@ contract RAT_Simple_Test is CommonTest {
         test_shouldTriggerRAT_always_true();
         test_stake_gas_measurement();
         test_triggerAttentionTest_gas_measurement();
-        test_submitCorrectEvidence_gas_measurement();
+        test_submitCandidate_gas_measurement();
         test_resolveClaim_gas_measurement();
 
         emit log_string("=== All tests completed successfully ===");

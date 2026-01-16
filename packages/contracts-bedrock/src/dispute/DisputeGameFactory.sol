@@ -76,7 +76,7 @@ contract DisputeGameFactory is ReinitializableBase, OwnableUpgradeable, ISemver 
 
     /// @notice Constructs a new DisputeGameFactory contract.
     constructor() OwnableUpgradeable() ReinitializableBase(1) {
-        // _disableInitializers(); // Commented for direct deployment testing
+        _disableInitializers();
     }
 
     /// @notice Initializes the contract.

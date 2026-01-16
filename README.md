@@ -8,6 +8,19 @@ Verification is conducted in two stages:
 
 ---
 
+## Environment
+
+### Recommended minimum versions
+- OS: Ubuntu 22.04+ (or any modern Linux/macOS with Docker)
+- Git: 2.30+
+- Make: 4.3+
+- Go: 1.21+ (for tooling and scripts)
+- Foundry (forge/cast): 1.2.0+
+- Node.js: 18+
+- Docker Engine: 24+
+- Kurtosis CLI: 1.15.0+
+- jq: 1.6+ (optional, for log parsing)
+
 ## Part 1: Logic Verification (Foundry)
 
 The unified verification script (`RAT_Paper_Verification.t.sol`) simulates the state indexer and validates the protocol's core logic.
@@ -19,6 +32,7 @@ The unified verification script (`RAT_Paper_Verification.t.sol`) simulates the s
 
 ### Execution
 ```bash
+cd packages/contracts-bedrock
 forge test --match-contract RAT_Paper_Verification -vv
 ```
 
@@ -34,61 +48,48 @@ This procedure validates the protocol on a live L2 network using **Kurtosis** to
 - Node.js (for discovery scripts)
 - Foundry (`forge`, `cast`)
 
-### Procedure
+### Recommended: Fully automated run
+This is the intended way to run the paper’s empirical demo. It spins up the devnet, deploys RAT, triggers tests, runs discovery, executes disputes, validates success/failure, and cleans up.
 
-#### 1. Start Network
-Launch a local Optimism Devnet with L1 and L2 nodes.
 ```bash
+scripts/cleanup_kurtosis.sh
 kurtosis run github.com/ethpandaops/optimism-package
+scripts/run_kurtosis_scenario.sh
 ```
-*Note the RPC mapping ports from the output (e.g., L1: `:32xxx`, L2: `:32yyy`).*
 
-#### 2. Deploy Contracts
-Deploy the RAT contract to L1.
+### (Optional) Step A~E helper script
+You can automate trigger + seed extraction + discovery + submitCandidate + disputes with:
 ```bash
-# Export L1 RPC and Private Key
-export ETH_RPC_URL="http://127.0.0.1:<L1_PORT>"
 export PRIVATE_KEY="<FUNDED_KEY>"
-
-# Run Deployment Script
-forge script scripts/DeployRAT.s.sol:DeployRAT --broadcast --sender <ADDRESS>
+# Optional overrides (auto-discovered by default):
+# export L1_RPC="http://127.0.0.1:<L1_PORT>"
+# export L2_RPC="http://127.0.0.1:<L2_PORT>"
+# export RAT_ADDR="<RAT_ADDR>"
+# export GAME_ADDR="<GAME_ADDR>"
+# export OUTPUT_ROOT="<OUTPUT_ROOT>"
+# export L2_BLOCK="<L2_BLOCK>"
+scripts/run_kurtosis_scenario.sh
 ```
+*Requires `jq` for log parsing.*
 
-#### 3. Execute Scenario: "Lazy Validator Dispute"
+#### What the helper script verifies (default)
+By default (opt-out), the script runs:
+- **Auto-cleanup**: cleans Kurtosis enclaves/engine on exit (success or failure).
+- **E2E dispute matrix (4 cases)** using real MPT proofs from L2:
+  - **Non-inclusion**: success (missing addr) + failure (existing addr → revert)
+  - **Closer-key**: success (closer exists) + failure (not closer → revert)
 
-**Step A: Trigger RAT**
-The factory (or admin) triggers a test.
-```bash
-cast send <RAT_ADDR> "triggerAttentionTest(address,bytes32,bytes32,uint64)" <GAME_ADDR> <ROOT> <HASH> <BLOCK> --private-key $PRIVATE_KEY
-```
+#### Why we use debug RPC (intentional, not an “excuse”)
+The “closest-key discovery” step requires access to state information that is typically **not available via public RPC**. In this design, a validator is expected to either:
+- run its own node with debug APIs enabled, or
+- work closely with an entity that operates such a node.
 
-**Step B: Watchdog Discovery**
-The Watchdog runs the discovery script to find the closest key to the generated `Seed`.
-```bash
-# This script dumps the L2 state and calculates numeric distances
-node scripts/find_closest_key.js --rpc http://127.0.0.1:<L2_PORT> --seed <SEED_FROM_EVENT>
-```
-*Output: Found Closest Key: `0x123...` (Distance: 100)*
+This is an intentional assumption: if a validator relies on *another* validator’s node to provide the closest-key result, it cannot efficiently verify that result is truly closest (without equivalent access), and submitting a non-closest key can lead to slashing. This makes efficient collusion unattractive in practice.
 
-**Step C: Lazy Submission (Victim)**
-The Victim submits a suboptimal key (farther distance).
-```bash
-cast send <RAT_ADDR> "submitCandidate(address,bytes32,bytes32,bytes32,bytes32,bytes32)" ... --private-key <VICTIM_KEY>
-```
-
-**Step D: Dispute (Watchdog)**
-The Watchdog disputes using the key found in Step B.
-```bash
-# Generate Proof (using standard L1/L2 proving tools or mock for devnet)
-# Call disputeByCloserKey
-cast send <RAT_ADDR> "disputeByCloserKey(address,bytes32,...)" <GAME_ADDR> <CLOSER_KEY> ... --private-key <WATCHDOG_KEY>
-```
-
-**Step E: Verification**
-Check the event logs to confirm the dispute was successful.
-```bash
-cast events --address <RAT_ADDR> "DisputeSuccessful(address,address,bytes32,uint256,string)"
-```
+#### Useful flags
+- `AUTO_CLEANUP=0`: opt-out of cleanup (keep enclave for debugging)
+- `AUTO_E2E_DISPUTE_CHECKS=0`: opt-out of the 4-case dispute matrix
+- `PRINT_PROOFS=1`: print proof summaries (eth_getProof fields + accountProof node preview)
 
 ---
 
@@ -99,15 +100,44 @@ The protocol's efficiency is validated by measuring the operational gas costs of
 ### Execution
 Run the gas measurement tests:
 ```bash
-forge test --match-contract RAT_GasTest -vv
+cd packages/contracts-bedrock
+forge test --match-path "test/L1/RAT_GasTest.t.sol" -vv
 ```
 
 ### Reference Costs
-| Function | Gas Cost (Est) | Notes |
-|----------|----------------|-------|
-| `submitCandidate` | **~28,837** | **Optimistic (No Proof)** + Refund. |
-| `disputeByCloserKey` | ~97,805 | Proof Verify + Slashing. |
-| `disputeByNonInclusion` | ~97,733 | Proof of "Other Key" (Vacancy) + Slashing. |
+There are two complementary views:
+1) **`forge --gas-report`** for deterministic unit-test measurements.
+2) **E2E receipt `gasUsed`** for proof-driven dispute costs on a live devnet, where trie proof depth is explicit.
+
+#### Unit-test gas report (deterministic)
+From `forge test --match-path "test/L1/RAT_GasTest.t.sol" --gas-report`:
+
+| Function | Measured (Avg) | Notes |
+|----------|---------------:|-------|
+| `triggerAttentionTest` | 159,560 | Upfront bond+penalty accounting. |
+| `submitCandidate` | 33,810 | Optimistic submission + refund (validity refresh is out-of-band). |
+
+**How the Avg is computed:** This value is taken from Foundry’s `--gas-report` **Avg** column, which is the arithmetic mean over the actual number of calls executed in the gas test suite.
+For example, `submitCandidate` is executed **3 times** in `RAT_GasTest.t.sol` (once in each of `test_gas_OptimisticFlow`, `test_gas_DisputeByCloserKey`, and `test_gas_DisputeByNonInclusion`), and the reported Avg is the mean of those three runs.
+
+#### Dispute gas (E2E, proof-driven)
+Measured from L1 transaction receipts during the default E2E dispute matrix, with **`accountProofNodes=4`** (state trie path length as returned by L2 `eth_getProof`):
+
+| Dispute | Outcome | gasUsed | accountProofNodes |
+|---------|---------|--------:|------------------:|
+| `disputeByNonInclusion` | success | 209,395 | 4 |
+| `disputeByNonInclusion` | failure | 175,914 | 4 |
+| `disputeByCloserKey` | success | 225,476 | 4 |
+| `disputeByCloserKey` | failure | 176,788 | 4 |
+
+**Depth scaling expectation:** verification cost is dominated by per-node hashing/RLP decoding over the proof nodes, so gas should grow **approximately linearly with `accountProofNodes`** (and node byte sizes). Expect a noticeable increase as depth grows; use `PRINT_PROOFS=1` to record proof node counts alongside `gasUsed` for your runs.
+
+### Gas report (actual)
+To print the exact per-function gas table:
+```bash
+cd packages/contracts-bedrock
+forge test --match-path "test/L1/RAT_GasTest.t.sol" --gas-report
+```
 
 ---
 

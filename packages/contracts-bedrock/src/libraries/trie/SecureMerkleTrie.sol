@@ -41,6 +41,26 @@ library SecureMerkleTrie {
         value_ = MerkleTrie.get(key, _proof, _root);
     }
 
+    /// @notice Attempts to retrieve the value associated with a given key. Returns `exists_ = false`
+    ///         when the proof is a valid non-inclusion proof.
+    /// @param _key   Key to search for, as hex bytes.
+    /// @param _proof Merkle trie proof for the key (inclusion or non-inclusion).
+    /// @param _root  Known root of the Merkle trie.
+    /// @return exists_ True if the key exists in the trie.
+    /// @return value_  The value for the key if it exists, empty otherwise.
+    function tryGet(
+        bytes memory _key,
+        bytes[] memory _proof,
+        bytes32 _root
+    )
+        internal
+        pure
+        returns (bool exists_, bytes memory value_)
+    {
+        bytes memory key = _getSecureKey(_key);
+        return MerkleTrie.tryGet(key, _proof, _root);
+    }
+
     /// @notice Computes the hashed version of the input key.
     /// @param _key Key to hash.
     /// @return hash_ Hashed version of the key.

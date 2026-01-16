@@ -20,8 +20,8 @@ interface IRAT is IProxyAdminOwnedBase, IReinitializableBase {
     struct AttentionInfo {
         bytes32 outputRoot;
         bytes32 seed;
-        bytes32 candidateKey;
         uint96 bondAmount;
+        address candidateAddr;
         address challengerAddress;
         uint64 submissionDeadlineBlock;
         uint64 l2BlockNumber;

@@ -52,8 +52,10 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     struct AttentionInfo {
         bytes32 outputRoot;              // OutputRoot for verification
         bytes32 seed;                    // Random seed = H(blockhash || timestamp)
-        bytes32 candidateKey;            // Submitted candidate key
+        // Pack into a single slot: bondAmount (12B) + candidateAddr (20B)
         uint96 bondAmount;
+        address candidateAddr;           // Submitted candidate (address form of key)
+        // Next slot(s)
         address challengerAddress;
         uint64 submissionDeadlineBlock;
         uint64 l2BlockNumber;
@@ -115,7 +117,7 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     // ============ Constructor ============
 
     constructor() ReinitializableBase(3) {
-        // _disableInitializers(); // Uncomment for production
+        _disableInitializers();
     }
 
     // ============ Initialize ============
@@ -164,6 +166,24 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         emit ChallengerStaked(msg.sender, msg.value);
     }
 
+    /// @notice Re-compute and apply a challenger's validity based on current staking amount.
+    ///         This allows operators to correct validity state after stake changes caused by
+    ///         bond deductions/refunds in the RAT flow.
+    /// @dev Intentionally permissionless: anyone can call to keep the set accurate.
+    function refreshChallengerValidity(address _challenger) external {
+        ChallengerInfo storage info = challengers[_challenger];
+        _updateValidity(_challenger, info);
+    }
+
+    /// @notice Batch version of `refreshChallengerValidity` to amortize overhead.
+    function refreshChallengerValidities(address[] calldata _challengers) external {
+        for (uint256 i = 0; i < _challengers.length; i++) {
+            address c = _challengers[i];
+            ChallengerInfo storage info = challengers[c];
+            _updateValidity(c, info);
+        }
+    }
+
     // ============ Core Protocol ============
 
     /// @notice Triggers attention test (called by DisputeGameFactory)
@@ -206,16 +226,18 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         attentionTests[_gameAddress] = AttentionInfo({
             outputRoot: _outputRoot,
             seed: seed,
-            candidateKey: bytes32(0),
             bondAmount: uint96(bondAmt),
+            candidateAddr: address(0),
             challengerAddress: selectedChallenger,
             submissionDeadlineBlock: uint64(block.number + evidenceSubmissionPeriod),
             l2BlockNumber: _l2BlockNumber,
             status: STATUS_PENDING
         });
 
-        // Update validity
-        _updateValidity(selectedChallenger, challengerInfo);
+        // NOTE: We intentionally do NOT update validity here.
+        // Bond deductions can temporarily drop a challenger's stake below the bond threshold, but we keep
+        // the cached validity set stable for gas and measurement consistency. Operators can call
+        // `refreshChallengerValidity` (or the batch variant) when they want to enforce the threshold.
 
         emit AttentionTriggered(_gameAddress, selectedChallenger, seed);
         emit OfflinePenalty(_gameAddress, selectedChallenger, penalty);
@@ -240,8 +262,10 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
         _verifyComponents(test, _version, _stateRoot, _messagePasserRoot, _blockHash);
 
-        // Optimistic: We do NOT verify proof here. We assume it's valid.
-        test.candidateKey = _candidateKey;
+        // NOTE: Candidate validity (existence / closest) is enforced via disputes (closer-key or non-inclusion).
+        // The on-chain verifier only checks that the (version, stateRoot, messagePasserRoot, blockHash) components
+        // match the pre-committed outputRoot for this test.
+        test.candidateAddr = address(uint160(uint256(_candidateKey)));
         test.status = STATUS_SUBMITTED;
 
         // Refund the Penalty (Reward for responding)
@@ -258,10 +282,12 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
             challenger.totalSlashedAmount -= penalty;
         }
 
-        _updateValidity(msg.sender, challenger);
+        // NOTE: We intentionally do NOT update validity here.
+        // Validity can be refreshed out-of-band via `refreshChallengerValidity` to avoid variable gas costs.
 
-        emit CandidateSubmitted(_gameAddress, msg.sender, _candidateKey, _distance(_candidateKey, test.seed));
-        emit SubmissionAccepted(_gameAddress, msg.sender, _candidateKey);
+        bytes32 emittedKey = bytes32(uint256(uint160(test.candidateAddr)));
+        emit CandidateSubmitted(_gameAddress, msg.sender, emittedKey, _distance(emittedKey, test.seed));
+        emit SubmissionAccepted(_gameAddress, msg.sender, emittedKey);
     }
 
 
@@ -278,24 +304,21 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         AttentionInfo storage test = attentionTests[_gameAddress];
         if (test.status != STATUS_SUBMITTED) revert InvalidStatus();
         if (block.number >= test.submissionDeadlineBlock) revert DeadlinePassed();
-        if (test.candidateKey != _key) revert InvalidKey(); // Must dispute the candidate key itself
+        if (test.candidateAddr != address(uint160(uint256(_key)))) revert InvalidKey(); // Must dispute the candidate key itself
 
         _verifyComponents(test, _version, _stateRoot, _messagePasserRoot, _blockHash);
 
         // Verify Non-Inclusion
         _verifyNonInclusion(address(uint160(uint256(_key))), _proof, _stateRoot);
 
-        // SLASHING
-        _slashChallenger(test.challengerAddress, test.bondAmount);
+        // Bond was refunded at submission time; a successful dispute must claw it back from the
+        // challenger and pay it out to the disputer.
+        uint256 slashed = _slashChallenger(test.challengerAddress, test.bondAmount);
 
         test.status = STATUS_DISPUTED;
-        payable(msg.sender).transfer(test.bondAmount);
+        payable(msg.sender).transfer(slashed);
 
-        // No validity update needed here as slash handles it?
-        // _slashChallenger calls _updateValidity.
-        // Wait, _slashChallenger does call _updateValidity.
-
-        emit DisputeSuccessful(_gameAddress, msg.sender, _key, test.bondAmount, "non-inclusion");
+        emit DisputeSuccessful(_gameAddress, msg.sender, _key, slashed, "non-inclusion");
     }
 
     /// @notice External wrapper to allow try/catch on internal library call (For Non-Inclusion Check)
@@ -305,17 +328,13 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
     /// @notice Internal virtual helper for existence check (Testable)
     function _verifyExistence(bytes memory _keyBlob, bytes[] calldata _proof, bytes32 _root) internal virtual {
-         SecureMerkleTrie.get(_keyBlob, _proof, _root);
+        (bool exists, ) = SecureMerkleTrie.tryGet(_keyBlob, _proof, _root);
+        if (!exists) revert ProofVerificationFailed();
     }
 
     function _verifyNonInclusion(address _keyAddr, bytes[] calldata _proof, bytes32 _root) internal virtual {
-        // Wrapper for try/catch mechanism
-        try this.verifyInclusionWrapper(_keyAddr, _proof, _root) returns (bytes memory) {
-            // If get succeeds, the key EXISTS.
-            revert KeyExists();
-        } catch {
-            // If get reverts, we assume it's because the key is missing.
-        }
+        (bool exists, ) = SecureMerkleTrie.tryGet(abi.encodePacked(_keyAddr), _proof, _root);
+        if (exists) revert KeyExists();
     }
 
     /// @notice Dispute by submitting strictly closer key
@@ -341,20 +360,19 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         _verifyExistence(abi.encodePacked(address(uint160(uint256(_closerKey)))), _proof, _stateRoot);
 
         // Verify strictly closer
-        if (_distance(_closerKey, test.seed) >= _distance(test.candidateKey, test.seed)) {
+        bytes32 currentKey = bytes32(uint256(uint160(test.candidateAddr)));
+        if (_distance(_closerKey, test.seed) >= _distance(currentKey, test.seed)) {
             revert NotCloserKey();
         }
 
-        // SLASHING
-        uint256 totalSlash = test.bondAmount;
-        _slashChallenger(test.challengerAddress, totalSlash);
+        // Bond was refunded at submission time; claw it back from the challenger and reward disputer.
+        uint256 slashed = _slashChallenger(test.challengerAddress, test.bondAmount);
 
         test.status = STATUS_DISPUTED;
 
-        // Reward Disputer with full bond amount
-        payable(msg.sender).transfer(totalSlash);
+        payable(msg.sender).transfer(slashed);
 
-        emit DisputeSuccessful(_gameAddress, msg.sender, _closerKey, totalSlash, "closer-key");
+        emit DisputeSuccessful(_gameAddress, msg.sender, _closerKey, slashed, "closer-key");
     }
 
 
@@ -432,7 +450,7 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
 
 
-    function _slashChallenger(address _challengerAddr, uint256 _amount) internal {
+    function _slashChallenger(address _challengerAddr, uint256 _amount) internal returns (uint256) {
         ChallengerInfo storage challenger = challengers[_challengerAddr];
 
         if (challenger.stakingAmount < _amount) {
@@ -442,6 +460,7 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         challenger.totalSlashedAmount += _amount;
 
         _updateValidity(_challengerAddr, challenger);
+        return _amount;
     }
 
     function _updateValidity(address _challenger, ChallengerInfo storage _info) internal {

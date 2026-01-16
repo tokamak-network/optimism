@@ -1,16 +1,23 @@
 const http = require('http');
 
 const SEED = process.argv[2];
-const RPC_URL = 'http://127.0.0.1:32816';
+const RPC_URL = process.env.RPC_URL || process.argv[3] || 'http://127.0.0.1:32816';
 
 if (!SEED) {
-    console.error("Usage: node find_closest_key.js <SEED_HEX>");
+    console.error("Usage: RPC_URL=<L2_RPC> node scripts/find_closest_key.js <SEED_HEX> [RPC_URL]");
     process.exit(1);
 }
 
 // Convert hex string to BigInt
 function hexToBigInt(hex) {
     return BigInt(hex.startsWith('0x') ? hex : '0x' + hex);
+}
+
+function padAddressToBytes32(addr) {
+    const a = addr.toLowerCase().replace(/^0x/, '');
+    // 20 bytes address => 40 hex chars
+    const hex = a.padStart(40, '0');
+    return '0x' + hex.padStart(64, '0');
 }
 
 // Calculate NUMERIC distance (Absolute Difference) per RAT.sol _distance()
@@ -57,9 +64,11 @@ async function main() {
 
         const accountMap = response.result.accounts || response.result;
 
-        let closestKey = null;
         let closestAddr = null;
         let minDist = null;
+
+        let farthestAddr = null;
+        let maxDist = null;
         let seedBig = hexToBigInt(SEED);
 
         let count = 0;
@@ -67,16 +76,18 @@ async function main() {
         for (const [addr, data] of Object.entries(accountMap)) {
             if (!addr.startsWith('0x') || addr.length < 40) continue;
 
-            let key = data.key;
-            if (!key) continue;
-
-            let keyBig = hexToBigInt(key);
+            // Our on-chain RAT logic treats "key" as an address (bytes32 with address in low 20 bytes).
+            // Therefore, in e2e we compute distances over account addresses, not the state-trie hashed keys.
+            let keyBig = hexToBigInt(addr);
             let dist = distance(seedBig, keyBig);
 
             if (minDist === null || dist < minDist) {
                 minDist = dist;
-                closestKey = key;
                 closestAddr = addr;
+            }
+            if (maxDist === null || dist > maxDist) {
+                maxDist = dist;
+                farthestAddr = addr;
             }
             count++;
         }
@@ -86,9 +97,12 @@ async function main() {
 
         console.log(JSON.stringify({
             seed: SEED,
-            closestKey: closestKey,
+            closestKey: closestAddr ? padAddressToBytes32(closestAddr) : null,
             closestAddress: closestAddr,
-            distance: minDist.toString() // Print as decimal for magnitude check
+            closestDistance: minDist !== null ? minDist.toString() : null,
+            farthestKey: farthestAddr ? padAddressToBytes32(farthestAddr) : null,
+            farthestAddress: farthestAddr,
+            farthestDistance: maxDist !== null ? maxDist.toString() : null
         }, null, 2));
 
     } catch (error) {

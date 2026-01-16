@@ -176,6 +176,126 @@ library MerkleTrie {
         revert("MerkleTrie: ran out of proof elements");
     }
 
+    /// @notice Attempts to retrieve the value associated with a given key. Unlike `get`, this
+    ///         function can return `exists_ = false` for valid non-inclusion proofs (i.e. proofs
+    ///         that demonstrate the key is absent from the trie) without reverting.
+    ///
+    ///         Reverts if the proof is malformed or inconsistent with the provided root.
+    /// @param _key   Key to search for, as hex bytes.
+    /// @param _proof Merkle trie proof for the key (inclusion or non-inclusion).
+    /// @param _root  Known root of the Merkle trie.
+    /// @return exists_ True if the key exists in the trie.
+    /// @return value_  The value for the key if it exists, empty otherwise.
+    function tryGet(
+        bytes memory _key,
+        bytes[] memory _proof,
+        bytes32 _root
+    )
+        internal
+        pure
+        returns (bool exists_, bytes memory value_)
+    {
+        require(_key.length > 0, "MerkleTrie: empty key");
+
+        TrieNode[] memory proof = _parseProof(_proof);
+        bytes memory key = Bytes.toNibbles(_key);
+        bytes memory currentNodeID = abi.encodePacked(_root);
+        uint256 currentKeyIndex = 0;
+
+        // Proof is top-down, so we start at the first element (root).
+        for (uint256 i = 0; i < proof.length; i++) {
+            TrieNode memory currentNode = proof[i];
+
+            // Key index should never exceed total key length or we'll be out of bounds.
+            require(currentKeyIndex <= key.length, "MerkleTrie: key index exceeds total key length");
+
+            // Verify that this node matches the expected node ID.
+            if (currentKeyIndex == 0) {
+                require(
+                    Bytes.equal(abi.encodePacked(keccak256(currentNode.encoded)), currentNodeID),
+                    "MerkleTrie: invalid root hash"
+                );
+            } else if (currentNode.encoded.length >= 32) {
+                require(
+                    Bytes.equal(abi.encodePacked(keccak256(currentNode.encoded)), currentNodeID),
+                    "MerkleTrie: invalid large internal hash"
+                );
+            } else {
+                require(Bytes.equal(currentNode.encoded, currentNodeID), "MerkleTrie: invalid internal node hash");
+            }
+
+            if (currentNode.decoded.length == BRANCH_NODE_LENGTH) {
+                if (currentKeyIndex == key.length) {
+                    // At end-of-key: return value if present, otherwise valid non-inclusion.
+                    value_ = RLPReader.readBytes(currentNode.decoded[TREE_RADIX]);
+                    if (value_.length == 0) {
+                        return (false, bytes(""));
+                    }
+                    require(i == proof.length - 1, "MerkleTrie: value node must be last node in proof (branch)");
+                    return (true, value_);
+                } else {
+                    uint8 branchKey = uint8(key[currentKeyIndex]);
+                    RLPReader.RLPItem memory nextNode = currentNode.decoded[branchKey];
+                    currentNodeID = _getNodeID(nextNode);
+                    currentKeyIndex += 1;
+
+                    // Missing child at the requested nibble => valid non-inclusion proof.
+                    if (currentNodeID.length == 0 || (currentNodeID.length == 1 && currentNodeID[0] == 0x80)) {
+                        require(i == proof.length - 1, "MerkleTrie: unexpected extra proof elements (missing child)");
+                        return (false, bytes(""));
+                    }
+                }
+            } else if (currentNode.decoded.length == LEAF_OR_EXTENSION_NODE_LENGTH) {
+                bytes memory path = _getNodePath(currentNode);
+                uint8 prefix = uint8(path[0]);
+                uint8 offset = 2 - (prefix % 2);
+                bytes memory pathRemainder = Bytes.slice(path, offset);
+                bytes memory keyRemainder = Bytes.slice(key, currentKeyIndex);
+                uint256 sharedNibbleLength = _getSharedNibbleLength(pathRemainder, keyRemainder);
+
+                // If this node's path is not a prefix of the remaining key, then the key does not exist.
+                if (pathRemainder.length != sharedNibbleLength) {
+                    require(i == proof.length - 1, "MerkleTrie: unexpected extra proof elements (path divergence)");
+                    return (false, bytes(""));
+                }
+
+                if (prefix == PREFIX_LEAF_EVEN || prefix == PREFIX_LEAF_ODD) {
+                    // Leaf node: key exists iff the full remainder matches.
+                    if (keyRemainder.length != sharedNibbleLength) {
+                        require(i == proof.length - 1, "MerkleTrie: unexpected extra proof elements (leaf divergence)");
+                        return (false, bytes(""));
+                    }
+
+                    value_ = RLPReader.readBytes(currentNode.decoded[1]);
+                    if (value_.length == 0) {
+                        // Empty values are not allowed in the Ethereum state trie: treat as non-inclusion.
+                        require(i == proof.length - 1, "MerkleTrie: value node must be last node in proof (leaf)");
+                        return (false, bytes(""));
+                    }
+
+                    require(i == proof.length - 1, "MerkleTrie: value node must be last node in proof (leaf)");
+                    return (true, value_);
+                } else if (prefix == PREFIX_EXTENSION_EVEN || prefix == PREFIX_EXTENSION_ODD) {
+                    currentNodeID = _getNodeID(currentNode.decoded[1]);
+                    currentKeyIndex += sharedNibbleLength;
+
+                    // Extension pointing to empty child is a valid non-inclusion (rare but possible with malformed tries).
+                    if (currentNodeID.length == 0 || (currentNodeID.length == 1 && currentNodeID[0] == 0x80)) {
+                        require(i == proof.length - 1, "MerkleTrie: unexpected extra proof elements (empty extension)");
+                        return (false, bytes(""));
+                    }
+                } else {
+                    revert("MerkleTrie: received a node with an unknown prefix");
+                }
+            } else {
+                revert("MerkleTrie: received an unparseable node");
+            }
+        }
+
+        // If we consumed the entire proof without returning, we were expecting a non-empty child node.
+        revert("MerkleTrie: ran out of proof elements");
+    }
+
     /// @notice Parses an array of proof elements into a new array that contains both the original
     ///         encoded element and the RLP-decoded element.
     /// @param _proof Array of proof elements to parse.
