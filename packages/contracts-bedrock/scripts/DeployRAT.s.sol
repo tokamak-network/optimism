@@ -12,6 +12,8 @@ contract DeployRAT is Script {
         vm.startBroadcast();
 
         address deployer = msg.sender;
+        address factory = vm.envOr("RAT_FACTORY", deployer);
+        uint256 probability = vm.envOr("RAT_TRIGGER_PROBABILITY", uint256(50000));
 
         // 1. Deploy Implementation
         RAT ratImpl = new RAT();
@@ -23,14 +25,15 @@ contract DeployRAT is Script {
         console2.log("Proxy deployed at:", address(proxy));
 
         // 3. Initialize Data
-        // We use 'deployer' as the Fake DisputeGameFactory to allow manual testing
+        // By default we use 'deployer' as a fake DisputeGameFactory for ad-hoc testing.
+        // For E2E integration, set RAT_FACTORY=<DisputeGameFactoryProxy>.
         bytes memory initData = abi.encodeWithSelector(
             RAT.initialize.selector,
-            IDisputeGameFactory(deployer), // Fake Factory
+            IDisputeGameFactory(factory),
             0.1 ether,                     // Bond Amount
             60,                            // Period (blocks)
             1 ether,                       // Min Stake
-            50000,                         // Probability (50%)
+            probability,                   // Probability
             5000,                          // Offline Penalty Rate (50%)
             deployer                       // Manager
         );

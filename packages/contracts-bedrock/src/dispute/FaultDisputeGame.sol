@@ -329,14 +329,15 @@ contract FaultDisputeGame is Clone, ISemver {
         // in the factory, but are not used by the game, which would allow for multiple dispute games for the same
         // output proposal to be created.
         //
-        // Expected length: 122 bytes
+        // Expected length: 122 bytes (legacy) or 154 bytes (RAT-integrated)
         // - 4 bytes selector
         // - 20 bytes creator address
         // - 32 bytes root claim
         // - 32 bytes l1 head
-        // - 32 bytes extraData
+        // - 32 bytes extraData (legacy: l2BlockNumber)
+        //   or 64 bytes extraData (RAT-integrated: l2BlockNumber || l2BlockHash)
         // - 2 bytes CWIA length
-        if (msg.data.length != 122) revert BadExtraData();
+        if (msg.data.length != 122 && msg.data.length != 154) revert BadExtraData();
 
         // Do not allow the game to be initialized if the root claim corresponds to a block at or before the
         // configured starting block number.
@@ -899,9 +900,19 @@ contract FaultDisputeGame is Clone, ISemver {
     /// @dev `clones-with-immutable-args` argument #4
     /// @return extraData_ Any extra data supplied to the dispute game contract by the creator.
     function extraData() public pure returns (bytes memory extraData_) {
-        // The extra data starts at the second word within the cwia calldata and
-        // is 32 bytes long.
-        extraData_ = _getArgBytes(84, 32);
+        // The extra data starts after:
+        // - creator (20 bytes)
+        // - rootClaim (32 bytes)
+        // - l1Head (32 bytes)
+        // i.e. at offset 84. Its length is the remaining immutable args length.
+        bytes memory args = _getArgBytes();
+        if (args.length <= 84) return bytes("");
+        uint256 len = args.length - 84;
+        extraData_ = new bytes(len);
+        // Copy the tail (extraData) into the return buffer.
+        for (uint256 i = 0; i < len; i++) {
+            extraData_[i] = args[84 + i];
+        }
     }
 
     /// @notice A compliant implementation of this interface should return the components of the

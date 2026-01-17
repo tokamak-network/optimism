@@ -194,12 +194,27 @@ contract DisputeGameFactory is ReinitializableBase, OwnableUpgradeable, ISemver 
         // Trigger RAT attention test if RAT contract is set and game type is CANNON
         if (rat != address(0) && _gameType.raw() == GameTypes.CANNON.raw()) {
             (, , address gameAddress) = id.unpack();
-            // Extract L2 block number from extraData (stored as bytes32 big-endian)
+            // Extract L2 block number (and optionally L2 block hash) from extraData.
+            // We keep backwards compatibility:
+            // - If extraData is at least 32 bytes, the first word is interpreted as uint64 l2BlockNumber.
+            // - If extraData is at least 64 bytes, the second word is interpreted as bytes32 l2BlockHash.
+            //   This is required for RAT outputRoot component verification in E2E.
             uint64 l2BlockNumber = 0;
             if (_extraData.length >= 32) {
                 l2BlockNumber = uint64(uint256(bytes32(_extraData)));
             }
-            try IRAT(rat).triggerAttentionTest(gameAddress, Claim.unwrap(_rootClaim), parentHash, l2BlockNumber) {} catch {}
+            bytes32 l2BlockHash = parentHash;
+            if (_extraData.length >= 64) {
+                bytes32 second;
+                assembly {
+                    // _extraData.offset points to the start of the bytes contents.
+                    // load the second 32-byte word.
+                    second := calldataload(add(_extraData.offset, 32))
+                }
+                l2BlockHash = second;
+            }
+
+            try IRAT(rat).triggerAttentionTest(gameAddress, Claim.unwrap(_rootClaim), l2BlockHash, l2BlockNumber) {} catch {}
         }
     }
 

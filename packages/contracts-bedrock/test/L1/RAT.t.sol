@@ -467,10 +467,12 @@ contract RAT_Dispute_Logic_Test is CommonTest {
         missingProof[0] = abi.encodePacked("MISSING");
 
         uint256 disputerBalBefore = DISPUTER.balance;
+        address selected = rat.getAttentionTest(mockGame).challengerAddress;
+        uint256 expectedPayout = rat.getChallengerInfo(selected).stakingAmount;
         vm.prank(DISPUTER);
         rat.disputeByNonInclusion(mockGame, candidateKey, sr, v, mpr, bh, missingProof);
         assertEq(rat.getAttentionTest(mockGame).status, rat.STATUS_DISPUTED());
-        assertEq(DISPUTER.balance, disputerBalBefore + BOND);
+        assertEq(DISPUTER.balance, disputerBalBefore + expectedPayout);
     }
 
     function test_disputeByCloserKey_validCloserKey_succeeds_and_notCloser_fails() public {
@@ -479,12 +481,10 @@ contract RAT_Dispute_Logic_Test is CommonTest {
         vm.prank(mockDisputeGameFactory);
         rat.triggerAttentionTest(mockGame, outputRoot, bytes32(0), uint64(block.number));
 
-        uint160 seed160 = uint160(uint256(rat.getAttentionTest(mockGame).seed));
-        // NOTE: keys are restricted to the low 160-bit "address" domain (high bits are zero),
-        // while `seed` is a full bytes32. With the current distance metric, when `seed` is large
-        // (overwhelmingly likely), larger keys are closer to `seed`.
-        bytes32 farKey = bytes32(uint256(seed160 + 1));
-        bytes32 closeKey = bytes32(uint256(seed160 + 100));
+        // NOTE: keys are restricted to the low 160-bit "address" domain (high bits are zero).
+        // Avoid extra locals to prevent stack-too-deep.
+        bytes32 farKey = bytes32(uint256(uint160(uint256(rat.getAttentionTest(mockGame).seed))) + 1);
+        bytes32 closeKey = bytes32(uint256(uint160(uint256(rat.getAttentionTest(mockGame).seed))) + 100);
 
         vm.prank(rat.getAttentionTest(mockGame).challengerAddress);
         rat.submitCandidate(mockGame, farKey, sr, v, mpr, bh);
@@ -500,10 +500,11 @@ contract RAT_Dispute_Logic_Test is CommonTest {
 
         // valid: closer key wins
         uint256 disputerBalBefore = DISPUTER.balance;
+        uint256 expectedPayout = rat.getChallengerInfo(rat.getAttentionTest(mockGame).challengerAddress).stakingAmount;
         vm.prank(DISPUTER);
         rat.disputeByCloserKey(mockGame, closeKey, sr, v, mpr, bh, existsProof);
         assertEq(rat.getAttentionTest(mockGame).status, rat.STATUS_DISPUTED());
-        assertEq(DISPUTER.balance, disputerBalBefore + BOND);
+        assertEq(DISPUTER.balance, disputerBalBefore + expectedPayout);
     }
 }
 

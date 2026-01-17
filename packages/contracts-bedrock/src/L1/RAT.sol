@@ -157,7 +157,7 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         ChallengerInfo storage challenger = challengers[msg.sender];
         challenger.stakingAmount += msg.value;
 
-        if (!challenger.isValid && challenger.stakingAmount >= perTestBondAmount) {
+        if (!challenger.isValid && challenger.stakingAmount >= minimumStakingBalance) {
             challenger.isValid = true;
             challenger.validatorIndex = uint32(validChallengers.length);
             validChallengers.push(msg.sender);
@@ -234,10 +234,8 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
             status: STATUS_PENDING
         });
 
-        // NOTE: We intentionally do NOT update validity here.
-        // Bond deductions can temporarily drop a challenger's stake below the bond threshold, but we keep
-        // the cached validity set stable for gas and measurement consistency. Operators can call
-        // `refreshChallengerValidity` (or the batch variant) when they want to enforce the threshold.
+        // Auto-refresh validity after stake changes so the selected set stays accurate.
+        _updateValidity(selectedChallenger, challengerInfo);
 
         emit AttentionTriggered(_gameAddress, selectedChallenger, seed);
         emit OfflinePenalty(_gameAddress, selectedChallenger, penalty);
@@ -282,8 +280,8 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
             challenger.totalSlashedAmount -= penalty;
         }
 
-        // NOTE: We intentionally do NOT update validity here.
-        // Validity can be refreshed out-of-band via `refreshChallengerValidity` to avoid variable gas costs.
+        // Auto-refresh validity after refund.
+        _updateValidity(msg.sender, challenger);
 
         bytes32 emittedKey = bytes32(uint256(uint160(test.candidateAddr)));
         emit CandidateSubmitted(_gameAddress, msg.sender, emittedKey, _distance(emittedKey, test.seed));
@@ -313,7 +311,10 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
 
         // Bond was refunded at submission time; a successful dispute must claw it back from the
         // challenger and pay it out to the disputer.
-        uint256 slashed = _slashChallenger(test.challengerAddress, test.bondAmount);
+        //
+        // Experiment setting: on successful safety dispute, confiscate the challenger's entire stake.
+        // `_slashChallenger` will cap the amount to the challenger's current stakingAmount.
+        uint256 slashed = _slashChallenger(test.challengerAddress, type(uint256).max);
 
         test.status = STATUS_DISPUTED;
         payable(msg.sender).transfer(slashed);
@@ -366,7 +367,8 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
         }
 
         // Bond was refunded at submission time; claw it back from the challenger and reward disputer.
-        uint256 slashed = _slashChallenger(test.challengerAddress, test.bondAmount);
+        // Experiment setting: on successful safety dispute, confiscate the challenger's entire stake.
+        uint256 slashed = _slashChallenger(test.challengerAddress, type(uint256).max);
 
         test.status = STATUS_DISPUTED;
 
@@ -464,7 +466,7 @@ contract RAT is ProxyAdminOwnedBase, ReinitializableBase, Initializable, Reentra
     }
 
     function _updateValidity(address _challenger, ChallengerInfo storage _info) internal {
-        bool shouldBeValid = _info.stakingAmount >= perTestBondAmount;
+        bool shouldBeValid = _info.stakingAmount >= minimumStakingBalance;
         bool currentIsValid = _info.isValid;
 
         if (currentIsValid && !shouldBeValid) {

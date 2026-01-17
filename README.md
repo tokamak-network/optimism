@@ -18,6 +18,7 @@ Verification is organized into two layers:
 - Make: 4.3+
 - Foundry (forge/cast): 1.2.0+
 - Node.js: 18+
+- Python: 3.10+ (only needed for the staking/validity graph)
 - Docker Engine: 24+
 - Kurtosis CLI: 1.15.0+
 - jq: 1.6+ (required for the default E2E helper script output parsing)
@@ -44,6 +45,12 @@ forge test --match-contract RAT_Paper_Verification -vv
 ## Part 2: Dynamic E2E Verification (Kurtosis)
 
 This procedure validates the protocol on a live L2 network using **Kurtosis** to spin up an ephemeral Optimism Devnet.
+In other words, it is an **end-to-end workflow** validation of:
+`DisputeGameFactory.create()` → (optional) `RAT.triggerAttentionTest()` → `submitCandidate()` → (optional) disputes → stake/prize effects,
+executed against a real devnet (L1 receipts + L2 trie proofs).
+
+> Scope note: this is not a full “OP system e2e” where `op-proposer` autonomously drives `create()` in a long-running service loop under sustained L2 traffic.
+> Instead, the scripts intentionally control `create()` to make the RAT paths observable and reproducible.
 
 ### Prerequisites
 - Docker Engine
@@ -96,6 +103,47 @@ This is an intentional assumption: if a validator relies on *another* validator�
 - `AUTO_E2E_DISPUTE_CHECKS=0`: opt-out of the 4-case dispute matrix
 - `PRINT_PROOFS=1`: print proof summaries (eth_getProof fields + accountProof node preview)
 
+### Round-based experiment: randomized disputes + staking/validity graph
+If you want a more “natural” experiment (multiple rounds, roles, and stake evolution), use:
+
+```bash
+# Start the devnet first (or reuse an existing enclave).
+kurtosis run github.com/ethpandaops/optimism-package
+
+# Run 30 rounds with 5 validators:
+# - 1 byzantine (offline): never submits
+# - 1 byzantine (distance): submits a far key
+# - 1 byzantine (non-existence): submits a key for a likely-nonexistent account
+# - 2 honest validators
+# Honest validators additionally attempt random (incorrect) disputes that must revert (negative testing).
+scripts/run_rounds_experiment.sh
+```
+
+Outputs:
+- **CSV**: `results/<run-id>/staking.csv`
+- **Graph (PDF)**: `results/<run-id>/staking.pdf`
+- **Roles**: `results/<run-id>/roles.json` (used to annotate the legend)
+
+The graph includes:
+- a **horizontal validity threshold** at `minimumStakingBalance`
+- an **“invalid” marker** at the round where a validator’s `isValid` flips to `false`.
+- a **dashed line per validator** showing **cumulative dispute prize** (from successful disputes)
+- a **round 0** snapshot so initial stakes are visible even if someone is slashed on round 1.
+- per-validator **markers** (to stay readable in grayscale printouts) and a tight, title-free PDF for easy IEEE inclusion.
+
+Defaults:
+- `TRIGGER_PROBABILITY=50000` (50% of 100000)
+
+Common knobs (env vars):
+- `L2_TX_PER_ROUND`: number of random L2 transfers per round to perturb the state trie (default: 5)
+- `MIN_STAKE_WEI`, `BOND_WEI`: validity threshold and per-test bond (also the per-missed-submit liveness loss in this experiment)
+- `STAKE_OFFLINE_WEI`, `STAKE_BYZ_WEI`, `STAKE_HONEST_WEI`: initial stakes per role
+
+Safety-penalty note (experiment setting):
+- In the round-based experiment, a **successful safety dispute confiscates the challenger's entire current stake** and pays it to the disputer.
+
+This script uses a Python venv at `.venv` and installs `matplotlib` automatically.
+
 ---
 
 ## Part 3: Gas Analysis
@@ -109,8 +157,17 @@ From `forge test --match-path "test/L1/RAT_GasTest.t.sol" --gas-report`:
 
 | Function | Measured (Avg) | Notes |
 |----------|---------------:|-------|
-| `triggerAttentionTest` | 159,560 | Upfront bond+penalty accounting. |
-| `submitCandidate` | 33,810 | Optimistic submission + refund (validity refresh is out-of-band). |
+| `triggerAttentionTest` | 184,529 | Upfront bond+penalty accounting + automatic validity refresh. |
+| `submitCandidate` | 68,912 | Optimistic submission + refund + automatic validity refresh. The increase vs older ~30k measurements is dominated by the refund `SSTORE` and validity set maintenance. |
+
+### `DisputeGameFactory.create()` gas (baseline vs. RAT-hooked)
+Measured from `forge test --match-path "test/L1/DGF_CreateGasTest.t.sol" -vv` (printed from `gasleft()` deltas):
+
+| Scenario | create() gas |
+|----------|-------------:|
+| baseline (no RAT) | 161,110 |
+| RAT hooked, not triggered (prob=0) | 165,081 |
+| RAT hooked, triggered (prob=100%) | 304,417 |
 
 **How the Avg is computed:** This value is taken from Foundry’s `--gas-report` **Avg** column, which is the arithmetic mean over the actual number of calls executed in the gas test suite.
 For example, `submitCandidate` is executed **3 times** in `RAT_GasTest.t.sol` (once in each of `test_gas_OptimisticFlow`, `test_gas_DisputeByCloserKey`, and `test_gas_DisputeByNonInclusion`), and the reported Avg is the mean of those three runs.

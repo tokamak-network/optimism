@@ -11,7 +11,13 @@ AUTO_E2E_DISPUTE_CHECKS=${AUTO_E2E_DISPUTE_CHECKS:-1}
 PRINT_PROOFS=${PRINT_PROOFS:-0}
 PROOF_NODE_LIMIT=${PROOF_NODE_LIMIT:-6}
 MESSAGE_PASSER_ADDR=${MESSAGE_PASSER_ADDR:-0x4200000000000000000000000000000000000016}
+# Default prefunded key depends on the devnet package; we auto-detect if PRIVATE_KEY is not set.
 PREFUNDED_KEY=${PREFUNDED_KEY:-0xbcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31}
+ALT_PREFUNDED_KEY=${ALT_PREFUNDED_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80}
+USE_INTEGRATED_DGF=${USE_INTEGRATED_DGF:-1}
+VALIDATOR_COUNT=${VALIDATOR_COUNT:-10}
+DEVNET_ENV_JSON=${DEVNET_ENV_JSON:-/tmp/devnet-desc/env.json}
+DISPUTE_GAME_FACTORY=${DISPUTE_GAME_FACTORY:-}
 WAIT_ATTEMPTS=${WAIT_ATTEMPTS:-90}
 WAIT_SLEEP=${WAIT_SLEEP:-2}
 
@@ -19,6 +25,8 @@ if ! command -v jq >/dev/null 2>&1; then
   echo "Missing dependency: jq (required for log parsing)" >&2
   exit 1
 fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 _cleanup_ran=0
 cleanup_on_exit() {
@@ -29,7 +37,7 @@ cleanup_on_exit() {
   if [[ "${AUTO_CLEANUP}" == "1" ]]; then
     echo ""
     echo "== Cleanup Kurtosis (trap) =="
-    scripts/cleanup_kurtosis.sh || true
+    "$SCRIPT_DIR/cleanup_kurtosis.sh" || true
   fi
 }
 
@@ -211,13 +219,58 @@ if [[ -z "${L1_RPC:-}" || -z "${L2_RPC:-}" ]]; then
 fi
 
 if [[ -z "${PRIVATE_KEY:-}" ]]; then
-  PRIVATE_KEY="$PREFUNDED_KEY"
-  echo "PRIVATE_KEY not set; using prefunded key."
+  pick_key() {
+    local pk="$1"
+    local addr bal
+    addr=$(cast wallet address --private-key "$pk" 2>/dev/null || true)
+    if [[ -z "${addr:-}" ]]; then
+      return 1
+    fi
+    bal=$(cast balance "$addr" --rpc-url "$L1_RPC" 2>/dev/null || echo "0")
+    # Require at least 1 ETH.
+    if [[ "$bal" != "0" && "$bal" != "0.0" && "$bal" != "0 ETH" ]]; then
+      echo "$pk"
+      return 0
+    fi
+    return 1
+  }
+
+  if picked=$(pick_key "$PREFUNDED_KEY"); then
+    PRIVATE_KEY="$picked"
+  elif picked=$(pick_key "$ALT_PREFUNDED_KEY"); then
+    PRIVATE_KEY="$picked"
+  else
+    echo "PRIVATE_KEY not set and could not auto-detect a funded prefunded key." >&2
+    echo "Set PRIVATE_KEY explicitly (must be funded on L1)." >&2
+    exit 1
+  fi
+  echo "PRIVATE_KEY not set; auto-selected a funded prefunded key."
 fi
 
 deployer_addr=$(cast wallet address --private-key "$PRIVATE_KEY")
+deployer_addr="${deployer_addr,,}"
 if [[ -z "${GAME_ADDR:-}" ]]; then
   GAME_ADDR="$deployer_addr"
+fi
+
+# Discover DisputeGameFactoryProxy from devnet descriptor if available.
+if [[ -z "${DISPUTE_GAME_FACTORY:-}" && -f "$DEVNET_ENV_JSON" ]]; then
+  dgf=$(jq -r '.DisputeGameFactoryProxy // empty' "$DEVNET_ENV_JSON" 2>/dev/null || true)
+  if [[ -n "${dgf:-}" && "$dgf" != "null" ]]; then
+    DISPUTE_GAME_FACTORY="$dgf"
+  fi
+fi
+
+# Fallback: discover DisputeGameFactoryProxy from the enclave's op-deployer-configs artifact.
+if [[ -z "${DISPUTE_GAME_FACTORY:-}" && -n "${KURTOSIS_ENCLAVE:-}" ]]; then
+  tmp_dir="/tmp/rat-e2e/${KURTOSIS_ENCLAVE}"
+  mkdir -p "$tmp_dir" || true
+  if kurtosis files download "$KURTOSIS_ENCLAVE" op-deployer-configs "$tmp_dir/op-deployer-configs" >/dev/null 2>&1; then
+    dgf=$(grep -o '"DisputeGameFactoryProxy": *"[^"]*"' "$tmp_dir/op-deployer-configs/state.json" 2>/dev/null | head -1 | cut -d'"' -f4)
+    if [[ -n "${dgf:-}" ]]; then
+      DISPUTE_GAME_FACTORY="$dgf"
+    fi
+  fi
 fi
 
 if [[ -z "${L2_BLOCK:-}" ]]; then
@@ -270,7 +323,18 @@ BLOCK_HASH="$block_hash"
 if [[ -z "${RAT_ADDR:-}" && "$AUTO_DEPLOY_RAT" == "1" ]]; then
   echo "== Deploy RAT (DeployRAT.s.sol) =="
   pushd packages/contracts-bedrock >/dev/null
-  deploy_out=$(forge script scripts/DeployRAT.s.sol:DeployRAT --broadcast --rpc-url "$L1_RPC" --private-key "$PRIVATE_KEY" 2>&1 || true)
+  if [[ "$USE_INTEGRATED_DGF" == "1" && -z "${DISPUTE_GAME_FACTORY:-}" ]]; then
+    echo "Missing DISPUTE_GAME_FACTORY. Set DISPUTE_GAME_FACTORY or provide $DEVNET_ENV_JSON." >&2
+    exit 1
+  fi
+  # Deploy RAT initialized against the real DisputeGameFactory when using the integrated path.
+  # Default trigger probability is set to 50% at deploy time; we override to 100% below for deterministic checks.
+  if [[ "$USE_INTEGRATED_DGF" == "1" ]]; then
+    deploy_out=$(RAT_FACTORY="$DISPUTE_GAME_FACTORY" forge script scripts/DeployRAT.s.sol:DeployRAT \
+      --broadcast --rpc-url "$L1_RPC" --private-key "$PRIVATE_KEY" 2>&1 || true)
+  else
+    deploy_out=$(forge script scripts/DeployRAT.s.sol:DeployRAT --broadcast --rpc-url "$L1_RPC" --private-key "$PRIVATE_KEY" 2>&1 || true)
+  fi
   popd >/dev/null
   RAT_ADDR=$(echo "$deploy_out" | grep -oE 'RAT Proxy initialized and ready at: 0x[a-fA-F0-9]+' | awk '{print $7}' | tail -1)
   if [[ -z "$RAT_ADDR" ]]; then
@@ -285,118 +349,77 @@ if [[ -z "${RAT_ADDR:-}" ]]; then
   exit 1
 fi
 
-if [[ "$AUTO_STAKE" == "1" ]]; then
-  if [[ -z "${SECONDARY_KEY:-}" ]]; then
-    SECONDARY_KEY="0x$(openssl rand -hex 32)"
+if [[ "$USE_INTEGRATED_DGF" == "1" ]]; then
+  if [[ -z "${DISPUTE_GAME_FACTORY:-}" ]]; then
+    echo "Missing DISPUTE_GAME_FACTORY. Set DISPUTE_GAME_FACTORY or provide $DEVNET_ENV_JSON." >&2
+    exit 1
   fi
-  secondary_addr=$(cast wallet address --private-key "$SECONDARY_KEY")
 
-  send_and_wait "$L1_RPC" "$PRIVATE_KEY" "$secondary_addr" --value 2ether >/dev/null
-  send_and_wait "$L1_RPC" "$PRIVATE_KEY" "$RAT_ADDR" "stake()" --value 1ether >/dev/null
-  send_and_wait "$L1_RPC" "$SECONDARY_KEY" "$RAT_ADDR" "stake()" --value 1ether >/dev/null
+  echo "== Configure DisputeGameFactory RAT hook =="
+  # Requires DisputeGameFactory owner privileges *and* a factory implementation that exposes `setRAT`.
+  set +e
+  set_rat_json=$(cast send --json --rpc-url "$L1_RPC" --private-key "$PRIVATE_KEY" --gas-limit 1000000 \
+    "$DISPUTE_GAME_FACTORY" "setRAT(address)" "$RAT_ADDR" 2>&1)
+  set_rat_rc=$?
+  set -e
+  if [[ $set_rat_rc -ne 0 ]]; then
+    echo "Failed to call DisputeGameFactory.setRAT(address)." >&2
+    echo "This usually means the devnet is running a DisputeGameFactory implementation that does not include the RAT hook (stock optimism-package), or the caller is not the owner." >&2
+    echo "DISPUTE_GAME_FACTORY=$DISPUTE_GAME_FACTORY" >&2
+    echo "caller=$deployer_addr" >&2
+    echo "raw: $set_rat_json" >&2
+    exit 1
+  fi
+fi
+
+declare -A PK_BY_ADDR
+
+if [[ "$AUTO_STAKE" == "1" ]]; then
+  echo "== Stake validators =="
+  # Build a validator set we fully control (so whichever address is selected, we have its key).
+  # First validator is the deployer.
+  PK_BY_ADDR["$deployer_addr"]="$PRIVATE_KEY"
+  validators=("$deployer_addr")
+  validator_pks=("$PRIVATE_KEY")
+
+  # Generate additional validators.
+  for i in $(seq 2 "$VALIDATOR_COUNT"); do
+    pk="0x$(openssl rand -hex 32)"
+    addr=$(cast wallet address --private-key "$pk")
+    addr="${addr,,}"
+    PK_BY_ADDR["$addr"]="$pk"
+    validators+=("$addr")
+    validator_pks+=("$pk")
+  done
+
+  # Fund + stake each validator.
+  for i in "${!validators[@]}"; do
+    addr="${validators[$i]}"
+    pk="${validator_pks[$i]}"
+    # Fund each validator from deployer.
+    send_and_wait "$L1_RPC" "$PRIVATE_KEY" "$addr" --value 2ether >/dev/null
+    send_and_wait "$L1_RPC" "$pk" "$RAT_ADDR" "stake()" --value 1ether >/dev/null
+  done
 fi
 
 echo "== Ensure trigger probability =="
 send_and_wait "$L1_RPC" "$PRIVATE_KEY" "$RAT_ADDR" "setRatTriggerProbability(uint256)" "100000" >/dev/null
 
-echo "== Step A: triggerAttentionTest =="
-tx_json=$(cast send --json "$RAT_ADDR" \
-  "triggerAttentionTest(address,bytes32,bytes32,uint64)" \
-  "$GAME_ADDR" "$OUTPUT_ROOT" "0x0000000000000000000000000000000000000000000000000000000000000000" "$L2_BLOCK" \
-  --private-key "$PRIVATE_KEY" \
-  --rpc-url "$L1_RPC")
-tx_hash=$(echo "$tx_json" | jq -r '.transactionHash')
-if [[ -z "$tx_hash" || "$tx_hash" == "null" ]]; then
-  echo "Failed to parse transaction hash from cast send output." >&2
-  exit 1
-fi
-
-echo ""
-echo "== Step B: fetch AttentionTriggered seed =="
-receipt_json=$(cast receipt "$tx_hash" --json --rpc-url "$L1_RPC")
-status=$(echo "$receipt_json" | jq -r '.status')
-if [[ "$status" != "0x1" && "$status" != "1" ]]; then
-  echo "triggerAttentionTest transaction failed: $tx_hash" >&2
-  echo "$receipt_json" >&2
-  exit 1
-fi
-block_number=$(echo "$receipt_json" | jq -r '.blockNumber')
-if [[ -z "$block_number" || "$block_number" == "null" ]]; then
-  echo "Failed to parse block number from receipt." >&2
-  exit 1
-fi
-
-logs_json=$(cast logs --address "$RAT_ADDR" \
-  "AttentionTriggered(address,address,bytes32)" \
-  --rpc-url "$L1_RPC" \
-  --from-block "$block_number" \
-  --to-block "$block_number" \
-  --json)
-
-log_count=$(echo "$logs_json" | jq 'length')
-if [[ "$log_count" -eq 0 ]]; then
-  echo "No AttentionTriggered logs found in block $block_number." >&2
-  exit 1
-fi
-
-seed=$(echo "$logs_json" | jq -r '.[0].data')
-if [[ -z "$seed" || "$seed" == "null" ]]; then
-  echo "Failed to parse seed from logs." >&2
-  exit 1
-fi
-
-echo "Seed: $seed"
-echo ""
-echo "== Step C: compute closest key =="
-closest_json=$(RPC_URL="$L2_RPC" node scripts/find_closest_key.js "$seed" 2>/dev/null)
-echo "$closest_json"
-closest_key=$(echo "$closest_json" | jq -r '.closestKey')
-closest_addr=$(echo "$closest_json" | jq -r '.closestAddress')
-farthest_key=$(echo "$closest_json" | jq -r '.farthestKey')
-farthest_addr=$(echo "$closest_json" | jq -r '.farthestAddress')
-if [[ -z "$closest_key" || "$closest_key" == "null" ]]; then
-  echo "Failed to parse closestKey from discovery output." >&2
-  exit 1
-fi
-if [[ -z "$closest_addr" || "$closest_addr" == "null" ]]; then
-  echo "Failed to parse closestAddress from discovery output." >&2
-  exit 1
-fi
-if [[ -z "$farthest_key" || "$farthest_key" == "null" || -z "$farthest_addr" || "$farthest_addr" == "null" ]]; then
-  echo "Failed to parse farthestKey/farthestAddress from discovery output." >&2
-  exit 1
-fi
-
-echo ""
-echo "== Step D: submitCandidate (auto) =="
-candidate_key="$closest_key"
-if [[ "$CHEAT_NON_INCLUSION" == "1" ]]; then
-  # Use a random address encoded as bytes32 (low 20 bytes) to keep the proof semantics consistent.
-  rand_addr="0x$(openssl rand -hex 20)"
-  candidate_key=$(bytes32_from_address "$rand_addr")
-  echo "CHEAT_NON_INCLUSION=1: submitting random candidate key (to exercise non-inclusion dispute)."
-fi
-att_data=$(cast call --rpc-url "$L1_RPC" --data "$(cast calldata "getAttentionTest(address)" "$GAME_ADDR")" "$RAT_ADDR")
-att_info=$(cast decode-abi "getAttentionTest(address)(bytes32,bytes32,uint96,address,address,uint64,uint64,uint8)" "$att_data")
-mapfile -t att_lines <<<"$att_info"
-_out_root="${att_lines[0]:-}"
-_seed="${att_lines[1]:-}"
-_bond="${att_lines[2]:-}"
-_candidate_addr="${att_lines[3]:-}"
-selected_challenger="${att_lines[4]:-}"
-_deadline="${att_lines[5]:-}"
-_l2block="${att_lines[6]:-}"
-_status="${att_lines[7]:-}"
-_bond="${_bond%% *}"
-
-if [[ "$selected_challenger" == "0x0000000000000000000000000000000000000000" || -z "$selected_challenger" ]]; then
-  echo "No challenger selected. Re-triggering once..."
+if [[ "$USE_INTEGRATED_DGF" != "1" ]]; then
+  echo "== Step A: triggerAttentionTest =="
   tx_json=$(cast send --json "$RAT_ADDR" \
     "triggerAttentionTest(address,bytes32,bytes32,uint64)" \
     "$GAME_ADDR" "$OUTPUT_ROOT" "0x0000000000000000000000000000000000000000000000000000000000000000" "$L2_BLOCK" \
     --private-key "$PRIVATE_KEY" \
     --rpc-url "$L1_RPC")
   tx_hash=$(echo "$tx_json" | jq -r '.transactionHash')
+  if [[ -z "$tx_hash" || "$tx_hash" == "null" ]]; then
+    echo "Failed to parse transaction hash from cast send output." >&2
+    exit 1
+  fi
+
+  echo ""
+  echo "== Step B: fetch AttentionTriggered seed =="
   receipt_json=$(cast receipt "$tx_hash" --json --rpc-url "$L1_RPC")
   status=$(echo "$receipt_json" | jq -r '.status')
   if [[ "$status" != "0x1" && "$status" != "1" ]]; then
@@ -404,86 +427,51 @@ if [[ "$selected_challenger" == "0x0000000000000000000000000000000000000000" || 
     echo "$receipt_json" >&2
     exit 1
   fi
-  att_data=$(cast call --rpc-url "$L1_RPC" --data "$(cast calldata "getAttentionTest(address)" "$GAME_ADDR")" "$RAT_ADDR")
-  att_info=$(cast decode-abi "getAttentionTest(address)(bytes32,bytes32,uint96,address,address,uint64,uint64,uint8)" "$att_data")
-  mapfile -t att_lines <<<"$att_info"
-  _out_root="${att_lines[0]:-}"
-  _seed="${att_lines[1]:-}"
-  _bond="${att_lines[2]:-}"
-  _candidate_addr="${att_lines[3]:-}"
-  selected_challenger="${att_lines[4]:-}"
-  _deadline="${att_lines[5]:-}"
-  _l2block="${att_lines[6]:-}"
-  _status="${att_lines[7]:-}"
-  _bond="${_bond%% *}"
-fi
-
-submit_key="$PRIVATE_KEY"
-if [[ "$selected_challenger" == "$secondary_addr" ]]; then
-  submit_key="$SECONDARY_KEY"
-elif [[ "$selected_challenger" != "$deployer_addr" ]]; then
-  echo "Selected challenger not found in local keys: $selected_challenger" >&2
-  exit 1
-fi
-
-send_and_wait "$L1_RPC" "$submit_key" "$RAT_ADDR" \
-  "submitCandidate(address,bytes32,bytes32,bytes32,bytes32,bytes32)" \
-  "$GAME_ADDR" "$candidate_key" "$STATE_ROOT" "$version" "$MESSAGE_PASSER_ROOT" "$BLOCK_HASH" >/dev/null
-
-echo ""
-echo "== Step E: disputeByNonInclusion (optional, requires real MPT proof) =="
-if [[ "$AUTO_DISPUTE_NON_INCLUSION" != "1" ]]; then
-  echo "Skipping non-inclusion dispute (set AUTO_DISPUTE_NON_INCLUSION=1 to run)."
-else
-  dispute_key="$SECONDARY_KEY"
-  if [[ "$submit_key" == "$SECONDARY_KEY" ]]; then
-    dispute_key="$PRIVATE_KEY"
-  fi
-
-  # Candidate is interpreted as address(uint160(uint256(candidate_key))).
-  candidate_addr="0x${candidate_key: -40}"
-  candidate_addr=$(cast to-checksum "$candidate_addr")
-  proof_obj=$(get_account_proof_obj "$candidate_addr") || true
-  print_proof_summary "non-inclusion candidate" "$candidate_addr" "${proof_obj:-null}"
-  account_proof_inner=$(echo "${proof_obj:-null}" | jq -r '.accountProof | join(",")')
-  account_proof="[$account_proof_inner]"
-  if [[ -z "${account_proof:-}" || "$account_proof" == "[]" ]]; then
-    echo "Failed to fetch accountProof for candidate address $candidate_addr" >&2
+  block_number=$(echo "$receipt_json" | jq -r '.blockNumber')
+  if [[ -z "$block_number" || "$block_number" == "null" ]]; then
+    echo "Failed to parse block number from receipt." >&2
     exit 1
   fi
 
-  # If CHEAT_NON_INCLUSION=1, we expect the dispute to succeed (candidate likely absent).
-  # Otherwise, for an honest candidate, the dispute should typically revert (KeyExists).
-  set +e
-  dispute_tx_json=$(cast send --json --gas-limit 3000000 --rpc-url "$L1_RPC" --private-key "$dispute_key" "$RAT_ADDR" \
-    "disputeByNonInclusion(address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes[])" \
-    "$GAME_ADDR" "$candidate_key" "$STATE_ROOT" "$version" "$MESSAGE_PASSER_ROOT" "$BLOCK_HASH" "$account_proof")
-  send_rc=$?
-  set -e
+  logs_json=$(cast logs --address "$RAT_ADDR" \
+    "AttentionTriggered(address,address,bytes32)" \
+    --rpc-url "$L1_RPC" \
+    --from-block "$block_number" \
+    --to-block "$block_number" \
+    --json)
 
-  if [[ $send_rc -ne 0 ]]; then
-    echo "disputeByNonInclusion submission failed (RPC error)."
-    echo "$dispute_tx_json"
+  log_count=$(echo "$logs_json" | jq 'length')
+  if [[ "$log_count" -eq 0 ]]; then
+    echo "No AttentionTriggered logs found in block $block_number." >&2
     exit 1
   fi
 
-  dispute_tx=$(echo "$dispute_tx_json" | jq -r '.transactionHash')
-  echo "Dispute tx: $dispute_tx"
-  dispute_receipt=$(cast receipt "$dispute_tx" --json --rpc-url "$L1_RPC")
-  dispute_status=$(echo "$dispute_receipt" | jq -r '.status')
+  seed=$(echo "$logs_json" | jq -r '.[0].data')
+  if [[ -z "$seed" || "$seed" == "null" ]]; then
+    echo "Failed to parse seed from logs." >&2
+    exit 1
+  fi
 
-  if [[ "$dispute_status" != "0x1" && "$dispute_status" != "1" ]]; then
-    echo "Dispute reverted (expected when candidate exists / proof shows inclusion)."
-    echo "$dispute_receipt" | jq '.'
-  else
-    dispute_block=$(echo "$dispute_receipt" | jq -r '.blockNumber')
-    dispute_logs=$(cast logs --address "$RAT_ADDR" \
-      "DisputeSuccessful(address,address,bytes32,uint256,string)" \
-      --rpc-url "$L1_RPC" \
-      --from-block "$dispute_block" \
-      --to-block "$dispute_block" \
-      --json)
-    echo "$dispute_logs" | jq '.'
+  echo "Seed: $seed"
+  echo ""
+  echo "== Step C: compute closest key =="
+  closest_json=$(RPC_URL="$L2_RPC" node scripts/find_closest_key.js "$seed" 2>/dev/null)
+  echo "$closest_json"
+  closest_key=$(echo "$closest_json" | jq -r '.closestKey')
+  closest_addr=$(echo "$closest_json" | jq -r '.closestAddress')
+  farthest_key=$(echo "$closest_json" | jq -r '.farthestKey')
+  farthest_addr=$(echo "$closest_json" | jq -r '.farthestAddress')
+  if [[ -z "$closest_key" || "$closest_key" == "null" ]]; then
+    echo "Failed to parse closestKey from discovery output." >&2
+    exit 1
+  fi
+  if [[ -z "$closest_addr" || "$closest_addr" == "null" ]]; then
+    echo "Failed to parse closestAddress from discovery output." >&2
+    exit 1
+  fi
+  if [[ -z "$farthest_key" || "$farthest_key" == "null" || -z "$farthest_addr" || "$farthest_addr" == "null" ]]; then
+    echo "Failed to parse farthestKey/farthestAddress from discovery output." >&2
+    exit 1
   fi
 fi
 
@@ -525,6 +513,286 @@ if [[ "$AUTO_E2E_DISPUTE_CHECKS" == "1" ]]; then
   echo ""
   echo "== E2E Dispute checks (non-inclusion + closer-key, success + failure) =="
 
+  if [[ "$USE_INTEGRATED_DGF" == "1" ]]; then
+    if [[ -z "${DISPUTE_GAME_FACTORY:-}" ]]; then
+      echo "Missing DISPUTE_GAME_FACTORY. Set DISPUTE_GAME_FACTORY or provide $DEVNET_ENV_JSON." >&2
+      exit 1
+    fi
+
+    # Read required init bond for CANNON (game type 0).
+    init_bond_hex=$(cast call --rpc-url "$L1_RPC" "$DISPUTE_GAME_FACTORY" "initBonds(uint32)(uint256)" 0)
+    init_bond_dec=$(cast to-dec "$init_bond_hex" 2>/dev/null || echo "0")
+
+    # Helper: (re)compute L2 components for a given block number.
+    set_l2_context() {
+      local l2_num_dec="$1"
+      l2_block_hex=$(cast to-hex "$l2_num_dec")
+
+      local block_json_local=""
+      for i in $(seq 1 "$WAIT_ATTEMPTS"); do
+        local block_raw_local
+        block_raw_local=$(cast rpc --rpc-url "$L2_RPC" eth_getBlockByNumber "$l2_block_hex" false 2>/dev/null || true)
+        block_json_local=$(parse_result_object "$block_raw_local" 2>/dev/null || true)
+        if [[ "$block_json_local" != "null" && -n "$block_json_local" ]]; then
+          break
+        fi
+        echo "Waiting for L2 block data (block=$l2_num_dec)... ($i/$WAIT_ATTEMPTS)"
+        sleep "$WAIT_SLEEP"
+      done
+      if [[ "$block_json_local" == "null" || -z "$block_json_local" ]]; then
+        echo "Failed to fetch L2 block data for $l2_num_dec." >&2
+        exit 1
+      fi
+
+      STATE_ROOT=$(echo "$block_json_local" | jq -r '.stateRoot')
+      BLOCK_HASH=$(echo "$block_json_local" | jq -r '.hash')
+
+      local proof_json_local=""
+      for i in $(seq 1 "$WAIT_ATTEMPTS"); do
+        local proof_raw_local
+        proof_raw_local=$(cast rpc --rpc-url "$L2_RPC" eth_getProof "$MESSAGE_PASSER_ADDR" "[]" "$l2_block_hex" 2>/dev/null || true)
+        proof_json_local=$(parse_result_object "$proof_raw_local" 2>/dev/null || true)
+        if [[ "$proof_json_local" != "null" && -n "$proof_json_local" ]]; then
+          break
+        fi
+        echo "Waiting for L2 proof data (block=$l2_num_dec)... ($i/$WAIT_ATTEMPTS)"
+        sleep "$WAIT_SLEEP"
+      done
+      if [[ "$proof_json_local" == "null" || -z "$proof_json_local" ]]; then
+        echo "Failed to fetch L2 proof data for $l2_num_dec." >&2
+        exit 1
+      fi
+
+      MESSAGE_PASSER_ROOT=$(echo "$proof_json_local" | jq -r '.storageHash')
+      version="0x0000000000000000000000000000000000000000000000000000000000000000"
+      encoded=$(cast abi-encode "f(bytes32,bytes32,bytes32,bytes32)" "$version" "$STATE_ROOT" "$MESSAGE_PASSER_ROOT" "$BLOCK_HASH")
+      OUTPUT_ROOT=$(cast keccak "$encoded")
+      L2_BLOCK="$l2_num_dec"
+    }
+
+    # Helper: create a dispute game via factory (this should trigger RAT via integrated hook).
+    create_game_and_get_seed() {
+      local label="$1"
+      local l2_num_dec="$2"
+      set_l2_context "$l2_num_dec"
+
+      # extraData = bytes32(l2BlockNumber) || bytes32(l2BlockHash)
+      local l2_word
+      l2_word=$(printf "0x%064x" "$l2_num_dec")
+      extra_data="0x${l2_word#0x}${BLOCK_HASH#0x}"
+
+      echo ""
+      echo "-- Case: $label"
+      echo "Creating DisputeGame via factory (integrated trigger)"
+      echo "  DGF: $DISPUTE_GAME_FACTORY"
+      echo "  initBond: $init_bond_dec"
+      echo "  l2Block: $L2_BLOCK"
+
+      if [[ "$init_bond_dec" == "0" ]]; then
+        tx_json=$(cast send --json --gas-limit 3000000 --rpc-url "$L1_RPC" --private-key "$PRIVATE_KEY" "$DISPUTE_GAME_FACTORY" \
+          "create(uint32,bytes32,bytes)" 0 "$OUTPUT_ROOT" "$extra_data")
+      else
+        tx_json=$(cast send --json --gas-limit 3000000 --rpc-url "$L1_RPC" --private-key "$PRIVATE_KEY" --value "$init_bond_dec" "$DISPUTE_GAME_FACTORY" \
+          "create(uint32,bytes32,bytes)" 0 "$OUTPUT_ROOT" "$extra_data")
+      fi
+
+      tx_hash=$(echo "$tx_json" | jq -r '.transactionHash')
+      receipt_json=$(cast receipt "$tx_hash" --json --rpc-url "$L1_RPC")
+      status=$(echo "$receipt_json" | jq -r '.status')
+      if [[ "$status" != "0x1" && "$status" != "1" ]]; then
+        echo "create() failed: $tx_hash" >&2
+        echo "$receipt_json" | jq '.' >&2
+        exit 1
+      fi
+      block_number=$(echo "$receipt_json" | jq -r '.blockNumber')
+
+      # Find the created game address.
+      dgf_logs=$(cast logs --address "$DISPUTE_GAME_FACTORY" "DisputeGameCreated(address,uint32,bytes32)" \
+        --rpc-url "$L1_RPC" --from-block "$block_number" --to-block "$block_number" --json)
+      # Some cast versions return raw topics without decoded args. DisputeGameCreated has indexed disputeProxy.
+      game_topic=$(echo "$dgf_logs" | jq -r '.[0].topics[1] // empty')
+      game_addr=""
+      if [[ -n "${game_topic:-}" && "$game_topic" != "null" ]]; then
+        game_addr="0x${game_topic: -40}"
+      else
+        game_addr=$(echo "$dgf_logs" | jq -r '.[0].args.disputeProxy // empty')
+      fi
+      if [[ -z "${game_addr:-}" ]]; then
+        echo "Failed to parse DisputeGameCreated.disputeProxy from logs." >&2
+        echo "$dgf_logs" | jq '.' >&2
+        exit 1
+      fi
+      game_addr=$(cast to-checksum "$game_addr")
+
+      # Find the AttentionTriggered event emitted by RAT during factory create().
+      rat_logs=$(cast logs --address "$RAT_ADDR" "AttentionTriggered(address,address,bytes32)" \
+        --rpc-url "$L1_RPC" --from-block "$block_number" --to-block "$block_number" --json)
+      # AttentionTriggered has indexed gameAddress and challenger, and seed in data.
+      seed=$(echo "$rat_logs" | jq -r --arg g "${game_addr,,}" '
+        .[] | select(("0x"+(.topics[1][26:66]))==$g) | .data' | head -1)
+      selected_challenger=$(echo "$rat_logs" | jq -r --arg g "${game_addr,,}" '
+        .[] | select(("0x"+(.topics[1][26:66]))==$g) | ("0x"+(.topics[2][26:66]))' | head -1)
+      selected_challenger="${selected_challenger,,}"
+      if [[ -z "${seed:-}" || "$seed" == "null" || -z "${selected_challenger:-}" || "$selected_challenger" == "null" ]]; then
+        echo "Failed to find AttentionTriggered for game=$game_addr in block $block_number" >&2
+        echo "$rat_logs" | jq '.' >&2
+        exit 1
+      fi
+
+      echo "  game: $game_addr"
+      echo "  selected: $selected_challenger"
+      echo "  seed: $seed"
+    }
+
+    # Helper to run a full case with integrated create().
+    run_case_integrated() {
+      local label="$1"
+      local l2_num_dec="$2"
+      local submit_mode="$3"   # random-missing | closest | farthest
+      local dispute_kind="$4"  # non-inclusion | closer-key
+      local dispute_mode="$5"  # closest | farthest (for closer-key)
+      local expect_success="$6" # 1 or 0
+
+      create_game_and_get_seed "$label" "$l2_num_dec"
+
+      # Discover closest/farthest keys for this seed.
+      closest_json=$(RPC_URL="$L2_RPC" node scripts/find_closest_key.js "$seed" 2>/dev/null)
+      close_key=$(echo "$closest_json" | jq -r '.closestKey')
+      close_addr=$(echo "$closest_json" | jq -r '.closestAddress')
+      far_key=$(echo "$closest_json" | jq -r '.farthestKey')
+      far_addr=$(echo "$closest_json" | jq -r '.farthestAddress')
+      if [[ -z "${close_key:-}" || "$close_key" == "null" || -z "${close_addr:-}" || "$close_addr" == "null" ]]; then
+        echo "Failed to compute closest key for $label" >&2
+        echo "$closest_json" >&2
+        exit 1
+      fi
+      if [[ -z "${far_key:-}" || "$far_key" == "null" || -z "${far_addr:-}" || "$far_addr" == "null" ]]; then
+        echo "Failed to compute farthest key for $label" >&2
+        echo "$closest_json" >&2
+        exit 1
+      fi
+      close_addr=$(cast to-checksum "$close_addr")
+      far_addr=$(cast to-checksum "$far_addr")
+
+      submit_pk="${PK_BY_ADDR[$selected_challenger]:-}"
+      if [[ -z "${submit_pk:-}" ]]; then
+        echo "Selected challenger not found in local validator set: $selected_challenger" >&2
+        exit 1
+      fi
+
+      # Choose candidate key.
+      if [[ "$submit_mode" == "random-missing" ]]; then
+        rnd_addr=$(cast to-checksum "0x$(openssl rand -hex 20)")
+        candidate_key=$(bytes32_from_address "$rnd_addr")
+        candidate_addr="$rnd_addr"
+      elif [[ "$submit_mode" == "closest" ]]; then
+        candidate_key="$close_key"
+        candidate_addr="$close_addr"
+      else
+        candidate_key="$far_key"
+        candidate_addr="$far_addr"
+      fi
+
+      # Choose disputer (any other validator).
+      disputer_pk=""
+      for addr in "${validators[@]}"; do
+        if [[ "$addr" != "$selected_challenger" ]]; then
+          disputer_pk="${PK_BY_ADDR[$addr]}"
+          break
+        fi
+      done
+      if [[ -z "${disputer_pk:-}" ]]; then
+        echo "Failed to pick a disputer key." >&2
+        exit 1
+      fi
+
+      # Submit candidate to RAT (on the game address created by DGF).
+      send_and_wait "$L1_RPC" "$submit_pk" "$RAT_ADDR" \
+        "submitCandidate(address,bytes32,bytes32,bytes32,bytes32,bytes32)" \
+        "$game_addr" "$candidate_key" "$STATE_ROOT" "$version" "$MESSAGE_PASSER_ROOT" "$BLOCK_HASH" >/dev/null
+
+      if [[ "$dispute_kind" == "non-inclusion" ]]; then
+        pobj=$(get_account_proof_obj "$candidate_addr") || true
+        print_proof_summary "$label (non-inclusion proof target)" "$candidate_addr" "${pobj:-null}"
+        proof_inner=$(echo "${pobj:-null}" | jq -r '.accountProof | join(",")')
+        proof="[$proof_inner]"
+        if [[ -z "${proof_inner:-}" || "$proof" == "[]" ]]; then
+          echo "Failed to get accountProof for $candidate_addr" >&2
+          exit 1
+        fi
+        dispute_receipt=$(send_and_receipt "$L1_RPC" "$disputer_pk" --gas-limit 3000000 "$RAT_ADDR" \
+          "disputeByNonInclusion(address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes[])" \
+          "$game_addr" "$candidate_key" "$STATE_ROOT" "$version" "$MESSAGE_PASSER_ROOT" "$BLOCK_HASH" "$proof")
+      else
+        if [[ "$dispute_mode" == "closest" ]]; then
+          dispute_key="$close_key"
+          dispute_addr="$close_addr"
+        else
+          dispute_key="$far_key"
+          dispute_addr="$far_addr"
+        fi
+        pobj=$(get_account_proof_obj "$dispute_addr") || true
+        print_proof_summary "$label (closer-key proof target)" "$dispute_addr" "${pobj:-null}"
+        proof_inner=$(echo "${pobj:-null}" | jq -r '.accountProof | join(",")')
+        proof="[$proof_inner]"
+        if [[ -z "${proof_inner:-}" || "$proof" == "[]" ]]; then
+          echo "Failed to get accountProof for $dispute_addr" >&2
+          exit 1
+        fi
+        dispute_receipt=$(send_and_receipt "$L1_RPC" "$disputer_pk" --gas-limit 3000000 "$RAT_ADDR" \
+          "disputeByCloserKey(address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes[])" \
+          "$game_addr" "$dispute_key" "$STATE_ROOT" "$version" "$MESSAGE_PASSER_ROOT" "$BLOCK_HASH" "$proof")
+      fi
+
+      ds=$(echo "$dispute_receipt" | jq -r '.status')
+      gas_used=$(echo "$dispute_receipt" | jq -r '.gasUsed')
+      gas_used_dec=$(cast to-dec "$gas_used" 2>/dev/null || echo "")
+      proof_nodes=$(echo "${pobj:-null}" | jq -r '.accountProof | length')
+
+      if [[ "$expect_success" == "1" ]]; then
+        if [[ "$ds" != "0x1" && "$ds" != "1" ]]; then
+          echo "Expected dispute SUCCESS but reverted for $label" >&2
+          echo "$dispute_receipt" | jq '.' >&2
+          exit 1
+        fi
+        dblock=$(echo "$dispute_receipt" | jq -r '.blockNumber')
+        dlogs=$(cast logs --address "$RAT_ADDR" "DisputeSuccessful(address,address,bytes32,uint256,string)" \
+          --rpc-url "$L1_RPC" --from-block "$dblock" --to-block "$dblock" --json)
+        if [[ "$(echo "$dlogs" | jq 'length')" -eq 0 ]]; then
+          echo "Expected DisputeSuccessful log but none found for $label" >&2
+          exit 1
+        fi
+        if [[ -n "${gas_used_dec}" ]]; then
+          echo "PASS: $label (success) gasUsed=$gas_used_dec accountProofNodes=$proof_nodes"
+        else
+          echo "PASS: $label (success) gasUsed=$gas_used accountProofNodes=$proof_nodes"
+        fi
+      else
+        if [[ "$ds" == "0x1" || "$ds" == "1" ]]; then
+          echo "Expected dispute FAILURE but succeeded for $label" >&2
+          echo "$dispute_receipt" | jq '.' >&2
+          exit 1
+        fi
+        if [[ -n "${gas_used_dec}" ]]; then
+          echo "PASS: $label (failure) gasUsed=$gas_used_dec accountProofNodes=$proof_nodes"
+        else
+          echo "PASS: $label (failure) gasUsed=$gas_used accountProofNodes=$proof_nodes"
+        fi
+      fi
+    }
+
+    # Use different L2 blocks per case to avoid DisputeGameFactory UUID collisions (extraData includes l2BlockNumber).
+    base_l2="$L2_BLOCK"
+    run_case_integrated "non-inclusion SUCCESS (missing addr)" "$base_l2" "random-missing" "non-inclusion" "closest" 1
+    run_case_integrated "non-inclusion FAILURE (existing addr -> KeyExists)" "$((base_l2 - 1))" "closest" "non-inclusion" "closest" 0
+    run_case_integrated "closer-key SUCCESS (closer exists)" "$((base_l2 - 2))" "farthest" "closer-key" "closest" 1
+    run_case_integrated "closer-key FAILURE (not closer)" "$((base_l2 - 3))" "closest" "closer-key" "farthest" 0
+
+    # Integrated path ends here (avoid running the legacy direct-trigger flow below).
+    exit 0
+  fi
+
+  # Legacy (direct trigger) path below.
   # Helper to run a full flow on a fresh game address.
   run_case() {
     local label="$1"
