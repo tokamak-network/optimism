@@ -48,9 +48,10 @@ This procedure validates the protocol on a live L2 network using **Kurtosis** to
 In other words, it is an **end-to-end workflow** validation of:
 `DisputeGameFactory.create()` → (optional) `RAT.triggerAttentionTest()` → `submitCandidate()` → (optional) disputes → stake/prize effects,
 executed against a real devnet (L1 receipts + L2 trie proofs).
-
-> Scope note: this is not a full “OP system e2e” where `op-proposer` autonomously drives `create()` in a long-running service loop under sustained L2 traffic.
-> Instead, the scripts intentionally control `create()` to make the RAT paths observable and reproducible.
+Concretely, the scripts execute real L1 transactions (and real L2 `eth_getProof` inputs) end-to-end and verify:
+- that the factory hook wiring is correct (`create()` → RAT),
+- that disputes succeed/fail as expected under real proofs,
+- and that the resulting stake/prize accounting matches the protocol rules.
 
 ### Prerequisites
 - Docker Engine
@@ -155,6 +156,10 @@ Gas costs are reported in two complementary ways:
 ### Unit-test gas (deterministic)
 From `forge test --match-path "test/L1/RAT_GasTest.t.sol" --gas-report`:
 
+These numbers measure the **RAT contract functions themselves** (called directly), not the full `create()` path.
+In particular, `triggerAttentionTest` can be noticeably higher in unit tests when the selected validator’s stake crosses
+`minimumStakingBalance`, because validity set maintenance (`validChallengers` updates) adds extra SSTORE/array work.
+
 | Function | Measured (Avg) | Notes |
 |----------|---------------:|-------|
 | `triggerAttentionTest` | 184,529 | Upfront bond+penalty accounting + automatic validity refresh. |
@@ -162,6 +167,9 @@ From `forge test --match-path "test/L1/RAT_GasTest.t.sol" --gas-report`:
 
 ### `DisputeGameFactory.create()` gas (baseline vs. RAT-hooked)
 Measured from `forge test --match-path "test/L1/DGF_CreateGasTest.t.sol" -vv` (printed from `gasleft()` deltas):
+
+These numbers measure the **full `create()` transaction**, including game clone/initialization and factory bookkeeping.
+To isolate the RAT-hook overhead, compare deltas vs. the baseline.
 
 | Scenario | create() gas |
 |----------|-------------:|
