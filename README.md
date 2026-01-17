@@ -2,7 +2,7 @@
 
 ## Overview
 This repository hosts a reference implementation of the **Randomized Attention Test (RAT) Protocol** and a reproducible workflow to validate its behavior and costs.
-RAT uses an **optimistic closest-key mechanism**: a challenged validator submits a candidate key cheaply, and independent watchdogs can dispute it on-chain with verifiable evidence (non-inclusion / closer-key).
+RAT uses a closest-key mechanism: a challenged validator submits a candidate key cheaply, and independent watchdogs can dispute it on-chain with verifiable evidence (non-inclusion / closer-key).
 
 Verification is organized into two layers:
 1.  **Logic verification (Foundry)**: deterministic, self-contained validation of the protocol scenarios.
