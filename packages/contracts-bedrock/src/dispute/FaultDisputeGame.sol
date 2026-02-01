@@ -68,6 +68,7 @@ import { IBigStepper, IPreimageOracle } from "interfaces/dispute/IBigStepper.sol
 import { IAnchorStateRegistry } from "interfaces/dispute/IAnchorStateRegistry.sol";
 import { IDisputeGame } from "interfaces/dispute/IDisputeGame.sol";
 import { IRAT } from "interfaces/L1/IRAT.sol";
+import { IWinningChallengerTracker } from "src/dispute/IWinningChallengerTracker.sol";
 
 /// @title FaultDisputeGame
 /// @notice An implementation of the `IFaultDisputeGame` interface.
@@ -233,6 +234,9 @@ contract FaultDisputeGame is Clone, ISemver {
     /// @notice RAT contract address
     address public rat;
 
+    /// @notice External winning challenger tracker contract
+    address public winningChallengerTracker;
+
     /// @param _params Parameters for creating a new FaultDisputeGame.
     constructor(GameConstructorParams memory _params) {
         // The max game depth may not be greater than `LibPosition.MAX_POSITION_BITLEN - 1`.
@@ -285,21 +289,27 @@ contract FaultDisputeGame is Clone, ISemver {
         L2_CHAIN_ID = _params.l2ChainId;
     }
 
-    /// @notice Initializes the contract with RAT address.
+    /// @notice Initializes the contract with RAT and WinningChallengerTracker addresses.
+    /// @dev This function may only be called once.
+    function initialize(address _rat, address _winningChallengerTracker) public payable virtual {
+        _initialize(_rat, _winningChallengerTracker);
+    }
+
+    /// @notice Initializes the contract with RAT address only.
     /// @dev This function may only be called once.
     function initialize(address _rat) public payable virtual {
-        _initialize(_rat);
+        _initialize(_rat, address(0));
     }
 
     /// @notice Initializes the contract without RAT.
     /// @dev This function may only be called once.
     function initialize() public payable virtual {
-        _initialize(address(0));
+        _initialize(address(0), address(0));
     }
 
     /// @notice Internal initialization function.
     /// @dev This function may only be called once.
-    function _initialize(address _rat) internal virtual {
+    function _initialize(address _rat, address _winningChallengerTracker) internal virtual {
         // SAFETY: Any revert in this function will bubble up to the DisputeGameFactory and
         // prevent the game from being created.
         //
@@ -329,15 +339,18 @@ contract FaultDisputeGame is Clone, ISemver {
         // in the factory, but are not used by the game, which would allow for multiple dispute games for the same
         // output proposal to be created.
         //
-        // Expected length: 122 bytes (without RAT) or 154 bytes (with RAT address)
+        // Expected length: 122 bytes (base) + 32 bytes per optional address
         // - 4 bytes selector
         // - 20 bytes creator address
         // - 32 bytes root claim
         // - 32 bytes l1 head
         // - 32 bytes extraData
         // - 2 bytes CWIA length
-        // - 32 bytes RAT address (optional, when _rat != address(0)) - Not included in CWIA.
-        uint256 expectedLength = (_rat != address(0)) ? 154 : 122;
+        // - 32 bytes RAT address (optional) - Not included in CWIA.
+        // - 32 bytes WinningChallengerTracker address (optional) - Not included in CWIA.
+        uint256 expectedLength = 122;
+        if (_rat != address(0)) expectedLength += 32;
+        if (_winningChallengerTracker != address(0)) expectedLength += 32;
         if (msg.data.length != expectedLength) revert BadExtraData();
 
         // Do not allow the game to be initialized if the root claim corresponds to a block at or before the
@@ -373,6 +386,9 @@ contract FaultDisputeGame is Clone, ISemver {
 
         // Set RAT contract address
         if (_rat != address(0)) rat = _rat;
+
+        // Set WinningChallengerTracker contract address
+        if (_winningChallengerTracker != address(0)) winningChallengerTracker = _winningChallengerTracker;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -791,6 +807,7 @@ contract FaultDisputeGame is Clone, ISemver {
             address counteredBy = subgameRootClaim.counteredBy;
             address recipient = counteredBy == address(0) ? subgameRootClaim.claimant : counteredBy;
             _distributeBond(recipient, subgameRootClaim);
+            _recordWinningChallenger(recipient);
             resolveClaimRat(recipient);
             resolvedSubgames[_claimIndex] = true;
             return;
@@ -852,6 +869,7 @@ contract FaultDisputeGame is Clone, ISemver {
                 // the bond is always paid out to the issuer of that challenge.
                 address challenger = l2BlockNumberChallenger;
                 _distributeBond(challenger, subgameRootClaim);
+                _recordWinningChallenger(challenger);
                 resolveClaimRat(challenger);
                 subgameRootClaim.counteredBy = challenger;
             } else {
@@ -859,6 +877,7 @@ contract FaultDisputeGame is Clone, ISemver {
                 // If the parent was successfully countered, pay out the parent's bond to the challenger.
                 address bondRecipient = countered == address(0) ? subgameRootClaim.claimant : countered;
                 _distributeBond(bondRecipient, subgameRootClaim);
+                _recordWinningChallenger(bondRecipient);
                 resolveClaimRat(bondRecipient);
 
                 // Once a subgame is resolved, we percolate the result up the DAG so subsequent calls to
@@ -1126,6 +1145,9 @@ contract FaultDisputeGame is Clone, ISemver {
         len_ = claimData.length;
     }
 
+    // Note: Winning challenger data is stored in external WinningChallengerTracker contract.
+    // Query winningChallengerTracker directly for: getWinningChallengers, getWinningChallengersCount, isWinningChallenger
+
     /// @notice Returns the credit balance of a given recipient.
     /// @param _recipient The recipient of the credit.
     /// @return credit_ The credit balance of the recipient.
@@ -1196,6 +1218,13 @@ contract FaultDisputeGame is Clone, ISemver {
     /// @param _bonded The claim to pay out the bond of.
     function _distributeBond(address _recipient, ClaimData storage _bonded) internal {
         normalModeCredit[_recipient] += _bonded.bond;
+    }
+
+    /// @notice Records a winning challenger via external tracker
+    function _recordWinningChallenger(address _recipient) internal {
+        if (winningChallengerTracker != address(0)) {
+            try IWinningChallengerTracker(winningChallengerTracker).recordWinner(address(this), _recipient, gameCreator()) {} catch {}
+        }
     }
 
     /// @notice Verifies the integrity of an execution bisection subgame's root claim. Reverts if the claim

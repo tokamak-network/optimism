@@ -438,7 +438,9 @@ contract Deploy is Deployer {
             disputeClockExtension: Duration.wrap(uint64(cfg.faultGameClockExtension())),
             disputeMaxClockDuration: Duration.wrap(uint64(cfg.faultGameMaxClockDuration())),
             // TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
-            ratAddress: cfg.ratAddress()
+            ratAddress: cfg.ratAddress(),
+            // TON Staking V3 WinningChallengerTracker configuration
+            winningChallengerTrackerAddress: cfg.winningChallengerTrackerAddress()
         });
     }
 }

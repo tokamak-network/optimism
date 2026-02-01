@@ -77,6 +77,9 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
     /// @notice SystemConfig address for RAT L2 identification
     address public systemConfig;
 
+    /// @notice WinningChallengerTracker contract address for tracking winning challengers
+    address public winningChallengerTracker;
+
     /// @notice Constructs a new DisputeGameFactory contract.
     constructor() OwnableUpgradeable() ReinitializableBase(1) {
         _disableInitializers();
@@ -177,9 +180,9 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         // └──────────────┴────────────────────────────────────┘
         proxy_ = IDisputeGame(address(impl).clone(abi.encodePacked(msg.sender, _rootClaim, parentHash, _extraData)));
 
-        // Initialize with RAT address if CANNON game type and RAT is configured
-        if (_gameType.raw() == GameTypes.CANNON.raw() && rat != address(0)) {
-            IInitializable(address(proxy_)).initialize{ value: msg.value }(rat);
+        // Initialize with RAT and WinningChallengerTracker if CANNON game type
+        if (_gameType.raw() == GameTypes.CANNON.raw() && (rat != address(0) || winningChallengerTracker != address(0))) {
+            IInitializable(address(proxy_)).initialize{ value: msg.value }(rat, winningChallengerTracker);
         } else {
             proxy_.initialize{ value: msg.value }();
         }
@@ -315,5 +318,12 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
     /// @param _systemConfig The SystemConfig address for this L2.
     function setSystemConfig(address _systemConfig) external onlyOwner {
         systemConfig = _systemConfig;
+    }
+
+    /// @notice Sets the WinningChallengerTracker contract address.
+    /// @dev May only be called by the `owner`.
+    /// @param _winningChallengerTracker The WinningChallengerTracker contract address.
+    function setWinningChallengerTracker(address _winningChallengerTracker) external onlyOwner {
+        winningChallengerTracker = _winningChallengerTracker;
     }
 }

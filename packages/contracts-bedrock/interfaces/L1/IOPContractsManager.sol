@@ -149,6 +149,9 @@ interface IOPContractsManager {
         // TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
         // Set to external RAT contract address, or zero address to skip
         address ratAddress;
+        // TON Staking V3 WinningChallengerTracker configuration
+        // Set to external WinningChallengerTracker contract address, or zero address to skip
+        address winningChallengerTrackerAddress;
     }
 
     /// @notice The full set of outputs from deploying a new OP Stack chain.

@@ -81,6 +81,9 @@ contract DeployConfig is Script {
     // TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
     address public ratAddress;
 
+    // TON Staking V3 WinningChallengerTracker configuration
+    address public winningChallengerTrackerAddress;
+
     function read(string memory _path) public {
         console.log("DeployConfig: reading file %s", _path);
         try vm.readFile(_path) returns (string memory data_) {
@@ -157,6 +160,8 @@ contract DeployConfig is Script {
         // RAT configuration with default values
         // TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
         ratAddress = _readOr(_json, "$.ratAddress", address(0));
+        // TON Staking V3 WinningChallengerTracker configuration
+        winningChallengerTrackerAddress = _readOr(_json, "$.winningChallengerTrackerAddress", address(0));
     }
 
     function fork() public view returns (Fork fork_) {

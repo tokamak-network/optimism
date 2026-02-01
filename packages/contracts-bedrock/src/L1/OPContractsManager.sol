@@ -1174,6 +1174,12 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
             IDisputeGameFactory(address(output.disputeGameFactoryProxy)).setSystemConfig(address(output.systemConfigProxy));
         }
 
+        // Configure WinningChallengerTracker on DisputeGameFactory
+        // WinningChallengerTracker is deployed separately by TON Staking V3, address comes from DeployInput
+        if (_input.winningChallengerTrackerAddress != address(0)) {
+            IDisputeGameFactory(address(output.disputeGameFactoryProxy)).setWinningChallengerTracker(_input.winningChallengerTrackerAddress);
+        }
+
         // Register the deployed game implementation in the DisputeGameFactory
         if (_input.disputeGameType.raw() == GameTypes.CANNON.raw()) {
             // Register FaultDisputeGame for CANNON (GameType 0)
@@ -1719,6 +1725,8 @@ contract OPContractsManager is ISemver {
         Duration disputeMaxClockDuration;
         // TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
         address ratAddress; // External RAT contract address (set to address(0) to skip)
+        // TON Staking V3 WinningChallengerTracker configuration
+        address winningChallengerTrackerAddress; // External WinningChallengerTracker contract address (set to address(0) to skip)
     }
 
     /// @notice The full set of outputs from deploying a new OP Stack chain.

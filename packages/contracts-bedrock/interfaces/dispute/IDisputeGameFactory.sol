@@ -78,5 +78,8 @@ interface IDisputeGameFactory is IProxyAdminOwnedBase, IReinitializableBase {
     function systemConfig() external view returns (address);
     function setSystemConfig(address _systemConfig) external;
 
+    function winningChallengerTracker() external view returns (address);
+    function setWinningChallengerTracker(address _winningChallengerTracker) external;
+
     function __constructor__() external;
 }
