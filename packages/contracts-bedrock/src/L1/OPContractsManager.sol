@@ -223,6 +223,29 @@ abstract contract OPContractsManagerBase {
         return Bytes.slice(dataWithSelector, 4);
     }
 
+    /// @notice Deploys a contract from blueprint(s). Handles both single and split blueprints.
+    ///         If `_blueprint2` is address(0), uses single-address deployFrom, otherwise uses two-address version.
+    /// @param _blueprint1 The first blueprint address (required).
+    /// @param _blueprint2 The second blueprint address (can be address(0) if not split).
+    /// @param _salt The CREATE2 salt.
+    /// @param _data The constructor arguments.
+    /// @return The address of the deployed contract.
+    function deployFromBlueprint(
+        address _blueprint1,
+        address _blueprint2,
+        bytes32 _salt,
+        bytes memory _data
+    )
+        internal
+        returns (address)
+    {
+        if (_blueprint2 == address(0)) {
+            return Blueprint.deployFrom(_blueprint1, _salt, _data);
+        } else {
+            return Blueprint.deployFrom(_blueprint1, _blueprint2, _salt, _data);
+        }
+    }
+
     /// @notice Returns the implementation contract address for a given game type.
     function getGameImplementation(
         IDisputeGameFactory _disputeGameFactory,
@@ -476,8 +499,9 @@ contract OPContractsManagerGameTypeAdder is OPContractsManagerBase {
             }
 
             // Deploy the new game type.
+            // Use deployFromBlueprint helper to handle both single and split blueprints.
             outputs[i].faultDisputeGame = IFaultDisputeGame(
-                Blueprint.deployFrom(
+                deployFromBlueprint(
                     blueprint1,
                     blueprint2,
                     computeSalt(l2ChainId, gameConfig.saltMixer, gameContractName),
@@ -913,8 +937,9 @@ contract OPContractsManagerUpgrader is OPContractsManagerBase {
         if (GameType.unwrap(_gameType) == GameType.unwrap(GameTypes.PERMISSIONED_CANNON)) {
             address proposer = getProposer(IPermissionedDisputeGame(address(_disputeGame)));
             address challenger = getChallenger(IPermissionedDisputeGame(address(_disputeGame)));
+            // Use deployFromBlueprint helper to handle both single and split blueprints.
             newGame = IDisputeGame(
-                Blueprint.deployFrom(
+                deployFromBlueprint(
                     bps.permissionedDisputeGame1,
                     bps.permissionedDisputeGame2,
                     computeSalt(_l2ChainId, reusableSaltMixer(_opChainConfig), "PermissionedDisputeGame"),
@@ -922,8 +947,9 @@ contract OPContractsManagerUpgrader is OPContractsManagerBase {
                 )
             );
         } else {
+            // Use deployFromBlueprint helper to handle both single and split blueprints.
             newGame = IDisputeGame(
-                Blueprint.deployFrom(
+                deployFromBlueprint(
                     bps.permissionlessDisputeGame1,
                     bps.permissionlessDisputeGame2,
                     computeSalt(_l2ChainId, reusableSaltMixer(_opChainConfig), "PermissionlessDisputeGame"),
@@ -1047,10 +1073,11 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
         );
 
         // Deploy dispute game based on the configured disputeGameType
+        // Use deployFromBlueprint helper to handle both single and split blueprints.
         if (_input.disputeGameType.raw() == GameTypes.CANNON.raw()) {
             // Deploy FaultDisputeGame for CANNON (GameType 0)
             output.faultDisputeGame = IFaultDisputeGame(
-                Blueprint.deployFrom(
+                deployFromBlueprint(
                     blueprint.permissionlessDisputeGame1,
                     blueprint.permissionlessDisputeGame2,
                     computeSalt(_input.l2ChainId, _input.saltMixer, "FaultDisputeGame"),
@@ -1075,7 +1102,7 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
         } else {
             // Deploy PermissionedDisputeGame for PERMISSIONED_CANNON (GameType 1) or others
             output.permissionedDisputeGame = IPermissionedDisputeGame(
-                Blueprint.deployFrom(
+                deployFromBlueprint(
                     blueprint.permissionedDisputeGame1,
                     blueprint.permissionedDisputeGame2,
                     computeSalt(_input.l2ChainId, _input.saltMixer, "PermissionedDisputeGame"),
@@ -1172,12 +1199,6 @@ contract OPContractsManagerDeployer is OPContractsManagerBase {
         if (_input.ratAddress != address(0)) {
             IDisputeGameFactory(address(output.disputeGameFactoryProxy)).setRAT(_input.ratAddress);
             IDisputeGameFactory(address(output.disputeGameFactoryProxy)).setSystemConfig(address(output.systemConfigProxy));
-        }
-
-        // Configure WinningChallengerTracker on DisputeGameFactory
-        // WinningChallengerTracker is deployed separately by TON Staking V3, address comes from DeployInput
-        if (_input.winningChallengerTrackerAddress != address(0)) {
-            IDisputeGameFactory(address(output.disputeGameFactoryProxy)).setWinningChallengerTracker(_input.winningChallengerTrackerAddress);
         }
 
         // Register the deployed game implementation in the DisputeGameFactory
@@ -1607,8 +1628,9 @@ contract OPContractsManagerInteropMigrator is OPContractsManagerBase {
             // use of the chain id is different and actually passed into the constructor of the
             // dispute game contracts. Since these are Super dispute games and involve multiple
             // chains, the contracts enforce that the chain id is zero.
+            // Use deployFromBlueprint helper to handle both single and split blueprints.
             ISuperPermissionedDisputeGame newSuperPDG = ISuperPermissionedDisputeGame(
-                Blueprint.deployFrom(
+                deployFromBlueprint(
                     blueprints().superPermissionedDisputeGame1,
                     blueprints().superPermissionedDisputeGame2,
                     computeSalt(
@@ -1663,8 +1685,9 @@ contract OPContractsManagerInteropMigrator is OPContractsManagerBase {
             );
 
             // Deploy the new SuperFaultDisputeGame.
+            // Use deployFromBlueprint helper to handle both single and split blueprints.
             ISuperFaultDisputeGame newSuperFDG = ISuperFaultDisputeGame(
-                Blueprint.deployFrom(
+                deployFromBlueprint(
                     blueprints().superPermissionlessDisputeGame1,
                     blueprints().superPermissionlessDisputeGame2,
                     computeSalt(block.timestamp, reusableSaltMixer(_input.opChainConfigs[0]), "SuperFaultDisputeGame"),
@@ -1725,8 +1748,6 @@ contract OPContractsManager is ISemver {
         Duration disputeMaxClockDuration;
         // TON Staking V3 RAT configuration (RAT is deployed separately by TON Staking V3)
         address ratAddress; // External RAT contract address (set to address(0) to skip)
-        // TON Staking V3 WinningChallengerTracker configuration
-        address winningChallengerTrackerAddress; // External WinningChallengerTracker contract address (set to address(0) to skip)
     }
 
     /// @notice The full set of outputs from deploying a new OP Stack chain.

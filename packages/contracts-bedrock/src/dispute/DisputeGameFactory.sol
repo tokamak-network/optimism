@@ -2,20 +2,30 @@
 pragma solidity 0.8.15;
 
 // Contracts
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { ReinitializableBase } from "src/universal/ReinitializableBase.sol";
-import { ProxyAdminOwnedBase } from "src/L1/ProxyAdminOwnedBase.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReinitializableBase} from "src/universal/ReinitializableBase.sol";
+import {ProxyAdminOwnedBase} from "src/L1/ProxyAdminOwnedBase.sol";
 
 // Libraries
-import { LibClone } from "@solady/utils/LibClone.sol";
-import { GameType, Claim, GameId, Timestamp, Hash, LibGameId, GameTypes } from "src/dispute/lib/Types.sol";
-import { NoImplementation, IncorrectBondAmount, GameAlreadyExists } from "src/dispute/lib/Errors.sol";
+import {LibClone} from "@solady/utils/LibClone.sol";
+import {
+    GameType,
+    Claim,
+    GameId,
+    Timestamp,
+    Hash,
+    LibGameId,
+    GameTypes
+} from "src/dispute/lib/Types.sol";
+import {NoImplementation, IncorrectBondAmount, GameAlreadyExists} from "src/dispute/lib/Errors.sol";
 
 // Interfaces
-import { ISemver } from "interfaces/universal/ISemver.sol";
-import { IDisputeGame } from "interfaces/dispute/IDisputeGame.sol";
-import { IRAT } from "interfaces/L1/IRAT.sol";
-import { IInitializable } from "interfaces/dispute/IInitializable.sol";
+import {ISemver} from "interfaces/universal/ISemver.sol";
+import {IDisputeGame} from "interfaces/dispute/IDisputeGame.sol";
+import {IRAT} from "interfaces/L1/IRAT.sol";
+import {IInitializable} from "interfaces/dispute/IInitializable.sol";
 
 /// @custom:proxied true
 /// @title DisputeGameFactory
@@ -23,7 +33,12 @@ import { IInitializable } from "interfaces/dispute/IInitializable.sol";
 ///         mapping and an append only array. The timestamp of the creation time of the dispute game is packed tightly
 ///         into the storage slot with the address of the dispute game to make offchain discoverability of playable
 ///         dispute games easier.
-contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, OwnableUpgradeable, ISemver {
+contract DisputeGameFactory is
+    ProxyAdminOwnedBase,
+    ReinitializableBase,
+    OwnableUpgradeable,
+    ISemver
+{
     /// @dev Allows for the creation of clone proxies with immutable arguments.
     using LibClone for address;
 
@@ -31,7 +46,11 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
     /// @param disputeProxy The address of the dispute game proxy
     /// @param gameType The type of the dispute game proxy's implementation
     /// @param rootClaim The root claim of the dispute game
-    event DisputeGameCreated(address indexed disputeProxy, GameType indexed gameType, Claim indexed rootClaim);
+    event DisputeGameCreated(
+        address indexed disputeProxy,
+        GameType indexed gameType,
+        Claim indexed rootClaim
+    );
 
     /// @notice Emitted when a new game implementation added to the factory
     /// @param impl The implementation contract for the given `GameType`.
@@ -115,11 +134,7 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         GameType _gameType,
         Claim _rootClaim,
         bytes calldata _extraData
-    )
-        external
-        view
-        returns (IDisputeGame proxy_, Timestamp timestamp_)
-    {
+    ) external view returns (IDisputeGame proxy_, Timestamp timestamp_) {
         Hash uuid = getGameUUID(_gameType, _rootClaim, _extraData);
         (, Timestamp timestamp, address proxy) = _disputeGames[uuid].unpack();
         (proxy_, timestamp_) = (IDisputeGame(proxy), timestamp);
@@ -132,11 +147,9 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
     /// @return gameType_ The type of the DisputeGame - used to decide the proxy implementation.
     /// @return timestamp_ The timestamp of the creation of the dispute game.
     /// @return proxy_ The clone of the `DisputeGame` created with the given parameters.
-    function gameAtIndex(uint256 _index)
-        external
-        view
-        returns (GameType gameType_, Timestamp timestamp_, IDisputeGame proxy_)
-    {
+    function gameAtIndex(
+        uint256 _index
+    ) external view returns (GameType gameType_, Timestamp timestamp_, IDisputeGame proxy_) {
         (GameType gameType, Timestamp timestamp, address proxy) = _disputeGameList[_index].unpack();
         (gameType_, timestamp_, proxy_) = (gameType, timestamp, IDisputeGame(proxy));
     }
@@ -150,11 +163,7 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         GameType _gameType,
         Claim _rootClaim,
         bytes calldata _extraData
-    )
-        external
-        payable
-        returns (IDisputeGame proxy_)
-    {
+    ) external payable returns (IDisputeGame proxy_) {
         // Grab the implementation contract for the given `GameType`.
         IDisputeGame impl = gameImpls[_gameType];
 
@@ -178,13 +187,21 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         // │ [52, 84)     │ Parent block hash at creation time │
         // │ [84, 84 + n) │ Extra data (opaque)                │
         // └──────────────┴────────────────────────────────────┘
-        proxy_ = IDisputeGame(address(impl).clone(abi.encodePacked(msg.sender, _rootClaim, parentHash, _extraData)));
+        proxy_ = IDisputeGame(
+            address(impl).clone(abi.encodePacked(msg.sender, _rootClaim, parentHash, _extraData))
+        );
 
-        // Initialize with RAT and WinningChallengerTracker if CANNON game type
-        if (_gameType.raw() == GameTypes.CANNON.raw() && (rat != address(0) || winningChallengerTracker != address(0))) {
-            IInitializable(address(proxy_)).initialize{ value: msg.value }(rat, winningChallengerTracker);
+        // Initialize with RAT address if CANNON game type and RAT is configured
+        if (
+            _gameType.raw() == GameTypes.CANNON.raw() &&
+            (rat != address(0) || winningChallengerTracker != address(0))
+        ) {
+            IInitializable(address(proxy_)).initialize{value: msg.value}(
+                rat,
+                winningChallengerTracker
+            );
         } else {
-            proxy_.initialize{ value: msg.value }();
+            proxy_.initialize{value: msg.value}();
         }
 
         // Compute the unique identifier for the dispute game.
@@ -194,7 +211,11 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         if (GameId.unwrap(_disputeGames[uuid]) != bytes32(0)) revert GameAlreadyExists(uuid);
 
         // Pack the game ID.
-        GameId id = LibGameId.pack(_gameType, Timestamp.wrap(uint64(block.timestamp)), address(proxy_));
+        GameId id = LibGameId.pack(
+            _gameType,
+            Timestamp.wrap(uint64(block.timestamp)),
+            address(proxy_)
+        );
 
         // Store the dispute game id in the mapping & emit the `DisputeGameCreated` event.
         _disputeGames[uuid] = id;
@@ -204,13 +225,15 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         // Trigger RAT attention test if RAT contract is set and game type is CANNON
         // RAT stores gameAddress to verify authenticity in resolveClaim()
         if (rat != address(0) && _gameType.raw() == GameTypes.CANNON.raw()) {
-            try IRAT(rat).triggerAttentionTest(
-                address(proxy_),
-                systemConfig,
-                uint32(_disputeGameList.length - 1),
-                Claim.unwrap(_rootClaim),
-                parentHash
-            ) { } catch { }
+            try
+                IRAT(rat).triggerAttentionTest(
+                    address(proxy_),
+                    systemConfig,
+                    uint32(_disputeGameList.length - 1),
+                    Claim.unwrap(_rootClaim),
+                    parentHash
+                )
+            {} catch {}
         }
     }
 
@@ -225,11 +248,7 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         GameType _gameType,
         Claim _rootClaim,
         bytes calldata _extraData
-    )
-        public
-        pure
-        returns (Hash uuid_)
-    {
+    ) public pure returns (Hash uuid_) {
         uuid_ = Hash.wrap(keccak256(abi.encode(_gameType, _rootClaim, _extraData)));
     }
 
@@ -242,11 +261,7 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         GameType _gameType,
         uint256 _start,
         uint256 _n
-    )
-        external
-        view
-        returns (GameSearchResult[] memory games_)
-    {
+    ) external view returns (GameSearchResult[] memory games_) {
         // If the `_start` index is greater than or equal to the game array length or `_n == 0`, return an empty array.
         if (_start >= _disputeGameList.length || _n == 0) return games_;
 
@@ -258,7 +273,7 @@ contract DisputeGameFactory is ProxyAdminOwnedBase, ReinitializableBase, Ownable
         }
 
         // Perform a reverse linear search for the `_n` most recent games of type `_gameType`.
-        for (uint256 i = _start; i >= 0 && i <= _start;) {
+        for (uint256 i = _start; i >= 0 && i <= _start; ) {
             GameId id = _disputeGameList[i];
             (GameType gameType, Timestamp timestamp, address proxy) = id.unpack();
 
