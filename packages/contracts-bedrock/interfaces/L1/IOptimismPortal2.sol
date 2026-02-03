@@ -38,6 +38,9 @@ interface IOptimismPortal2 is IProxyAdminOwnedBase {
     error OptimismPortal_InvalidOutputRootChainId();
     error OptimismPortal_WrongProofMethod();
     error OptimismPortal_MigratingToSameRegistry();
+    error OptimismPortal_AlreadyFastFinalized();
+    error OptimismPortal_NotVerifiedByRAT();
+    error OptimismPortal_OnlyRAT();
     error Encoding_EmptySuperRoot();
     error Encoding_InvalidSuperRootVersion();
     error OutOfGas();
@@ -51,6 +54,10 @@ interface IOptimismPortal2 is IProxyAdminOwnedBase {
     event WithdrawalProvenExtension1(bytes32 indexed withdrawalHash, address indexed proofSubmitter);
     event ETHMigrated(address indexed lockbox, uint256 ethBalance);
     event PortalMigrated(IETHLockbox oldLockbox, IETHLockbox newLockbox, IAnchorStateRegistry oldAnchorStateRegistry, IAnchorStateRegistry newAnchorStateRegistry);
+    event FastWithdrawalRequested(bytes32 indexed withdrawalHash, address indexed user, uint256 amount, bytes32 stateRoot, uint256 feePaid, uint256 deadline);
+    event WithdrawalVerifiedByRAT(bytes32 indexed withdrawalHash);
+    event FastWithdrawalFinalized(bytes32 indexed withdrawalHash, bool success);
+    event RatContractUpdated(address indexed oldRatContract, address indexed newRatContract);
 
     receive() external payable;
 
@@ -124,6 +131,22 @@ interface IOptimismPortal2 is IProxyAdminOwnedBase {
     function upgrade(IAnchorStateRegistry _anchorStateRegistry, IETHLockbox _ethLockbox) external;
     function version() external pure returns (string memory);
     function migrateLiquidity() external;
+
+    // Fast Withdrawal functions
+    function ratContract() external view returns (address);
+    function withdrawalVerified(bytes32) external view returns (bool);
+    function fastFinalizedWithdrawals(bytes32) external view returns (bool);
+    function fastWithdrawalResponsePeriod() external view returns (uint256);
+    function setRatContract(address _ratContract) external;
+    function setFastWithdrawalResponsePeriod(uint256 _period) external;
+    function proveAndRequestFastWithdrawal(
+        Types.WithdrawalTransaction memory _tx,
+        uint256 _disputeGameIndex,
+        Types.OutputRootProof calldata _outputRootProof,
+        bytes[] calldata _withdrawalProof
+    ) external payable;
+    function setWithdrawalVerified(bytes32 _withdrawalHash) external;
+    function fastWithdrawalFinalize(Types.WithdrawalTransaction memory _tx) external;
 
     function __constructor__(uint256 _proofMaturityDelaySeconds) external;
 }

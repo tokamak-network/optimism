@@ -130,6 +130,22 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
     /// @dev Used to notify Bridged TON changes for Type 3 rollups
     address public seigManager;
 
+    // ============================================================
+    // Fast Withdrawal Storage (RAT Integration)
+    // ============================================================
+
+    /// @notice RAT contract address for Fast Withdrawal verification
+    address public ratContract;
+
+    /// @notice RAT-verified withdrawals that can bypass the 7-day delay
+    mapping(bytes32 => bool) public withdrawalVerified;
+
+    /// @notice Withdrawals that have been finalized via Fast Withdrawal
+    mapping(bytes32 => bool) public fastFinalizedWithdrawals;
+
+    /// @notice Fast Withdrawal response period (default: 10 minutes)
+    uint256 public fastWithdrawalResponsePeriod;
+
     /// @notice Emitted when a transaction is deposited from L1 to L2. The parameters of this event
     ///         are read by the rollup node and used to derive deposit transactions on L2.
     /// @param from       Address that triggered the deposit transaction.
@@ -172,6 +188,36 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         IAnchorStateRegistry oldAnchorStateRegistry,
         IAnchorStateRegistry newAnchorStateRegistry
     );
+
+    /// @notice Emitted when a fast withdrawal is requested.
+    /// @param withdrawalHash Hash of the withdrawal transaction.
+    /// @param user Address that requested the fast withdrawal.
+    /// @param amount Amount of ETH to withdraw.
+    /// @param stateRoot State root used for the withdrawal proof.
+    /// @param feePaid Fee paid for fast withdrawal.
+    /// @param deadline Deadline for fast withdrawal response.
+    event FastWithdrawalRequested(
+        bytes32 indexed withdrawalHash,
+        address indexed user,
+        uint256 amount,
+        bytes32 stateRoot,
+        uint256 feePaid,
+        uint256 deadline
+    );
+
+    /// @notice Emitted when a withdrawal is verified by RAT.
+    /// @param withdrawalHash Hash of the withdrawal transaction.
+    event WithdrawalVerifiedByRAT(bytes32 indexed withdrawalHash);
+
+    /// @notice Emitted when a fast withdrawal is finalized.
+    /// @param withdrawalHash Hash of the withdrawal transaction.
+    /// @param success Whether the withdrawal was successful.
+    event FastWithdrawalFinalized(bytes32 indexed withdrawalHash, bool success);
+
+    /// @notice Emitted when the RAT contract address is updated.
+    /// @param oldRatContract The old RAT contract address.
+    /// @param newRatContract The new RAT contract address.
+    event RatContractUpdated(address indexed oldRatContract, address indexed newRatContract);
 
     /// @notice Thrown when a withdrawal has already been finalized.
     error OptimismPortal_AlreadyFinalized();
@@ -236,10 +282,19 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
     /// @notice Thrown when trying to migrate to the same AnchorStateRegistry.
     error OptimismPortal_MigratingToSameRegistry();
 
+    /// @notice Thrown when a withdrawal has already been fast finalized.
+    error OptimismPortal_AlreadyFastFinalized();
+
+    /// @notice Thrown when a withdrawal has not been verified by RAT.
+    error OptimismPortal_NotVerifiedByRAT();
+
+    /// @notice Thrown when the caller is not the RAT contract.
+    error OptimismPortal_OnlyRAT();
+
     /// @notice Semantic version.
-    /// @custom:semver 4.6.0
+    /// @custom:semver 4.7.0-fastwithdrawal
     function version() public pure virtual returns (string memory) {
-        return "4.6.0";
+        return "4.7.0-fastwithdrawal";
     }
 
     /// @param _proofMaturityDelaySeconds The proof maturity delay in seconds.
@@ -393,6 +448,22 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         seigManager = _seigManager;
     }
 
+    /// @notice Sets the RAT contract address for Fast Withdrawal.
+    /// @param _ratContract The RAT contract address.
+    function setRatContract(address _ratContract) external {
+        _assertOnlyProxyAdminOrProxyAdminOwner();
+        address oldRatContract = ratContract;
+        ratContract = _ratContract;
+        emit RatContractUpdated(oldRatContract, _ratContract);
+    }
+
+    /// @notice Sets the Fast Withdrawal response period.
+    /// @param _period The response period in seconds.
+    function setFastWithdrawalResponsePeriod(uint256 _period) external {
+        _assertOnlyProxyAdminOrProxyAdminOwner();
+        fastWithdrawalResponsePeriod = _period;
+    }
+
     /// @notice Notifies SeigManager of Bridged TON balance change.
     /// @dev Called after TON deposit/withdrawal completes.
     ///      Uses low-level call to ensure transaction never fails even if SeigManager
@@ -516,6 +587,130 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
 
         // Prove the transaction.
         _proveWithdrawalTransaction(_tx, disputeGameProxy, 0, superRootProof, _outputRootProof, _withdrawalProof);
+    }
+
+    /// @notice Proves a withdrawal transaction and requests fast withdrawal in one transaction.
+    /// @dev    Emits FastWithdrawalRequested event for RAT validators to detect and sign.
+    ///         If fast withdrawal fails or times out, user can still use normal 7-day finalization.
+    /// @param _tx               Withdrawal transaction to prove.
+    /// @param _disputeGameIndex Index of the dispute game to prove the withdrawal against.
+    /// @param _outputRootProof  Inclusion proof of the L2ToL1MessagePasser storage root.
+    /// @param _withdrawalProof  Inclusion proof of the withdrawal within the L2ToL1MessagePasser.
+    function proveAndRequestFastWithdrawal(
+        Types.WithdrawalTransaction memory _tx,
+        uint256 _disputeGameIndex,
+        Types.OutputRootProof calldata _outputRootProof,
+        bytes[] calldata _withdrawalProof
+    )
+        external
+        payable
+    {
+        // Cannot prove withdrawal transactions while the system is paused.
+        _assertNotPaused();
+
+        // Make sure that the OptimismPortal is using Output Roots.
+        if (superRootsActive) {
+            revert OptimismPortal_WrongProofMethod();
+        }
+
+        // Fetch the dispute game proxy from the `DisputeGameFactory` contract.
+        (,, IDisputeGame disputeGameProxy) = disputeGameFactory().gameAtIndex(_disputeGameIndex);
+
+        // Create a dummy super root proof to pass into the internal function.
+        Types.SuperRootProof memory superRootProof;
+
+        // Step 1: Prove the withdrawal transaction (starts 7-day countdown as fallback)
+        _proveWithdrawalTransaction(_tx, disputeGameProxy, 0, superRootProof, _outputRootProof, _withdrawalProof);
+
+        // Step 2: Emit event for RAT validators to detect and sign
+        bytes32 withdrawalHash = Hashing.hashWithdrawal(_tx);
+        uint256 deadline = block.timestamp + fastWithdrawalResponsePeriod;
+
+        emit FastWithdrawalRequested(
+            withdrawalHash,
+            msg.sender,
+            _tx.value,
+            _outputRootProof.stateRoot,
+            msg.value,  // fee paid
+            deadline
+        );
+    }
+
+    /// @notice Sets the withdrawal as verified by RAT.
+    /// @dev    Only callable by the RAT contract after successful BLS signature verification.
+    /// @param _withdrawalHash Hash of the withdrawal transaction.
+    function setWithdrawalVerified(bytes32 _withdrawalHash) external {
+        if (msg.sender != ratContract) {
+            revert OptimismPortal_OnlyRAT();
+        }
+        withdrawalVerified[_withdrawalHash] = true;
+        emit WithdrawalVerifiedByRAT(_withdrawalHash);
+    }
+
+    /// @notice Finalizes a fast withdrawal (bypasses 7-day delay).
+    /// @dev    Only callable by the RAT contract after verification.
+    /// @param _tx Withdrawal transaction to finalize.
+    function fastWithdrawalFinalize(Types.WithdrawalTransaction memory _tx) external {
+        // Only RAT contract can call this function.
+        if (msg.sender != ratContract) {
+            revert OptimismPortal_OnlyRAT();
+        }
+
+        // Cannot finalize while the system is paused.
+        _assertNotPaused();
+
+        // Make sure that the l2Sender has not yet been set (reentrancy guard).
+        if (l2Sender != Constants.DEFAULT_L2_SENDER) {
+            revert OptimismPortal_NoReentrancy();
+        }
+
+        // Make sure that the target address is safe.
+        if (_isUnsafeTarget(_tx.target)) {
+            revert OptimismPortal_BadTarget();
+        }
+
+        bytes32 withdrawalHash = Hashing.hashWithdrawal(_tx);
+
+        // Check that the withdrawal has not already been finalized (normal path).
+        if (finalizedWithdrawals[withdrawalHash]) {
+            revert OptimismPortal_AlreadyFinalized();
+        }
+
+        // Check that the withdrawal has not already been fast finalized.
+        if (fastFinalizedWithdrawals[withdrawalHash]) {
+            revert OptimismPortal_AlreadyFastFinalized();
+        }
+
+        // Check that RAT has verified this withdrawal.
+        if (!withdrawalVerified[withdrawalHash]) {
+            revert OptimismPortal_NotVerifiedByRAT();
+        }
+
+        // Mark the withdrawal as fast finalized.
+        fastFinalizedWithdrawals[withdrawalHash] = true;
+
+        // Unlock the ETH from the ETHLockbox.
+        if (_tx.value > 0) ethLockbox.unlockETH(_tx.value);
+
+        // Set the l2Sender so contracts know who triggered this withdrawal on L2.
+        l2Sender = _tx.sender;
+
+        // Execute the withdrawal call.
+        bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.value, _tx.data);
+
+        // Reset the l2Sender back to the default value.
+        l2Sender = Constants.DEFAULT_L2_SENDER;
+
+        // Emit the finalization event.
+        emit FastWithdrawalFinalized(withdrawalHash, success);
+
+        // Send ETH back to the Lockbox in the case of a failed transaction.
+        if (!success && _tx.value > 0) {
+            ethLockbox.lockETH{ value: _tx.value }();
+        }
+
+        // Notify SeigManager of Bridged TON change (Type 3 rollups with Native TON)
+        _notifySeigManager();
     }
 
     /// @notice Internal function for proving a withdrawal transaction, used by both the Super Root
@@ -725,6 +920,11 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         // Check that this withdrawal has not already been finalized, this is replay protection.
         if (finalizedWithdrawals[_withdrawalHash]) {
             revert OptimismPortal_AlreadyFinalized();
+        }
+
+        // Check that this withdrawal has not already been fast finalized.
+        if (fastFinalizedWithdrawals[_withdrawalHash]) {
+            revert OptimismPortal_AlreadyFastFinalized();
         }
 
         // A withdrawal can only be finalized if it has been proven. We know that a withdrawal has
