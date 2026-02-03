@@ -20,6 +20,7 @@ use_literal_content = true
 # entire build directory.
 additional_compiler_profiles = [
   { name = "dispute", optimizer_runs = 5000 },
+  { name = "portal", optimizer_runs = 200 },
 ]
 compilation_restrictions = [
   { paths = "src/dispute/FaultDisputeGame.sol", optimizer_runs = 5000 },
@@ -27,7 +28,7 @@ compilation_restrictions = [
   { paths = "src/dispute/PermissionedDisputeGame.sol", optimizer_runs = 5000 },
   { paths = "src/L1/OPContractsManager.sol", optimizer_runs = 5000 },
   { paths = "src/L1/OPContractsManagerStandardValidator.sol", optimizer_runs = 5000 },
-  { paths = "src/L1/OptimismPortal2.sol", optimizer_runs = 5000 }
+  { paths = "src/L1/OptimismPortal2.sol", optimizer_runs = 200 }
 ]
 
 extra_output = ['devdoc', 'userdoc', 'metadata', 'storageLayout']
@@ -142,7 +143,7 @@ compilation_restrictions = [
   { paths = "src/dispute/PermissionedDisputeGame.sol", optimizer_runs = 0 },
   { paths = "src/L1/OPContractsManager.sol", optimizer_runs = 0 },
   { paths = "src/L1/OPContractsManagerStandardValidator.sol", optimizer_runs = 0 },
-  { paths = "src/L1/OptimismPortal2.sol", optimizer_runs = 0 },
+  { paths = "src/L1/OptimismPortal2.sol", optimizer_runs = 200 },
 ]
 
 ################################################################

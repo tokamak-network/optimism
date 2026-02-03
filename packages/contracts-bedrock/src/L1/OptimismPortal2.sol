@@ -567,7 +567,7 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         Types.OutputRootProof calldata _outputRootProof,
         bytes[] calldata _withdrawalProof
     )
-        external
+        public
     {
         // Cannot prove withdrawal transactions while the system is paused.
         _assertNotPaused();
@@ -605,22 +605,9 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         external
         payable
     {
-        // Cannot prove withdrawal transactions while the system is paused.
-        _assertNotPaused();
-
-        // Make sure that the OptimismPortal is using Output Roots.
-        if (superRootsActive) {
-            revert OptimismPortal_WrongProofMethod();
-        }
-
-        // Fetch the dispute game proxy from the `DisputeGameFactory` contract.
-        (,, IDisputeGame disputeGameProxy) = disputeGameFactory().gameAtIndex(_disputeGameIndex);
-
-        // Create a dummy super root proof to pass into the internal function.
-        Types.SuperRootProof memory superRootProof;
-
         // Step 1: Prove the withdrawal transaction (starts 7-day countdown as fallback)
-        _proveWithdrawalTransaction(_tx, disputeGameProxy, 0, superRootProof, _outputRootProof, _withdrawalProof);
+        // Reuse the existing proveWithdrawalTransaction function to avoid code duplication
+        this.proveWithdrawalTransaction(_tx, _disputeGameIndex, _outputRootProof, _withdrawalProof);
 
         // Step 2: Emit event for RAT validators to detect and sign
         bytes32 withdrawalHash = Hashing.hashWithdrawal(_tx);
@@ -689,25 +676,11 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         // Mark the withdrawal as fast finalized.
         fastFinalizedWithdrawals[withdrawalHash] = true;
 
-        // Unlock the ETH from the ETHLockbox.
-        if (_tx.value > 0) ethLockbox.unlockETH(_tx.value);
-
-        // Set the l2Sender so contracts know who triggered this withdrawal on L2.
-        l2Sender = _tx.sender;
-
-        // Execute the withdrawal call.
-        bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.value, _tx.data);
-
-        // Reset the l2Sender back to the default value.
-        l2Sender = Constants.DEFAULT_L2_SENDER;
+        // Execute the withdrawal using the shared internal function.
+        (, bool success) = _executeWithdrawal(_tx);
 
         // Emit the finalization event.
         emit FastWithdrawalFinalized(withdrawalHash, success);
-
-        // Send ETH back to the Lockbox in the case of a failed transaction.
-        if (!success && _tx.value > 0) {
-            ethLockbox.lockETH{ value: _tx.value }();
-        }
 
         // Notify SeigManager of Bridged TON change (Type 3 rollups with Native TON)
         _notifySeigManager();
@@ -870,33 +843,12 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         // Mark the withdrawal as finalized so it can't be replayed.
         finalizedWithdrawals[withdrawalHash] = true;
 
-        // Unlock the ETH from the ETHLockbox.
-        if (_tx.value > 0) ethLockbox.unlockETH(_tx.value);
-
-        // Set the l2Sender so contracts know who triggered this withdrawal on L2.
-        l2Sender = _tx.sender;
-
-        // Trigger the call to the target contract. We use a custom low level method
-        // SafeCall.callWithMinGas to ensure two key properties
-        //   1. Target contracts cannot force this call to run out of gas by returning a very large
-        //      amount of data (and this is OK because we don't care about the returndata here).
-        //   2. The amount of gas provided to the execution context of the target is at least the
-        //      gas limit specified by the user. If there is not enough gas in the current context
-        //      to accomplish this, `callWithMinGas` will revert.
-        bool success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.value, _tx.data);
-
-        // Reset the l2Sender back to the default value.
-        l2Sender = Constants.DEFAULT_L2_SENDER;
+        // Execute the withdrawal using the shared internal function.
+        (, bool success) = _executeWithdrawal(_tx);
 
         // All withdrawals are immediately finalized. Replayability can
         // be achieved through contracts built on top of this contract
         emit WithdrawalFinalized(withdrawalHash, success);
-
-        // Send ETH back to the Lockbox in the case of a failed transaction or it'll get stuck here
-        // and would need to be moved back via the migrateLiquidity function.
-        if (!success && _tx.value > 0) {
-            ethLockbox.lockETH{ value: _tx.value }();
-        }
 
         // Reverting here is useful for determining the exact gas cost to successfully execute the
         // sub call to the target contract if the minimum gas limit specified by the user would not
@@ -1035,6 +987,34 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
     function _isUnsafeTarget(address _target) internal view virtual returns (bool) {
         // Prevent users from targeting an unsafe target address on a withdrawal transaction.
         return _target == address(this) || _target == address(ethLockbox);
+    }
+
+    /// @notice Internal function to execute the withdrawal call.
+    /// @param _tx Withdrawal transaction to execute.
+    /// @return withdrawalHash Hash of the withdrawal transaction.
+    /// @return success Whether the withdrawal call succeeded.
+    function _executeWithdrawal(Types.WithdrawalTransaction memory _tx)
+        internal
+        returns (bytes32 withdrawalHash, bool success)
+    {
+        withdrawalHash = Hashing.hashWithdrawal(_tx);
+
+        // Unlock the ETH from the ETHLockbox.
+        if (_tx.value > 0) ethLockbox.unlockETH(_tx.value);
+
+        // Set the l2Sender so contracts know who triggered this withdrawal on L2.
+        l2Sender = _tx.sender;
+
+        // Execute the withdrawal call.
+        success = SafeCall.callWithMinGas(_tx.target, _tx.gasLimit, _tx.value, _tx.data);
+
+        // Reset the l2Sender back to the default value.
+        l2Sender = Constants.DEFAULT_L2_SENDER;
+
+        // Send ETH back to the Lockbox in the case of a failed transaction.
+        if (!success && _tx.value > 0) {
+            ethLockbox.lockETH{ value: _tx.value }();
+        }
     }
 
     /// @notice Getter for the resource config. Used internally by the ResourceMetering contract.
