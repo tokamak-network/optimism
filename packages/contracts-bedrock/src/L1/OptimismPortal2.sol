@@ -401,7 +401,7 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         if (seigManager != address(0)) {
             // Low-level call to ensure this never reverts
             // solhint-disable-next-line avoid-low-level-calls
-            try ISeigManager(seigManager).onBridgedTONChange() {} catch {}
+            try ISeigManager(seigManager).onBridgedTonChange() {} catch {}
         }
     }
 

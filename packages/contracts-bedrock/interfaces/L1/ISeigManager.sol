@@ -10,5 +10,5 @@ interface ISeigManager {
     ///      SeigManager automatically queries rollupConfig from msg.sender (OptimismPortal)
     ///      via L1BridgeRegistry.rollupConfigWithPortal()
     ///      This is a trigger function - uses early return instead of revert
-    function onBridgedTONChange() external;
+    function onBridgedTonChange() external;
 }
