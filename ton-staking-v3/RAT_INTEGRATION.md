@@ -132,10 +132,10 @@ Called when:
 ```solidity
 // interfaces/L1/ISeigManager.sol
 interface ISeigManager {
-    /// @notice Called when Bridged TON balance changes
-    /// @param rollupConfig L2's SystemConfig address (L2 identifier)
-    /// @param totalTONTVL Total TON amount in the bridge
-    function onBridgedTONChange(address rollupConfig, uint256 totalTONTVL) external;
+    /// @notice Called when Bridged TON balance changes (Type 3 only)
+    /// @dev SeigManager automatically queries rollupConfig from msg.sender (OptimismPortal)
+    ///      via L1BridgeRegistry.rollupConfigWithPortal()
+    function onBridgedTonChange() external;
 }
 ```
 
@@ -165,16 +165,9 @@ function setTON(address _ton) external;
 ```solidity
 /// @notice Notifies SeigManager of Bridged TON balance change
 function _notifySeigManager() internal {
-    if (seigManager != address(0) && ton != address(0) && address(systemConfig) != address(0)) {
-        uint256 newBalance = IERC20(ton).balanceOf(address(this));
-        // Low-level call - transaction continues even if this fails
-        seigManager.call(
-            abi.encodeWithSelector(
-                ISeigManager.onBridgedTONChange.selector,
-                address(systemConfig),  // rollupConfig
-                newBalance              // totalTONTVL
-            )
-        );
+    if (seigManager != address(0)) {
+        // Low-level call to ensure this never reverts
+        try ISeigManager(seigManager).onBridgedTonChange() {} catch {}
     }
 }
 ```
@@ -206,9 +199,10 @@ resolveClaim(claimant) time:
 ### Bridged TON Verification
 
 ```
-onBridgedTONChange(rollupConfig, totalTONTVL) time:
-├── msg.sender = L1StandardBridge
-└── L2 identified by rollupConfig
+onBridgedTonChange() time:
+├── msg.sender = OptimismPortal
+├── L1BridgeRegistry.rollupConfigWithPortal(msg.sender) → rollupConfig
+└── Layer2Manager.getLayer2BySystemConfig(rollupConfig) → layer2
 ```
 
 ---
@@ -239,6 +233,6 @@ All external calls do not affect the original transaction on failure:
 
 - `triggerAttentionTest`: Wrapped in try-catch
 - `resolveClaim`: Wrapped in try-catch
-- `onBridgedTONChange`: Uses low-level call
+- `onBridgedTonChange`: Wrapped in try-catch
 
 If RAT/SeigManager is not set (zero address), calls are skipped.
