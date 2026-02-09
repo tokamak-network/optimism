@@ -429,7 +429,45 @@ Fast Withdrawal uses the existing asset transfer logic - no additional changes n
 
 ---
 
-## 9. References
+## 9. op-proposer Gas Limit Fix
+
+### Problem
+
+`DisputeGameFactory.create()`에서 `IRAT.triggerAttentionTest()`가 try-catch로 감싸져 있어,
+RAT 호출이 가스 부족으로 실패해도 트랜잭션은 성공합니다.
+이로 인해 op-proposer의 `eth_estimateGas`가 RAT에 필요한 가스를 제외한 최소값만 반환합니다.
+
+| 시나리오 | gasLimit | gasUsed | RAT 결과 |
+|----------|----------|---------|----------|
+| eth_estimateGas (수정 전) | ~475,000 | ~468,000 | out of gas (try-catch로 무시됨) |
+| 명시적 설정 (수정 후) | 1,500,000 | ~943,000 | AttentionTestTriggered 성공 |
+
+### Fix
+
+**File:** `op-proposer/contracts/disputegamefactory.go` - `ProposalTx` 함수
+
+```go
+candidate.Value = initBond
+// Set explicit gas limit to ensure sufficient gas for RAT triggerAttentionTest
+// called via try-catch in DGF.create(). eth_estimateGas underestimates because
+// the try-catch makes the tx succeed even when RAT call runs out of gas.
+candidate.GasLimit = 1_500_000
+return candidate, err
+```
+
+### Why 1,500,000?
+
+- 게임 생성 기본 가스: ~506,000
+- RAT triggerAttentionTest 추가 가스: ~437,000
+- 합계: ~943,000
+- 여유분 포함: 1,500,000
+
+> **Note:** RAT 검증자가 없는 경우에도 이 가스 리밋이 적용되지만,
+> 실제 가스는 ~506,000만 소비되므로 추가 비용은 없습니다 (미사용 가스는 환불됨).
+
+---
+
+## 10. References
 
 ### Current Implementation
 
@@ -446,4 +484,4 @@ Fast Withdrawal uses the existing asset transfer logic - no additional changes n
 
 ---
 
-*Last Updated: 2026-02-03*
+*Last Updated: 2026-02-09*

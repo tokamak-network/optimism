@@ -108,6 +108,10 @@ func (f *DisputeGameFactory) ProposalTx(ctx context.Context, gameType uint32, ou
 		return txmgr.TxCandidate{}, err
 	}
 	candidate.Value = initBond
+	// Set explicit gas limit to ensure sufficient gas for RAT triggerAttentionTest
+	// called via try-catch in DGF.create(). eth_estimateGas underestimates because
+	// the try-catch makes the tx succeed even when RAT call runs out of gas.
+	candidate.GasLimit = 1_500_000
 	return candidate, err
 }
 

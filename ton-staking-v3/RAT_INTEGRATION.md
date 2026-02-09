@@ -236,3 +236,39 @@ All external calls do not affect the original transaction on failure:
 - `onBridgedTonChange`: Wrapped in try-catch
 
 If RAT/SeigManager is not set (zero address), calls are skipped.
+
+---
+
+## 9. op-proposer Gas Limit Fix
+
+### Problem
+
+`DisputeGameFactory.create()`에서 `triggerAttentionTest()`가 try-catch로 감싸져 있기 때문에,
+RAT 호출이 가스 부족으로 실패해도 트랜잭션 자체는 성공합니다.
+
+이로 인해 `eth_estimateGas`가 RAT 호출에 필요한 가스를 제외한 최소 가스만 반환합니다:
+
+| 시나리오 | gasLimit | gasUsed | RAT 결과 |
+|----------|----------|---------|----------|
+| eth_estimateGas (수정 전) | ~475,000 | ~468,000 | out of gas (try-catch로 무시됨) |
+| 명시적 설정 (수정 후) | 1,500,000 | ~943,000 | AttentionTestTriggered 성공 |
+
+### Fix
+
+**File:** `op-proposer/contracts/disputegamefactory.go` - `ProposalTx` 함수
+
+```go
+candidate.Value = initBond
+// Set explicit gas limit to ensure sufficient gas for RAT triggerAttentionTest
+// called via try-catch in DGF.create(). eth_estimateGas underestimates because
+// the try-catch makes the tx succeed even when RAT call runs out of gas.
+candidate.GasLimit = 1_500_000
+return candidate, err
+```
+
+### Why 1,500,000?
+
+- 게임 생성 기본 가스: ~506,000
+- RAT triggerAttentionTest 추가 가스: ~437,000
+- 합계: ~943,000
+- 여유분 포함: 1,500,000
