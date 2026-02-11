@@ -54,16 +54,13 @@ mapping(bytes32 => bool) public finalizedWithdrawals;
 
 ### 1.2 Added Events
 
-**Location:** With existing events (around line 150)
-
 ```solidity
-/// @notice Emitted when a fast withdrawal is requested
+/// @notice Emitted when a fast withdrawal is requested (via RAT)
 event FastWithdrawalRequested(
     bytes32 indexed withdrawalHash,
     address indexed user,
     uint256 amount,
     bytes32 stateRoot,
-    uint256 feePaid,
     uint256 deadline
 );
 
@@ -78,8 +75,6 @@ event RATContractUpdated(address indexed oldRatContract, address indexed newRatC
 ```
 
 ### 1.3 Added Errors
-
-**Location:** With existing errors (around line 200)
 
 ```solidity
 /// @notice Thrown when a withdrawal has not been verified by RAT
@@ -97,161 +92,181 @@ error OptimismPortal_AlreadyFinalized();
 
 ### 1.4 Added Functions
 
-#### A. proveAndRequestFastWithdrawal()
+#### A. proveAndRequestFastWithdrawal() - RAT Only
 
-**Location:** Add as new external function (around line 400)
+**Access Control:** Only callable by RAT contract. Users call `RAT.requestFastWithdrawal()` which internally calls this function.
 
 ```solidity
-/// @notice Prove withdrawal and request fast withdrawal
-/// @param _tx Withdrawal transaction
-/// @param _disputeGameIndex Index of dispute game
-/// @param _outputRootProof Output root proof
-/// @param _withdrawalProof Withdrawal proof
+/// @notice Prove withdrawal and request fast withdrawal (RAT only)
 function proveAndRequestFastWithdrawal(
     Types.WithdrawalTransaction memory _tx,
     uint256 _disputeGameIndex,
     Types.OutputRootProof calldata _outputRootProof,
     bytes[] calldata _withdrawalProof
-) external payable {
-    // Call existing proveWithdrawalTransaction
-    proveWithdrawalTransaction(_tx, _disputeGameIndex, _outputRootProof, _withdrawalProof);
-    
-    // Emit Fast Withdrawal request
+) external {
+    if (msg.sender != ratContract) {
+        revert OptimismPortal_OnlyRAT();
+    }
+
+    // Step 1: Prove the withdrawal transaction (starts 7-day countdown as fallback)
+    this.proveWithdrawalTransaction(_tx, _disputeGameIndex, _outputRootProof, _withdrawalProof);
+
+    // Step 2: Emit event for RAT validators to detect and sign
     bytes32 withdrawalHash = Hashing.hashWithdrawal(_tx);
+    uint256 deadline = block.timestamp + fastWithdrawalResponsePeriod;
+
     emit FastWithdrawalRequested(
         withdrawalHash,
         msg.sender,
         _tx.value,
         _outputRootProof.stateRoot,
-        msg.value,
-        block.timestamp + fastWithdrawalResponsePeriod
+        deadline
     );
 }
 ```
 
-#### B. setRATWithdrawalVerified() - RAT Only
-
-**Location:** Add as new external function (around line 430)
+#### B. setWithdrawalVerified() - RAT Only
 
 ```solidity
 /// @notice Mark a withdrawal as verified by RAT (RAT only)
-/// @param _withdrawalHash Hash of the withdrawal transaction
-function setRATWithdrawalVerified(bytes32 _withdrawalHash) external {
-    require(msg.sender == ratContract, OptimismPortal_OnlyRAT());
-    
+function setWithdrawalVerified(bytes32 _withdrawalHash) external {
+    if (msg.sender != ratContract) {
+        revert OptimismPortal_OnlyRAT();
+    }
+
     ratVerifiedWithdrawals[_withdrawalHash] = true;
-    
+
     emit RATWithdrawalVerified(_withdrawalHash);
 }
 ```
 
 #### C. fastWithdrawalFinalize()
 
-**Location:** Add as new external function (around line 450)
-
 ```solidity
 /// @notice Finalize a fast withdrawal (bypass 7-day delay)
-/// @param _tx Withdrawal transaction
 function fastWithdrawalFinalize(Types.WithdrawalTransaction memory _tx) external {
     bytes32 withdrawalHash = Hashing.hashWithdrawal(_tx);
-    
-    // Check RAT verification
+
     require(ratVerifiedWithdrawals[withdrawalHash], OptimismPortal_NotVerifiedByRAT());
-    
-    // Check not already finalized (reuse existing mapping)
     require(!finalizedWithdrawals[withdrawalHash], OptimismPortal_AlreadyFinalized());
-    
-    // Transfer assets (using existing Portal logic)
+
     _transferAssets(_tx);
-    
-    // Mark as finalized (reuse existing mapping)
     finalizedWithdrawals[withdrawalHash] = true;
-    
+
     emit FastWithdrawalFinalized(withdrawalHash, true);
 }
 ```
 
 #### D. Admin Functions
 
-**Location:** With existing admin functions (around line 500)
-
 ```solidity
-/// @notice Set RAT contract address (Owner only)
 function setRATContract(address _ratContract) external {
     require(msg.sender == guardian(), "OptimismPortal: only guardian");
-    
     address oldRatContract = ratContract;
     ratContract = _ratContract;
-    
     emit RATContractUpdated(oldRatContract, _ratContract);
 }
 
-/// @notice Set fast withdrawal response period (Owner only)
 function setFastWithdrawalResponsePeriod(uint256 _period) external {
     require(msg.sender == guardian(), "OptimismPortal: only guardian");
-    
     fastWithdrawalResponsePeriod = _period;
 }
 ```
 
 ---
 
-## 2. RAT Contract (Already Implemented)
+## 2. RAT Contract - Fee System
 
 **File:** `ton-staking-v2/src/validator/RATFastWithdrawal.sol`
 
-### 2.1 Core Function
+### 2.1 Fee Model
 
-**Location:** Line 330 (already implemented)
+- **Fee Token:** TON (ERC20)
+- **Fee Amount:** Fixed (e.g., 10 TON = 10e18)
+- **Fee Collection:** RAT collects TON via `transferFrom` (user must `approve` first)
+- **Fee Distribution:** On successful fast withdrawal, distributed to aggregator + validators (TON transfer)
+- **Fee Reclaim:** If deadline passes without processing, user can reclaim fee
+
+### 2.2 requestFastWithdrawal (User Entry Point)
+
+```solidity
+/// @notice 빠른 출금 요청 (수수료: TON)
+function requestFastWithdrawal(
+    Types.WithdrawalTransaction memory _tx,
+    uint256 _disputeGameIndex,
+    Types.OutputRootProof calldata _outputRootProof,
+    bytes[] calldata _withdrawalProof,
+    address _systemConfig
+) external whenNotPaused {
+    uint256 fee = fastWithdrawalFee;
+    if (fee == 0) revert InsufficientFastWithdrawalFeeError();
+
+    // TON 수수료 수령
+    IERC20(ton).transferFrom(msg.sender, address(this), fee);
+
+    address portal = _getOptimismPortal(_systemConfig);
+    if (portal == address(0)) revert FastWithdrawalPortalNotSetError();
+
+    // Portal 빠른 출금 증명 호출 (RAT만 호출 가능)
+    IOptimismPortal2ForRAT(portal).proveAndRequestFastWithdrawal(
+        _tx, _disputeGameIndex, _outputRootProof, _withdrawalProof
+    );
+
+    // 수수료 저장
+    bytes32 withdrawalHash = keccak256(abi.encode(
+        _tx.nonce, _tx.sender, _tx.target, _tx.value, _tx.gasLimit, _tx.data
+    ));
+    uint256 deadline = block.timestamp + IOptimismPortal2ForRAT(portal).fastWithdrawalResponsePeriod();
+    pendingFees[withdrawalHash] = PendingFee({
+        amount: fee,
+        user: msg.sender,
+        deadline: deadline
+    });
+
+    emit FastWithdrawalRequested(withdrawalHash, msg.sender, _tx.value, fee, deadline);
+}
+```
+
+### 2.3 verifyAndExecuteFastWithdrawal (Aggregator)
 
 ```solidity
 /// @notice Verify and execute fast withdrawal
-/// @param _tx Withdrawal transaction
-/// @param input Fast withdrawal input (stateRoot, proofs, signatures, etc.)
-/// @param _aggregatedSignature BLS aggregated signature from validators
 function verifyAndExecuteFastWithdrawal(
     Types.WithdrawalTransaction calldata _tx,
     RATFastWithdrawalLib.FastWithdrawalInput calldata input,
     bytes calldata _aggregatedSignature
-) external payable ifFree whenNotPaused {
-    // 1. Validate preconditions (withdrawalHash, systemConfig, etc.)
-    address portal = _validateFastWithdrawalPreconditions(input, _tx);
-    
-    // 2. Check game claims (block if dispute exists)
-    if (input.gameAddress != address(0)) {
-        uint256 claimCount = IDisputeGame(input.gameAddress).claimDataLen();
-        if (claimCount > 0) revert FastWithdrawalGameHasClaimsError();
-    }
-    
+) external ifFree whenNotPaused {
+    // 1. Validate preconditions
+    // 2. Check game claims
     // 3. Check minimum validators
-    uint256 validatorCount = validatorPools[input.systemConfig].activeCount;
-    if (validatorCount < minValidatorsForFastWithdrawal) {
-        revert FastWithdrawalInsufficientValidatorsError();
-    }
-    
-    // 4. Check unanimous consensus (100% validators)
-    if (input.validatorBitmap != (1 << validatorCount) - 1) {
-        revert FastWithdrawalNotUnanimousError();
-    }
-    
+    // 4. Check unanimous consensus (100%)
     // 5. Verify BLS aggregated signature
-    RATFastWithdrawalLib.verifyBLSSignature(input, _aggregatedSignature, aggregatedPubKey);
-    
     // 6. Verify adjacent leaves proof
-    RATFastWithdrawalLib.verifyAdjacentLeaves(input);
-    
-    // 7. Notify Portal
-    IOptimismPortal2(portal).setRATWithdrawalVerified(input.withdrawalHash);
-    
-    // 8. Distribute fees to validators and aggregator
-    _distributeFees(input.systemConfig, msg.sender);
+    // 7. Portal.setWithdrawalVerified + fastWithdrawalFinalize
+    // 8. Distribute TON fees (aggregator + validators)
 }
 ```
 
-### 2.2 Input Structure
+### 2.4 reclaimFee (User - Timeout Recovery)
 
-**File:** `ton-staking-v2/src/libraries/RATFastWithdrawalLib.sol`  
-**Location:** Line 23 (already implemented)
+```solidity
+/// @notice 기한 초과 시 TON 수수료 환불
+function reclaimFee(bytes32 _withdrawalHash) external {
+    PendingFee memory fee = pendingFees[_withdrawalHash];
+    if (fee.amount == 0) revert FeeAlreadyClaimedError();
+    if (block.timestamp <= fee.deadline + 120) revert FeeNotReclaimableError();
+    if (processedWithdrawals[_withdrawalHash]) revert FeeAlreadyClaimedError();
+
+    delete pendingFees[_withdrawalHash];
+    IERC20(ton).transfer(fee.user, fee.amount);
+
+    emit FeeReclaimed(_withdrawalHash, fee.user, fee.amount);
+}
+```
+
+### 2.5 Input Structure
+
+**File:** `ton-staking-v2/src/libraries/RATFastWithdrawalLib.sol`
 
 ```solidity
 struct FastWithdrawalInput {
@@ -274,27 +289,38 @@ struct FastWithdrawalInput {
 ### Call Sequence
 
 ```
-User → Portal.proveAndRequestFastWithdrawal()
-    ↓ emit FastWithdrawalRequested
+User → TON.approve(RAT, fee)
+  ↓
+User → RAT.requestFastWithdrawal()
+  ↓ RAT collects TON fee via transferFrom
+  ↓ RAT calls Portal.proveAndRequestFastWithdrawal() (RAT only)
+  ↓ Portal emits FastWithdrawalRequested
+  ↓ RAT emits FastWithdrawalRequested (with fee info)
 Validators → Generate BLS signatures (offchain)
-    ↓
+  ↓
 Aggregator → RAT.verifyAndExecuteFastWithdrawal()
-    ↓ verify BLS signatures + adjacent leaves
-RAT → Portal.setRATWithdrawalVerified()
-    ↓
-User → Portal.fastWithdrawalFinalize()
-    ↓ transfer assets
+  ↓ verify BLS signatures + adjacent leaves
+RAT → Portal.setWithdrawalVerified()
+RAT → Portal.fastWithdrawalFinalize() → transfer assets to user
+RAT → distribute TON fees (aggregator + validators)
+  ↓
 Done (3 minutes vs 7 days)
+
+Timeout (fallback):
+  User → RAT.reclaimFee(withdrawalHash) → TON refund
+  User → Portal.finalizeWithdrawalTransaction() → 7-day standard path
 ```
 
 ### Access Control
 
 | Function | Caller | Restriction |
 |----------|--------|-------------|
-| `proveAndRequestFastWithdrawal` | Anyone | Fee required |
-| `setRATWithdrawalVerified` | **RAT only** | `OptimismPortal_OnlyRAT` |
-| `fastWithdrawalFinalize` | Anyone | RAT verification required |
-| `verifyAndExecuteFastWithdrawal` | Anyone (Aggregator) | Valid BLS signature required |
+| `Portal.proveAndRequestFastWithdrawal` | **RAT only** | `OptimismPortal_OnlyRAT` |
+| `Portal.setWithdrawalVerified` | **RAT only** | `OptimismPortal_OnlyRAT` |
+| `Portal.fastWithdrawalFinalize` | Anyone | RAT verification required |
+| `RAT.requestFastWithdrawal` | Anyone (User) | TON fee required (approve first) |
+| `RAT.verifyAndExecuteFastWithdrawal` | Anyone (Aggregator) | Valid BLS signature required |
+| `RAT.reclaimFee` | Anyone | Deadline passed + not yet processed |
 
 ---
 
@@ -303,8 +329,11 @@ Done (3 minutes vs 7 days)
 ### 4.1 Access Control
 
 ```solidity
+// CRITICAL: Only RAT can prove + request fast withdrawal
+if (msg.sender != ratContract) revert OptimismPortal_OnlyRAT();
+
 // CRITICAL: Only RAT can mark withdrawal as verified
-require(msg.sender == ratContract, OptimismPortal_OnlyRAT());
+if (msg.sender != ratContract) revert OptimismPortal_OnlyRAT();
 ```
 
 ### 4.2 Double Withdrawal Prevention
@@ -330,6 +359,14 @@ if (validatorBitmap != (1 << validatorCount) - 1) {
 }
 ```
 
+### 4.5 Fee Protection
+
+```solidity
+// Timeout recovery: user can reclaim TON fee if fast withdrawal is not processed
+if (block.timestamp <= fee.deadline + 120) revert FeeNotReclaimableError();
+if (processedWithdrawals[_withdrawalHash]) revert FeeAlreadyClaimedError();
+```
+
 ---
 
 ## 5. Deployment Steps
@@ -342,6 +379,9 @@ cast send $RAT "setMinValidatorsForFastWithdrawal(uint256)" 3
 
 # Set aggregator fee rate (10%)
 cast send $RAT "setAggregatorFeeRate(uint256)" 1e26
+
+# Set fast withdrawal fee (10 TON)
+cast send $RAT "setFastWithdrawalFee(uint256)" 10000000000000000000
 ```
 
 ### Step 2: Upgrade OptimismPortal2
@@ -379,8 +419,8 @@ cast send $RAT "registerBLSPublicKey(address,bytes,bytes)" \
 - [ ] `ratContract` storage added
 - [ ] `ratVerifiedWithdrawals` mapping added
 - [ ] `fastWithdrawalResponsePeriod` storage added
-- [ ] `proveAndRequestFastWithdrawal()` implemented
-- [ ] `setRATWithdrawalVerified()` implemented with RAT-only access control
+- [ ] `proveAndRequestFastWithdrawal()` implemented with **RAT-only** access control
+- [ ] `setWithdrawalVerified()` implemented with RAT-only access control
 - [ ] `fastWithdrawalFinalize()` implemented
 - [ ] Admin functions implemented
 - [ ] 4 events added
@@ -392,14 +432,18 @@ cast send $RAT "registerBLSPublicKey(address,bytes,bytes)" \
 - [ ] Portal.setRATContract() called
 - [ ] Portal.setFastWithdrawalResponsePeriod() called
 - [ ] RAT.setMinValidatorsForFastWithdrawal() called
+- [ ] RAT.setFastWithdrawalFee() called (e.g., 10 TON)
 - [ ] Validators registered with BLS keys
 
 ### Testing
 
-- [ ] Normal fast withdrawal flow
+- [ ] Normal fast withdrawal flow (User → RAT → Portal)
+- [ ] Access control (only RAT can call proveAndRequestFastWithdrawal)
 - [ ] Access control (only RAT can verify)
 - [ ] Double withdrawal prevention
 - [ ] Game claim check
+- [ ] TON fee collection and distribution
+- [ ] Fee reclaim on timeout
 
 ---
 
@@ -407,13 +451,20 @@ cast send $RAT "registerBLSPublicKey(address,bytes,bytes)" \
 
 ### Storage Optimization
 
-- ✅ Reuse existing `finalizedWithdrawals` mapping for both regular and fast withdrawals
-- ✅ Reuse existing error `OptimismPortal_AlreadyFinalized` for both types
-- ✅ Only 3 new storage variables needed (`ratContract`, `ratVerifiedWithdrawals`, `fastWithdrawalResponsePeriod`)
+- Reuse existing `finalizedWithdrawals` mapping for both regular and fast withdrawals
+- Reuse existing error `OptimismPortal_AlreadyFinalized` for both types
+- Only 3 new storage variables needed (`ratContract`, `ratVerifiedWithdrawals`, `fastWithdrawalResponsePeriod`)
+
+### Fee Architecture
+
+- Portal does NOT handle fees - it only handles proof + verification + finalization
+- RAT handles the entire fee lifecycle: collection (TON) → storage → distribution / refund
+- Fee is paid in TON (ERC20), not ETH
+- Fixed fee amount (e.g., 10 TON), not percentage-based
 
 ### Custom Gas Token Support
 
-OptimismPortal2 already supports both Native ETH and Custom Gas Token.  
+OptimismPortal2 already supports both Native ETH and Custom Gas Token.
 Fast Withdrawal uses the existing asset transfer logic - no additional changes needed.
 
 ---
@@ -422,10 +473,10 @@ Fast Withdrawal uses the existing asset transfer logic - no additional changes n
 
 | Operation | Gas | Notes |
 |-----------|-----|-------|
-| `proveAndRequestFastWithdrawal` | ~80k | Existing prove + event |
-| `verifyAndExecuteFastWithdrawal` | ~280k | BLS + adjacent leaves verification |
-| `fastWithdrawalFinalize` | ~50k | Asset transfer + state update |
-| **Total** | **~410k** | vs 7 days wait |
+| `RAT.requestFastWithdrawal` | ~100k | TON transfer + Portal prove + event |
+| `RAT.verifyAndExecuteFastWithdrawal` | ~280k | BLS + adjacent leaves verification |
+| `Portal.fastWithdrawalFinalize` | ~50k | Asset transfer + state update |
+| **Total** | **~430k** | vs 7 days wait |
 
 ---
 
@@ -565,4 +616,4 @@ The validator client requires the following L2 RPC methods:
 
 ---
 
-*Last Updated: 2026-02-09*
+*Last Updated: 2026-02-11*

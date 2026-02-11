@@ -194,14 +194,12 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
     /// @param user Address that requested the fast withdrawal.
     /// @param amount Amount of ETH to withdraw.
     /// @param stateRoot State root used for the withdrawal proof.
-    /// @param feePaid Fee paid for fast withdrawal.
     /// @param deadline Deadline for fast withdrawal response.
     event FastWithdrawalRequested(
         bytes32 indexed withdrawalHash,
         address indexed user,
         uint256 amount,
         bytes32 stateRoot,
-        uint256 feePaid,
         uint256 deadline
     );
 
@@ -603,8 +601,11 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
         bytes[] calldata _withdrawalProof
     )
         external
-        payable
     {
+        if (msg.sender != ratContract) {
+            revert OptimismPortal_OnlyRAT();
+        }
+
         // Step 1: Prove the withdrawal transaction (starts 7-day countdown as fallback)
         // Reuse the existing proveWithdrawalTransaction function to avoid code duplication
         this.proveWithdrawalTransaction(_tx, _disputeGameIndex, _outputRootProof, _withdrawalProof);
@@ -618,7 +619,6 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ReinitializableBase
             msg.sender,
             _tx.value,
             _outputRootProof.stateRoot,
-            msg.value,  // fee paid
             deadline
         );
     }
