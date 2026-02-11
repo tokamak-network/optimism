@@ -467,7 +467,88 @@ return candidate, err
 
 ---
 
-## 10. References
+## 10. RAT Client (Validator) Configuration
+
+### rat-client-type3 Configuration Fix
+
+**Repository:** `ton-staking-v2/clients/rat-client-type3/`
+
+The RAT validator client monitors `AttentionTestTriggered` events and submits evidence (adjacent leaves proof) within the deadline. Two critical configuration parameters affect evidence submission success:
+
+#### Problem
+
+The original configuration prevented evidence submission:
+- `DeadlineBuffer` was set to 600 seconds (= `evidenceSubmissionPeriod`)
+- By the time the client detected an event, less than 600s remained before deadline
+- The client always rejected with: `"deadline too close: N seconds remaining"`
+
+#### Fix
+
+**File: `pkg/client/config.go`**
+
+| Parameter | Before | After | Description |
+|-----------|--------|-------|-------------|
+| `Confirmations` | 2 | **1** | L1 blocks to wait before treating events as final |
+| `DeadlineBuffer` | 10 min | **2 min** | Safety margin before deadline to stop submission attempts |
+
+```go
+// Default config changes
+Confirmations:  1,                    // Detect events faster (was 2)
+DeadlineBuffer: 2 * time.Minute,      // Submit up to 2 min before deadline (was 10 min)
+```
+
+**File: `pkg/client/service_adjacent.go`**
+
+- Added `deadlineBuffer` field to `RATClientAdjacentService` struct
+- Replaced hardcoded `600s` deadline check with configurable buffer from config
+
+```go
+// Before (hardcoded):
+if timeRemaining < 600 {
+    return fmt.Errorf("deadline too close: %d seconds remaining", timeRemaining)
+}
+
+// After (configurable):
+bufferSeconds := int64(s.deadlineBuffer.Seconds())
+if timeRemaining < bufferSeconds {
+    return fmt.Errorf("deadline too close: %d seconds remaining (buffer=%ds)", timeRemaining, bufferSeconds)
+}
+```
+
+**File: `cmd/main.go`**
+
+- Added `DeadlineBuffer` passthrough from config to `AdjacentServiceConfig`
+
+#### Evidence Submission Flow
+
+```
+L1: AttentionTestTriggered event emitted
+  ↓ (wait Confirmations blocks)
+Client: Detect event via FilterLogs
+  ↓ (check deadline - buffer)
+Client: Query L2 state via debug_accountRange
+  ↓
+Client: Generate adjacent leaves proof via eth_getProof
+  ↓
+Client: Submit evidence tx to L1 RAT contract
+```
+
+#### L2 RPC Requirements
+
+The validator client requires the following L2 RPC methods:
+
+| Method | Purpose | Namespace |
+|--------|---------|-----------|
+| `debug_accountRange` | Iterate state trie to find adjacent account leaves | `debug` |
+| `eth_getProof` | Generate Merkle proofs for adjacent leaves | `eth` |
+| `eth_getBlockByNumber` | Fetch block header for StateRoot | `eth` |
+
+> **Important:** The L2 node (op-geth) must have `debug` API enabled:
+> `--http.api=eth,net,web3,debug,txpool,miner`
+
+---
+
+## 11. References
 
 ### Current Implementation
 
