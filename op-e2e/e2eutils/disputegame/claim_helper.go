@@ -31,6 +31,10 @@ func newClaimHelper(game *SplitGameHelper, idx int64, claim types.Claim) *ClaimH
 	}
 }
 
+func (c *ClaimHelper) Value() common.Hash {
+	return c.claim
+}
+
 func (c *ClaimHelper) AgreesWithOutputRoot() bool {
 	return c.Position.Depth()%2 == 0
 }
